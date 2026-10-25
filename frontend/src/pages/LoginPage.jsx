@@ -11,7 +11,9 @@ export function LoginPage() {
   const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(false)
   useTitle('Sign in')
-  const next = q.get('next') && q.get('next').startsWith('/') && !q.get('next').startsWith('//') ? q.get('next') : '/account'
+  // only paths on this site: "/x", never "//host" or "/\\host" (both leave the site)
+  const rawNext = q.get('next') || ''
+  const next = /^\/(?![/\\])[^\s]*$/.test(rawNext) ? rawNext : '/account'
   if (!loading && user) return <Navigate to={next} replace />
   return (
     <div className="container page login">

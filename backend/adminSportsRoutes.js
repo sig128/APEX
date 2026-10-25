@@ -1,4 +1,5 @@
 import { getDisabledSportKeys, writeDisabledSportKeysToFirestore, APEX_SPORT_KEYS, APEX_SPORT_LABELS } from './sportsConfig.js'
+import { checkAdminKey } from './src/security/adminKey.js'
 
 /**
  * @param {import('express').Application} app
@@ -23,9 +24,13 @@ export function registerAdminSportsRoutes(app, opts) {
 
   app.post('/api/admin/sports', async (req, res) => {
     const expected = typeof getAdminKey === 'function' ? getAdminKey() : ''
-    const header = req.headers['x-apex-admin-key']
-    const got = typeof header === 'string' ? header.trim() : ''
-    if (!expected || got !== expected) {
+    // constant-time compare, and an address that keeps guessing is locked out for a while
+    const key = checkAdminKey(req, expected)
+    if (key === 'blocked') {
+      res.status(429).set('Retry-After', '900').json({ error: 'Too many wrong admin keys from this address. Try again later.' })
+      return
+    }
+    if (key !== 'ok') {
       res.status(401).json({ error: 'Invalid or missing X-Apex-Admin-Key.' })
       return
     }

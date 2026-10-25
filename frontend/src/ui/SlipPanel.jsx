@@ -115,7 +115,7 @@ export function SlipPanel({ open, onClose }) {
   return (
     <>
       <div className={`slip-scrim${open ? ' is-open' : ''}`} onClick={onClose} aria-hidden="true" />
-      <aside className={`slip${open ? ' is-open' : ''}`} aria-label="Bet slip" aria-hidden={!open} inert={open ? undefined : ''}>
+      <aside className={`slip${open ? ' is-open' : ''}`} aria-label="Bet slip" aria-hidden={!open} inert={!open}>
         <div className="slip__head">
           <h2 className="slip__title">
             Slip <span className="num">{legs.length}</span>
