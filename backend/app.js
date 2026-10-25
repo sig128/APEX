@@ -30,6 +30,25 @@ import {
   handleOddsUpcomingRequest,
 } from './oddsEvents.js'
 import { nameKey, envInt } from './src/lib/util.js'
+import { renderUserHead } from './src/picks/og.js'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+// The built site's index.html, when it ships next to the API (Cloud Functions: copied to
+// functions/apex/web/ at deploy) so shared /u/handle links get their own preview card.
+const WEB_INDEX = process.env.APEX_WEB_INDEX || path.join(path.dirname(fileURLToPath(import.meta.url)), 'web', 'index.html')
+let webIndex
+function indexHtml() {
+  if (webIndex === undefined) {
+    try {
+      webIndex = fs.readFileSync(WEB_INDEX, 'utf8')
+    } catch {
+      webIndex = null
+    }
+  }
+  return webIndex
+}
 
 async function lookupUidByEmail(email) {
   try {
@@ -216,6 +235,26 @@ export function createApexApp({
   app.get('/api/odds/mlb-player-props-board', (req, res) => void handleMlbPlayerPropsBoardRequest(req, res, odds()))
 
   registerAdminSportsRoutes(app, { getAdminKey: adminKey, getFirestore })
+
+  // Picks pages with a preview card of their own (see src/picks/og.js).
+  app.get('/u/:handle', async (req, res, next) => {
+    const html = indexHtml()
+    if (!html) return next()
+    let out = html
+    try {
+      const view = await picks.page(req.params.handle)
+      // the public address: configured, or the Hosting domain the request came through (only
+      // names we serve, so a forged header can't point the card somewhere else)
+      const host = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim().toLowerCase()
+      const allowed = String(process.env.APEX_ALLOWED_ORIGINS || '').split(',').map((o) => o.trim().replace(/^https?:\/\//, '').toLowerCase())
+      const known = /^[a-z0-9-]+\.(web\.app|firebaseapp\.com)$/.test(host) || allowed.includes(host)
+      const site = process.env.APEX_PUBLIC_SITE_URL || (known ? `https://${host}` : '')
+      if (site) out = renderUserHead(html, view, site.replace(/\/$/, ''))
+    } catch {
+      /* unknown handle: the app shows its own not-found */
+    }
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300').type('html').send(out)
+  })
 
   app.get('/api/health', (req, res) => {
     const s = engine.status()

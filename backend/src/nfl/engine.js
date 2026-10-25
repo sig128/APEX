@@ -195,13 +195,20 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
   }
 
   // ---- persistence -------------------------------------------------------------------------
+  let livePersistAt = 0
   async function persist(force = false) {
     if (!store) return
     if (!force && !wh.dirty.size) return
+    // score-only changes are saved at most every two minutes (a cold start re-reads the
+    // scoreboard anyway); anything that moves the analytics is saved right away
+    if (!force && wh.dirty.size === 1 && wh.dirty.has('live') && now() - livePersistAt < 2 * MIN) return
     const dirty = new Set(wh.dirty)
     wh.dirty.clear()
     try {
-      if (force || dirty.has('core') || dirty.has('live')) await store.set('nfl', 'core', wh.snapshotCore())
+      if (force || dirty.has('core') || dirty.has('live')) {
+        await store.set('nfl', 'core', wh.snapshotCore())
+        livePersistAt = now()
+      }
       if (force || dirty.has('rosters')) await store.set('nfl', 'rosters', wh.snapshotRosters())
       if (force || dirty.has('schedules')) await store.set('nfl', 'schedules', wh.snapshotSchedules())
       if (force || dirty.has('logs')) {

@@ -37,6 +37,13 @@
         }
       },
       {
+        "source": "/u/**",
+        "function": {
+          "functionId": "chat",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
