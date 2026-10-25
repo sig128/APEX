@@ -49,6 +49,7 @@ const ai = {
   async create(params) {
     ai.calls.push(params)
     if (ai.mode === 'fail') throw Object.assign(new Error('overloaded'), { status: 529 })
+    if (ai.createBlocks) return { id: 'msg_blocks', usage: {}, content: ai.createBlocks }
     return { id: 'msg_once', usage: {}, content: [{ type: 'text', text: ai.createText || 'One-shot analysis.' }] }
   },
 }
@@ -385,4 +386,45 @@ test('parlay check: Pro only, reads a typed slip, simulates, then a verdict per 
   assert.equal(ev.at(-1).type, 'complete')
   assert.match(ai.calls.at(-1).system, /KEEP/, 'the verdict prompt')
   assert.match(ai.calls.at(-1).messages[0].content, /LEG 2/)
+})
+
+test('game intel: Pro only, reputable sources only, one shared scan per game', async () => {
+  const g = (await api.get('/api/nfl/games/401873020')).body
+  const star = g.props.find((p) => p.kind !== 'team')
+  assert.equal((await api.post('/api/nfl/intel', { gameId: '401873020' })).status, 401)
+  assert.equal((await api.post('/api/nfl/intel', { gameId: '401873020' }, { headers: bearer('u_free') })).status, 402)
+  assert.equal((await api.post('/api/nfl/intel', { gameId: 'x' }, { headers: bearer('u_elite2') })).status, 400)
+  const calls = ai.calls.length
+  ai.createBlocks = [
+    { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'injury report' } },
+    { type: 'web_search_tool_result', tool_use_id: 's1', content: [{ type: 'web_search_result', url: 'https://www.espn.com/nfl/story/_/id/1', title: 'Injury report' }, { type: 'web_search_result', url: 'https://leaks.example.net/playbook', title: 'Leaked playbook' }] },
+    {
+      type: 'text',
+      text: JSON.stringify({
+        summary: 'The top receiver was limited all week.',
+        injuries: [{ player: star.name, team: star.teamAbbr, status: 'Questionable', note: 'Hamstring, limited Thursday and Friday.', url: 'https://www.espn.com/nfl/story/_/id/1' }],
+        news: [
+          { headline: 'Coach says the run game is the plan', team: star.teamAbbr, detail: 'Said so at Wednesday’s press conference.', impact: 'up', players: [star.name], url: 'https://www.nfl.com/news/x', date: '2026-10-22' },
+          { headline: 'Leaked game plan', team: star.teamAbbr, detail: 'Do not use.', impact: 'up', players: [], url: 'https://leaks.example.net/playbook' },
+        ],
+        angles: [{ player: star.name, lean: 'hurt', why: 'A limited hamstring caps his snaps.' }],
+      }),
+    },
+  ]
+  const r = await api.post('/api/nfl/intel', { gameId: '401873020' }, { headers: bearer('u_elite2') })
+  ai.createBlocks = null
+  assert.equal(r.status, 200, r.text)
+  const req = ai.calls.at(-1)
+  assert.equal(req.tools[0].type, 'web_search_20250305')
+  assert.ok(req.tools[0].allowed_domains.includes('espn.com'), 'search is limited to established outlets')
+  assert.match(req.system, /Never use or repeat leaked/)
+  assert.equal(r.body.news.length, 1, 'items from outlets off the list are dropped')
+  assert.ok(r.body.sources.every((x) => !/leaks/.test(x.url)))
+  assert.equal(r.body.injuries[0].playerId, star.playerId, 'players are linked to the board')
+  assert.ok(r.body.angles[0].props.length > 0)
+  assert.equal(r.body.cached, false)
+  const again = await api.post('/api/nfl/intel', { gameId: '401873020' }, { headers: bearer('u_elite') })
+  assert.equal(again.status, 200)
+  assert.equal(again.body.cached, true)
+  assert.equal(ai.calls.length, calls + 1, 'the scan is shared')
 })

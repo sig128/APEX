@@ -2,6 +2,7 @@
 import { createRouter, ApiError, RAW, clientIp } from '../lib/router.js'
 import { ROUTE_TIER, TOPIC_RE, topicAllowed } from './gate.js'
 import { streamPropInsight } from './ai.js'
+import { createIntel } from './intel.js'
 import { extractLegs, matchLegs, streamParlayCheck, cleanImage, MAX_TEXT } from './parlay.js'
 import { atLeast } from '../billing/service.js'
 import { billingConfig } from '../billing/config.js'
@@ -21,6 +22,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
   const limiter = createLimiter({ burst: envInt('APEX_RATE_BURST', 600, { min: 10 }), perSec: envInt('APEX_RATE_RPS', 20, { min: 1 }) })
   const insightLimiter = createLimiter({ burst: 6, perSec: 1 / 5 })
   const checkLimiter = createLimiter({ burst: 3, perSec: 1 / 10 })
+  const intelLimiter = createLimiter({ burst: 3, perSec: 1 / 20 })
   const paywallOn = () => Boolean(access && billing && billingConfig().paywall)
   const OPEN = { ok: true, user: null, ent: { plan: 'elite', status: 'open' }, tier: 'elite' }
 
@@ -167,7 +169,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
    * (open in local dev without Firebase). Takes one read off today's allowance; `refund()` gives
    * it back when nothing was produced.
    */
-  async function aiGate(req, res, { what = 'AI reads', limiterFor = insightLimiter } = {}) {
+  async function aiGate(req, res, { what = 'AI reads', limiterFor = insightLimiter, charge = true } = {}) {
     let user
     let ent
     if (paywallOn()) {
@@ -183,6 +185,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
       user = await auth.authenticate(req)
       if (!(await auth.inviteVerified(user))) throw new ApiError(403, 'invite', `Redeem an invite code to use ${what}.`)
     }
+    if (!charge) return { user, refund: async () => {} }
     const lim = limiterFor.take(user.uid)
     if (!lim.ok) throw new ApiError(429, 'slow_down', 'One at a time. Try again in a few seconds.', { retryAfter: lim.retryAfter })
     let usage = null
@@ -198,6 +201,35 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     }
   }
   const key = () => (typeof anthropicKey === 'function' ? anthropicKey() : anthropicKey)
+  const intel = createIntel({ engine, apiKey: key })
+
+  /**
+   * Game intel: official injuries plus this week's reputable public reporting, tied to the props
+   * it moves. One shared scan per game (cached); a fresh scan uses one AI read.
+   */
+  r.post('/intel', { selfAuth: true }, async (ctx) => {
+    const { req, res } = ctx
+    ctx.cache = null
+    const gameId = String(req.body?.gameId || '')
+    if (!/^\d{6,12}$/.test(gameId)) throw new ApiError(400, 'bad_game', 'That game id is not valid.')
+    if (!views.game(gameId)) throw new ApiError(404, 'not_found', 'That game is not on the schedule.')
+    const hit = intel.cachedFor(gameId)
+    const wantFresh = req.body?.fresh === true && (!hit || Date.now() - hit.at > 15 * 60e3)
+    if (hit && !wantFresh) {
+      await aiGate(req, res, { what: 'game intel', charge: false })
+      return { ...hit.data, at: hit.at, cached: true }
+    }
+    if (!key()) throw new ApiError(503, 'ai_off', 'AI is not configured on this server (ANTHROPIC_API_KEY).')
+    const gate = await aiGate(req, res, { what: 'game intel', limiterFor: intelLimiter })
+    try {
+      const e = await intel.get(gameId, { fresh: wantFresh })
+      if (e?.cached) await gate.refund()
+      return { ...e.data, at: e.at, cached: Boolean(e.cached) }
+    } catch {
+      await gate.refund()
+      throw new ApiError(502, 'intel_failed', 'The intel scan failed. Your allowance was not used; try again in a minute.')
+    }
+  })
 
   /** AI read of one prop. Pro and Elite (or the invite rule while the paywall is off). */
   r.post('/insight', { selfAuth: true }, async (ctx) => {

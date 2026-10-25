@@ -9,6 +9,7 @@ import { PropRow } from '../ui/PropRow.jsx'
 import { Tabs, Pills, Skeleton, ErrorBox, Empty, Section } from '../ui/Bits.jsx'
 import { ParlayCard } from './HomePage.jsx'
 import { Odds } from '../ui/Odds.jsx'
+import { GameIntel } from '../ui/GameIntel.jsx'
 
 export function GamePage() {
   const { id } = useParams()
@@ -42,6 +43,7 @@ export function GamePage() {
     { key: 'props', label: 'Props', count: data.props.length },
     { key: 'trends', label: 'Team trends' },
     { key: 'injuries', label: 'Injuries', count: data.home.injuries.length + data.away.injuries.length },
+    ...(g.status.state !== 'post' ? [{ key: 'intel', label: 'Intel' }] : []),
     ...(started ? [{ key: 'live', label: g.status.state === 'post' ? 'Final box' : 'Live' }] : []),
   ]
   return (
@@ -52,6 +54,7 @@ export function GamePage() {
         {cur === 'props' && <GameProps data={data} />}
         {cur === 'trends' && <Trends data={data} />}
         {cur === 'injuries' && <Injuries data={data} />}
+        {cur === 'intel' && <GameIntel gameId={g.id} official={data.home.injuries.length + data.away.injuries.length} />}
         {cur === 'live' && <LiveBox data={data} />}
       </div>
     </div>
