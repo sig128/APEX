@@ -118,3 +118,17 @@ export function oddsMeaning(american) {
   const pp = `${(p * 100).toFixed(1)}%`
   return n < 0 ? `${n}: risk $${-n} to win $100. The book is saying this happens ${pp} of the time.` : `+${n}: risk $100 to win $${n}. The book is saying this happens ${pp} of the time.`
 }
+
+/**
+ * Odds in any format -> decimal odds: American (-110, +150), decimal (1.91) or fractional (10/11).
+ * Returns null when it isn't a price.
+ */
+export function parseAnyOdds(s) {
+  const t = String(s ?? '').trim()
+  const am = parseOdds(t)
+  if (am != null) return decimalOf(am)
+  const fr = /^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/.exec(t)
+  if (fr && Number(fr[2]) > 0) return 1 + Number(fr[1]) / Number(fr[2])
+  const d = Number(t)
+  return /^\d+(\.\d+)?$/.test(t) && d > 1 && d < 100 ? d : null
+}

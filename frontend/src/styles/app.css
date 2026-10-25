@@ -3593,14 +3593,14 @@ code {
 }
 
 /* ---- parlay check: every leg gets a call, like an official's signal ---------------------- */
-.check {
+.pcheck {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
 @media (min-width: 980px) {
-  .check {
+  .pcheck {
     grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
   }
   .check__in {
@@ -5251,4 +5251,99 @@ code {
 .strip__cell {
   scroll-snap-align: start;
   display: flex;
+}
+
+/* ---- Kelly calculator ------------------------------------------------------------------- */
+.kcalc {
+  margin-bottom: 26px;
+  padding: 20px 22px;
+  border-radius: var(--r-l);
+  background: radial-gradient(120% 140% at 100% 0%, rgba(252, 216, 0, 0.08), transparent 55%), var(--stand);
+  border: 1px solid var(--seat);
+}
+.kcalc__grid {
+  display: grid;
+  gap: 22px;
+}
+@media (min-width: 960px) {
+  .kcalc__grid {
+    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  }
+}
+.kcalc__in {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.kcalc__in .field > span:first-child {
+  font-weight: 700;
+}
+.kcalc__in input:not([type='checkbox']) {
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--seat-2);
+  background: var(--night);
+  color: var(--chalk);
+  font: inherit;
+}
+.kcalc__in input:focus {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.kcalc__in .field {
+  display: grid;
+  gap: 6px;
+}
+.kcalc__sharp,
+.kcalc__mult {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kcalc__sharp input {
+  width: 100px;
+}
+.kcalc__mult input {
+  width: 80px;
+}
+.kcalc__hint {
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+.kcalc__out {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.kcalc__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px 22px;
+  margin: 0;
+}
+.kcalc__facts dt {
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+.kcalc__facts dd {
+  margin: 2px 0 0;
+  font-size: 26px;
+}
+.kcalc__main {
+  grid-column: 1 / -1;
+}
+.kcalc__main dd {
+  font-size: clamp(48px, 9vw, 76px);
+  line-height: 0.95;
+  color: var(--gold);
+}
+.kcalc__facts .is-plus { color: var(--turf); }
+.kcalc__facts .is-minus { color: var(--flag); }
+.kcalc__say {
+  margin: 0;
+  max-width: 70ch;
+  line-height: 1.55;
+  color: var(--chalk-2);
 }

@@ -251,6 +251,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
       price: p.price,
       profit: p.profit ?? null,
       note: p.note || '',
+      tails: p.tails || 0,
       legs: p.legs.map((l) => ({ id: l.id, playerId: l.playerId || null, teamId: l.teamId || null, name: l.name, short: l.short, headshot: l.headshot || null, teamAbbr: l.teamAbbr, oppAbbr: l.oppAbbr, market: l.market, label: l.label, line: l.line, side: l.side, kickoff: l.kickoff, price: l.price, book: l.book || null, prob: l.prob, fair: l.fair, score: l.score, result: l.result || null, value: l.value ?? null, gameId: l.gameId })),
     }
   }
@@ -460,6 +461,26 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     return { ok: true }
   }
 
+  /**
+   * Tail a pick: count it once per person (signed-in uid, or a hash of the address for guests)
+   * while it's still open. The legs go onto the tailer's own slip in the browser.
+   */
+  async function tail(id, who) {
+    if (typeof id !== 'string' || !/^pk_[0-9a-f]{20}$/.test(id)) throw new ApiError(404, 'not_found', 'No such pick.')
+    const key = crypto.createHash('sha256').update(`${id}|${who}`).digest('hex').slice(0, 32)
+    const out = await d.tx(async (tx) => {
+      const p = await tx.get('picks', id)
+      if (!p) throw new ApiError(404, 'not_found', 'No such pick.')
+      if (now() >= p.lockAt) throw new ApiError(409, 'locked', 'This pick has kicked off, so it can’t be tailed now.')
+      if (await tx.get('tails', key)) return { tails: p.tails || 0, already: true }
+      tx.set('tails', key, { pick: id, at: now() })
+      tx.merge('picks', id, { tails: (p.tails || 0) + 1 })
+      return { tails: (p.tails || 0) + 1, already: false }
+    })
+    bust()
+    return out
+  }
+
   async function picksOf(uid, { limit = 30, before } = {}) {
     return d.recent('picks', { field: 'createdAt', limit, where: [['uid', '==', uid]], before })
   }
@@ -640,5 +661,5 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     return { ok: true, handle, hidden: Boolean(hidden) }
   }
 
-  return { me, saveProfile, post, check, remove, page, feed, leaderboard, gradeOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, _atLeast: atLeast }
+  return { me, saveProfile, post, check, remove, tail, page, feed, leaderboard, gradeOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, _atLeast: atLeast }
 }

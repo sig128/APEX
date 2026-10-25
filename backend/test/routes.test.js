@@ -314,6 +314,18 @@ test('picks: pages for everyone, showcase for Elite', async () => {
   const board = await api.get('/api/picks/leaderboard?range=all')
   assert.equal(board.status, 200)
   assert.equal(board.body.min, 5)
+  // tailing: counted once per person while the pick is open
+  const pid = post.body.picks[0].id
+  const t1 = await api.post(`/api/picks/${pid}/tail`, {}, { headers: bearer('u_free') })
+  assert.equal(t1.status, 200, JSON.stringify(t1.body))
+  assert.equal(t1.body.tails, 1)
+  const t2 = await api.post(`/api/picks/${pid}/tail`, {}, { headers: bearer('u_free') })
+  assert.equal(t2.body.tails, 1, 'the same person twice counts once')
+  assert.equal(t2.body.already, true)
+  assert.equal((await api.post(`/api/picks/${pid}/tail`, {})).body.tails, 2, 'a guest counts too')
+  assert.equal((await api.post('/api/picks/pk_nope/tail', {})).status, 404)
+  const tailed = await api.get('/api/picks/u/sharp_one')
+  assert.equal(tailed.body.open[0].tails, 2)
   const del = await api.del(`/api/picks/${post.body.picks[0].id}`, { headers: bearer('u_free') })
   assert.equal(del.status, 404, 'only the owner can delete')
   const mine = await api.del(`/api/picks/${post.body.picks[0].id}`, { headers: bearer('u_elite') })

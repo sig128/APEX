@@ -83,6 +83,13 @@ export function picksRoutes({ picks, access }) {
     throttle(readLimit, clientIp(req))
     return picks.check(req.body || {})
   }))
+  r.post('/:id/tail', wrap(async (req) => {
+    needDb()
+    const u = await viewer(req).catch(() => null)
+    const who = u ? `u:${u.uid}` : `ip:${clientIp(req)}`
+    throttle(writeLimit, who)
+    return picks.tail(req.params.id, who)
+  }))
   r.delete('/:id', wrap(async (req) => {
     const u = await signedIn(req)
     throttle(writeLimit, u.uid)

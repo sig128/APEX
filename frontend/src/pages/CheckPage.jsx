@@ -159,7 +159,7 @@ export function CheckPage() {
         <p className="page-sub">Show APEX the parlay before you place it. Every leg gets a call, keep, cut or swap, with the numbers behind it, and the whole slip is played out 20,000 times.</p>
       </header>
       <Locked need="pro" title="The parlay check">
-        <div className="check">
+        <div className="pcheck">
           <section className="check__in" aria-label="Your parlay">
             <div className="seg" role="tablist" aria-label="How to add your parlay">
               {MODES.map((m) => (

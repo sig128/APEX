@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Headshot } from './Img.jsx'
 import { EliteBadge } from './Bits.jsx'
@@ -5,6 +6,8 @@ import { odds, units as fmtUnits, ago, kickoff, pct, bookName, impliedOf } from 
 import { importLegs } from '../lib/slip.js'
 import { SITE_URL } from '../lib/config.js'
 import { Odds } from './Odds.jsx'
+import { SendToBook } from './Books.jsx'
+import { api } from '../lib/api.js'
 
 const RESULT = { win: 'Won', loss: 'Lost', push: 'Push', void: 'Void' }
 
@@ -15,6 +18,20 @@ export function Avatar({ profile, size = 40 }) {
 /** One posted pick: legs, price, units, and how it turned out. */
 export function PickCard({ pick, showProfile = false, onDelete, owner = false }) {
   const locked = pick.locked || Date.now() >= pick.lockAt
+  const [tails, setTails] = useState(pick.tails || 0)
+  const [tailed, setTailed] = useState(false)
+  const [sending, setSending] = useState(false)
+  const tail = () => {
+    // the legs go on your slip at the prices they were posted at; then pick a book
+    importLegs(pick.legs, Object.fromEntries(pick.legs.filter((l) => Number.isFinite(l.price)).map((l) => [l.id, l.price])))
+    setSending(true)
+    if (!tailed) {
+      setTailed(true)
+      api(`/api/picks/${pick.id}/tail`, { method: 'POST', body: {} })
+        .then((r) => Number.isFinite(r?.tails) && setTails(r.tails))
+        .catch(() => {})
+    }
+  }
   const status = pick.status === 'graded' ? pick.result : locked ? 'live' : 'open'
   const shareText = `${pick.legs.length > 1 ? `${pick.legs.length}-leg parlay` : pick.legs[0].label}${pick.legs.length === 1 ? ` (${pick.legs[0].name})` : ''} ${odds(pick.price)}, ${pick.units}u. Graded live on APEX.`
   const pageUrl = `${SITE_URL}/u/${pick.handle}`
@@ -62,11 +79,14 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
           {status === 'live' && 'In play'}
           {pick.status === 'graded' && `${RESULT[pick.result]}${pick.profit ? `, ${fmtUnits(pick.profit)}` : ''}`}
         </span>
-        <span className="pick__when muted">{ago(pick.createdAt)}</span>
+        <span className="pick__when muted">
+          {ago(pick.createdAt)}
+          {tails > 0 && `, ${tails} tailing`}
+        </span>
         <span className="pick__acts">
-          {!locked && (
-            <button type="button" className="linkish" onClick={() => importLegs(pick.legs) || window.dispatchEvent(new Event('apex:open-slip'))}>
-              Copy to slip
+          {!locked && !owner && (
+            <button type="button" className="btn btn--gold btn--s pick__tail" onClick={tail}>
+              Tail
             </button>
           )}
           <a className="linkish" href={`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(pageUrl)}`} target="_blank" rel="noopener noreferrer">
@@ -79,6 +99,7 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
           )}
         </span>
       </footer>
+      {sending && <SendToBook open={sending} onClose={() => setSending(false)} legs={pick.legs} p={pick.legs.reduce((x, l) => x * (l.prob || 0), 1) || null} title={`Tail ${pick.handle ? `@${pick.handle}` : 'this pick'} at a sportsbook`} />}
     </article>
   )
 }
