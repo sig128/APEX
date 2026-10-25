@@ -113,6 +113,58 @@ export function recordOf(picks) {
   return r
 }
 
+// Running totals kept on the profile, updated in the same transaction that grades a pick, so
+// a record never misses or double-counts a pick however many picks someone has posted.
+const bucket = () => ({ wins: 0, losses: 0, pushes: 0, voids: 0, units: 0, risked: 0 })
+const KEEP_DAYS = 40
+
+function addPick(b, pick) {
+  const x = { ...bucket(), ...(b || {}) }
+  if (pick.result === 'win') x.wins++
+  else if (pick.result === 'loss') x.losses++
+  else if (pick.result === 'push') x.pushes++
+  else x.voids++
+  if (pick.result === 'win' || pick.result === 'loss') x.risked = round(x.risked + pick.units, 2)
+  x.units = round(x.units + (pick.profit || 0), 2)
+  return x
+}
+
+/** stats + one newly graded pick (graded on local day `day`, YYYY-MM-DD). */
+export function applyGraded(stats, pick, day) {
+  const cur = stats || { all: bucket(), days: {}, recent: [] }
+  const days = { ...(cur.days || {}) }
+  days[day] = addPick(days[day], pick)
+  const keys = Object.keys(days).sort()
+  while (keys.length > KEEP_DAYS) delete days[keys.shift()]
+  const recent = pick.result === 'win' || pick.result === 'loss' ? [pick.result === 'win' ? 'W' : 'L', ...(cur.recent || [])].slice(0, 20) : cur.recent || []
+  return { all: addPick(cur.all, pick), days, recent }
+}
+
+function recordView(b, recent) {
+  const x = { ...bucket(), ...(b || {}) }
+  const graded = x.wins + x.losses
+  let streak = ''
+  for (const c of recent) {
+    if (!streak) streak = c
+    else if (streak[0] === c) streak += c
+    else break
+  }
+  return { wins: x.wins, losses: x.losses, pushes: x.pushes, voids: x.voids, units: round(x.units, 2), graded, roi: x.risked ? round(x.units / x.risked, 4) : null, hitRate: graded ? round(x.wins / graded, 4) : null, streak: streak ? `${streak[0]}${streak.length}` : null, last10: recent.slice(0, 10) }
+}
+
+/** The public record (all time and the last 30 days) from the running totals. */
+export function recordFromStats(stats, t, tz) {
+  if (!stats) return null
+  const from = dayKey(t - 29 * DAY_MS, tz)
+  let d30 = bucket()
+  for (const [day, b] of Object.entries(stats.days || {})) {
+    if (day < from) continue
+    d30 = { wins: d30.wins + b.wins, losses: d30.losses + b.losses, pushes: d30.pushes + b.pushes, voids: d30.voids + b.voids, units: round(d30.units + b.units, 2), risked: round(d30.risked + b.risked, 2) }
+  }
+  const recent = stats.recent || []
+  return { all: recordView(stats.all, recent), d30: recordView(d30, recent) }
+}
+
 export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
   const d = docs
   let lastGrade = 0
@@ -147,7 +199,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
       ig: elite ? p.ig || null : null,
       elite,
       since: p.createdAt || null,
-      record: p.record || null,
+      record: p.stats ? recordFromStats(p.stats, t, billingConfig().usageTz) : null,
       hidden: Boolean(p.hidden),
     }
   }
@@ -241,7 +293,8 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
         handleChangedAt: changing ? t : cur?.handleChangedAt || null,
         eliteUntil: eliteUntilFor(user, ent),
         hidden: Boolean(cur?.hidden),
-        record: cur?.record || null,
+        stats: cur?.stats || null,
+        recordAt: cur?.recordAt ?? null,
       }
       tx.set('profiles', user.uid, next)
       tx.set('profileHandles', handle, { uid: user.uid, at: t })
@@ -389,22 +442,37 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     const key = range === 'all' ? 'all' : 'd30'
     return cached(`board:${key}`, 60_000, async () => {
       const t = now()
-      const profs = await d.recent('profiles', { field: 'updatedAt', limit: 200 })
+      // everyone with a recently graded pick (recordAt is stamped when a pick is graded)
+      const profs = await d.recent('profiles', { field: 'recordAt', limit: 200, ...(key === 'd30' ? { where: [['recordAt', '>=', t - 30 * DAY_MS]] } : {}) })
       const rows = profs
-        .filter((p) => !p.hidden && (p.eliteUntil || 0) > t && p.record?.[key]?.graded >= MIN_GRADED_FOR_BOARD)
-        .map((p) => ({ profile: publicProfile(p, t), record: p.record[key] }))
+        .filter((p) => !p.hidden && (p.eliteUntil || 0) > t)
+        .map((p) => ({ p, rec: recordFromStats(p.stats, t, billingConfig().usageTz)?.[key] }))
+        .filter((x) => x.rec && x.rec.graded >= MIN_GRADED_FOR_BOARD)
+        .map((x) => ({ profile: publicProfile(x.p, t), record: x.rec }))
         .sort((a, b) => b.record.units - a.record.units || (b.record.roi ?? 0) - (a.record.roi ?? 0))
         .slice(0, 50)
       return { range: key === 'all' ? 'all' : '30d', rows, min: MIN_GRADED_FOR_BOARD }
     })
   }
 
-  async function refreshRecord(uid) {
-    const all = await picksOf(uid, { limit: 200 })
+  /** Recompute someone's totals from every graded pick (repairs; grading keeps them current). */
+  async function rebuildRecord(uid) {
+    const tz = billingConfig().usageTz
+    const all = []
+    let before
+    for (let i = 0; i < 100; i++) {
+      const page = await picksOf(uid, { limit: 200, before })
+      all.push(...page)
+      if (page.length < 200) break
+      before = page[page.length - 1].createdAt
+    }
+    const graded = all.filter((p) => p.status === 'graded').sort((a, b) => (a.gradedAt || 0) - (b.gradedAt || 0))
+    let stats = null
+    for (const p of graded) stats = applyGraded(stats, p, dayKey(p.gradedAt || p.createdAt, tz))
     const t = now()
-    const record = { all: recordOf(all), d30: recordOf(all.filter((p) => p.createdAt >= t - 30 * DAY_MS)), at: t }
-    await d.merge('profiles', uid, { record })
-    return record
+    await d.patch('profiles', uid, { stats, recordAt: graded.length ? graded[graded.length - 1].gradedAt || t : null })
+    bust()
+    return recordFromStats(stats, t, tz)
   }
 
   const summaryCache = new Map()
@@ -426,7 +494,9 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
 
   async function gradeOpen() {
     const t = now()
-    const open = await d.recent('picks', { field: 'lockAt', limit: 100, where: [['status', '==', 'open'], ['lockAt', '<=', t]] })
+    // oldest first: a pick waiting on a late game can't hold up the ones before it
+    const open = await d.recent('picks', { field: 'lockAt', limit: 150, dir: 'asc', where: [['status', '==', 'open'], ['lockAt', '<=', t]] })
+    const tz = billingConfig().usageTz
     const touched = new Set()
     const logs = new Map()
     async function logRow(playerId, gameId, kickoff) {
@@ -463,10 +533,17 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
         if (legs.some((l, i) => l.result !== p.legs[i].result)) await d.merge('picks', p.id, { legs })
         continue
       }
-      await d.merge('picks', p.id, { status: 'graded', result: done.result, profit: done.profit, decimal: done.decimal, legs: done.legs, gradedAt: t })
-      touched.add(p.uid)
+      const graded = { status: 'graded', result: done.result, profit: done.profit, decimal: done.decimal, legs: done.legs, gradedAt: t }
+      const ok = await d.tx(async (tx) => {
+        const cur = await tx.get('picks', p.id)
+        if (!cur || cur.status !== 'open') return false // graded elsewhere, or deleted
+        const prof = await tx.get('profiles', p.uid)
+        tx.merge('picks', p.id, graded)
+        if (prof) tx.patch('profiles', p.uid, { stats: applyGraded(prof.stats, { ...cur, ...graded }, dayKey(t, tz)), recordAt: t })
+        return true
+      })
+      if (ok) touched.add(p.uid)
     }
-    for (const uid of touched) await refreshRecord(uid)
     if (touched.size) bust()
     lastGrade = t
     return { checked: open.length, graded: touched.size }
@@ -497,5 +574,5 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     return { ok: true, handle, hidden: Boolean(hidden) }
   }
 
-  return { me, saveProfile, post, remove, page, feed, leaderboard, gradeOpen, maybeGrade, syncPlan, setHidden, refreshRecord, eliteUntilFor, publicProfile, _atLeast: atLeast }
+  return { me, saveProfile, post, remove, page, feed, leaderboard, gradeOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, _atLeast: atLeast }
 }

@@ -96,7 +96,7 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
       if (cur && t - cur.at < maxAge) return
       try {
         const props = await espn.propBets(g.id, { priority: 'normal' })
-        if (wh.setLines(g.id, props, now())) publish(`props:${g.id}`, 'update', { gameId: g.id, at: now() })
+        if (wh.setLines(g.id, props, now(), { keepMissing: until < 45 * MIN })) publish(`props:${g.id}`, 'update', { gameId: g.id, at: now() })
       } catch (e) {
         log.warn('prop lines failed', { game: g.id, err: errText(e) })
       }

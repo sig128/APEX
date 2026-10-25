@@ -35,6 +35,11 @@ export function createFirestoreDocs(db) {
     async merge(col, id, data) {
       await ref(col, id).set(stripUndefined(data), { merge: true })
     },
+    /** Replace these top-level fields whole (merge would keep nested keys that were removed). */
+    async patch(col, id, data) {
+      const clean = stripUndefined(data)
+      await ref(col, id).set(clean, { mergeFields: Object.keys(clean) })
+    },
     async del(col, id) {
       await ref(col, id).delete()
     },
@@ -47,15 +52,19 @@ export function createFirestoreDocs(db) {
           },
           set: (col, id, data) => t.set(ref(col, id), stripUndefined(data)),
           merge: (col, id, data) => t.set(ref(col, id), stripUndefined(data), { merge: true }),
+          patch: (col, id, data) => {
+            const clean = stripUndefined(data)
+            t.set(ref(col, id), clean, { mergeFields: Object.keys(clean) })
+          },
           del: (col, id) => t.delete(ref(col, id)),
         }),
       )
     },
-    /** Newest first. where: [[field, op, value], ...] */
-    async recent(col, { field = 'createdAt', limit = 50, where = [], before } = {}) {
+    /** Newest first (dir 'asc' for oldest first). where: [[field, op, value], ...] */
+    async recent(col, { field = 'createdAt', limit = 50, where = [], before, dir = 'desc' } = {}) {
       let q = db.collection(col)
       for (const [f, op, v] of where) q = q.where(f, op, v)
-      q = q.orderBy(field, 'desc')
+      q = q.orderBy(field, dir === 'asc' ? 'asc' : 'desc')
       if (before != null) q = q.startAfter(before)
       const snap = await q.limit(Math.min(200, limit)).get()
       return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
@@ -84,6 +93,9 @@ export function createStoreDocs(store) {
     async merge(col, id, data) {
       await store.update(ns(col), String(id), (cur) => deepMerge(cur || {}, stripUndefined(data)))
     },
+    async patch(col, id, data) {
+      await store.update(ns(col), String(id), (cur) => ({ ...(cur || {}), ...stripUndefined(data) }))
+    },
     async del(col, id) {
       await store.del(ns(col), String(id))
     },
@@ -94,22 +106,25 @@ export function createStoreDocs(store) {
           get: (col, id) => api.get(col, id),
           set: (col, id, data) => writes.push(() => api.set(col, id, data)),
           merge: (col, id, data) => writes.push(() => api.merge(col, id, data)),
+          patch: (col, id, data) => writes.push(() => api.patch(col, id, data)),
           del: (col, id) => writes.push(() => api.del(col, id)),
         })
         for (const w of writes) await w()
         return result
       })
     },
-    async recent(col, { field = 'createdAt', limit = 50, where = [], before } = {}) {
+    async recent(col, { field = 'createdAt', limit = 50, where = [], before, dir = 'desc' } = {}) {
       const keys = await store.keys(ns(col))
       const rows = []
       for (const k of keys) {
         const v = await store.get(ns(col), k)
         if (!v) continue
         const ok = where.every(([f, op, x]) => (op === '==' ? v[f] === x : op === '>=' ? v[f] >= x : op === '<=' ? v[f] <= x : op === '>' ? v[f] > x : op === '<' ? v[f] < x : true))
-        if (ok && (before == null || v[field] < before)) rows.push({ id: k, ...v })
+        // like Firestore: documents without the order field are left out
+        if (ok && v[field] != null && (before == null || v[field] < before)) rows.push({ id: k, ...v })
       }
-      return rows.sort((a, b) => (b[field] ?? 0) - (a[field] ?? 0)).slice(0, Math.min(200, limit))
+      const sign = dir === 'asc' ? -1 : 1
+      return rows.sort((a, b) => sign * ((b[field] ?? 0) - (a[field] ?? 0))).slice(0, Math.min(200, limit))
     },
   }
   return api

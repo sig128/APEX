@@ -74,9 +74,17 @@ export function createViews(engine) {
         pending += r.pending
       }
       const byId = new Map(rows.map((r) => [r.id, r]))
-      return { rows, pending, byId }
+      const byGame = new Map()
+      for (const r of rows) {
+        if (!byGame.has(r.gameId)) byGame.set(r.gameId, [])
+        byGame.get(r.gameId).push(r)
+      }
+      return { rows, pending, byId, byGame }
     })
   }
+
+  /** One game's rows, from the shared memo (live score changes don't rebuild analytics). */
+  const gameRows = (id) => allRows().byGame.get(String(id)) || []
 
   // ---- shapes ----------------------------------------------------------------------------------
   const gameCard = (g) => ({
@@ -232,7 +240,7 @@ export function createViews(engine) {
     if (!g) return null
     return cached(`game:${id}`, `${wh.aVersion}:${wh.version}`, () => {
       const s = wh.summaries.get(g.id)?.data || null
-      const { rows } = rowsForGame(g)
+      const rows = gameRows(g.id)
       const side = (t) => {
         const sched = wh.schedules.get(t.id)?.games || []
         const form = teamForm(sched, { home: t.id === g.home.id })
@@ -276,7 +284,7 @@ export function createViews(engine) {
     if (!g) return null
     return cached(`live:${id}`, wh.version, () => {
       const s = wh.summaries.get(g.id)?.data || null
-      const { rows } = rowsForGame(g)
+      const rows = gameRows(g.id)
       const tracked = rows
         .map((r) => ({ r, p: progressFor(r, g, s) }))
         .filter((x) => x.p && !x.p.untracked)
@@ -293,7 +301,7 @@ export function createViews(engine) {
         homeWinPct: s?.homeWinPct ?? null,
         leaders: s ? { [g.home.id]: boxLeaders(s, g.home.id), [g.away.id]: boxLeaders(s, g.away.id) } : {},
         scoring: (s?.scoring || []).slice(-6),
-        props: tracked.slice(0, 80).map(({ r, p }) => ({ ...card(r), live: p })),
+        props: tracked.slice(0, 160).map(({ r, p }) => ({ ...card(r), live: p })),
       }
     })
   }
@@ -316,7 +324,7 @@ export function createViews(engine) {
     for (const g of wh.games.values()) {
       if (g.status.state !== 'in' && g.status.state !== 'post') continue
       const s = wh.summaries.get(g.id)?.data
-      for (const r of rowsForGame(g).rows) {
+      for (const r of gameRows(g.id)) {
         const p = progressFor(r, g, s)
         if (!p || p.untracked) continue
         const sig = `${p.cur}|${p.status}`

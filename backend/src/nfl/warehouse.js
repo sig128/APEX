@@ -86,7 +86,11 @@ export function createWarehouse() {
   }
 
   w.setSummary = (id, data, at = Date.now()) => {
+    const prev = w.summaries.get(String(id))?.data
     w.summaries.set(String(id), { data, at })
+    // Only injury news moves the prop analytics; box scores and clocks are live-only changes.
+    const injSig = (d) => (d?.injuries || []).map((i) => `${i.athleteId}:${i.status}`).sort().join('|')
+    const moved = !prev || injSig(prev) !== injSig(data)
     if (data?.injuries) {
       const byTeam = new Map()
       for (const i of data.injuries) {
@@ -99,7 +103,7 @@ export function createWarehouse() {
     for (const p of Object.values(data?.players || {})) {
       if (!w.players.has(p.id)) w.players.set(p.id, { id: p.id, name: p.name, short: p.short, pos: '', teamId: p.teamId, jersey: p.jersey, headshot: `https://a.espncdn.com/i/headshots/nfl/players/full/${p.id}.png` })
     }
-    w.bump(data?.status?.state === 'in' ? 'live' : 'core')
+    w.bump(moved && data?.status?.state !== 'in' ? 'core' : 'live')
   }
 
   w.setLogs = (playerId, season, rows, at = Date.now()) => {
@@ -113,8 +117,19 @@ export function createWarehouse() {
     w.bump('logs')
   }
 
-  w.setLines = (gameId, props, at = Date.now()) => {
+  /**
+   * Prop lines for one game. Books pull markets in the last minutes before kickoff; with
+   * keepMissing the lines that vanished stay (they are the closing lines the live tracker and
+   * graded picks are measured against), and an empty reply never wipes a game's board.
+   */
+  w.setLines = (gameId, propsIn, at = Date.now(), { keepMissing = false } = {}) => {
     const prev = w.lines.get(String(gameId))
+    let props = propsIn
+    if (prev?.props?.length && (!props.length || keepMissing)) {
+      const k = (p) => `${p.athleteId || p.teamId}:${p.market}`
+      const have = new Set(props.map(k))
+      props = props.concat(prev.props.filter((p) => !have.has(k(p))))
+    }
     const sig = props.map((p) => `${p.athleteId || p.teamId}:${p.market}:${p.line}`).sort().join('|')
     w.lines.set(String(gameId), { props, at, sig })
     if (!prev || prev.sig !== sig) {

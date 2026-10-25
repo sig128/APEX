@@ -23,7 +23,8 @@ export const atLeast = (plan, need) => (PLAN_RANK[plan] ?? 0) >= (PLAN_RANK[need
  */
 export function applyPurchase(sub, planId, at, cfg, periodMs = cfg.periodDays * DAY_MS) {
   if (periodMs === 'lifetime') return { plan: planId, paidUntil: LIFETIME, lifetime: true }
-  const active = sub && sub.plan && sub.paidUntil > at ? sub : null
+  // a revoked pass gives no credit toward the next one
+  const active = sub && sub.plan && !sub.revoked && sub.paidUntil > at ? sub : null
   if (active?.lifetime) return { plan: atLeast(active.plan, planId) ? active.plan : planId, paidUntil: LIFETIME, lifetime: true }
   if (!active) return { plan: planId, paidUntil: at + periodMs, lifetime: false }
   if (active.plan === planId) return { plan: planId, paidUntil: active.paidUntil + periodMs, lifetime: false }
@@ -263,14 +264,18 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     const cfg = billingConfig()
     const inv = await ownedInvoice(user, id)
     if (inv.status === 'paid') return { status: 'paid', invoice: invoiceView(inv, cfg) }
-    const c = chain({ ...cfg, network: inv.network, chainId: inv.chainId })
+    const c = chain({ ...cfg, network: inv.network, chainId: inv.chainId, rpcUrl: inv.network === cfg.network ? cfg.rpcUrl : NETWORKS[inv.network].rpc })
     const head = await c.blockNumber()
-    // Base makes a block about every 2 seconds
-    const est = head - Math.ceil((now() - inv.createdAt + SKEW_MS) / 2000)
-    const from = Math.max(inv.scannedTo ?? inv.startBlock ?? est, est - 50)
+    // Base makes a block about every 2 seconds. Start a little before the request was made (the
+    // same clock-skew allowance confirm() gives), then pick up where the last scan stopped, with
+    // a few blocks of overlap in case the newest ones were reorganized.
+    const skewBlocks = Math.ceil(SKEW_MS / 2000)
+    const createdBlock = inv.startBlock ?? head - Math.ceil((now() - inv.createdAt) / 2000)
+    const first = Math.max(0, createdBlock - skewBlocks)
+    const from = inv.scannedTo != null ? Math.max(first, inv.scannedTo - cfg.confirmations) : first
     const found = await c.findTransfer({ token: inv.token, to: inv.treasury, amount: inv.units, fromBlock: from, toBlock: head })
     if (found.txHash) return confirm(user, id, found.txHash)
-    await d.merge('billingInvoices', inv.id, { scannedTo: Math.max(from, (found.scannedTo ?? head) - cfg.confirmations) })
+    await d.merge('billingInvoices', inv.id, { scannedTo: found.scannedTo ?? head })
     return { status: 'not_found', invoice: invoiceView(inv, cfg) }
   }
 

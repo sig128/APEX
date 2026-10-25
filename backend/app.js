@@ -140,6 +140,8 @@ export function createApexApp({
         if (!atLeast(a.tier, 'pro')) throw new ApiError(402, 'upgrade', 'The AI analyzer is part of Pro and Elite.', { need: 'pro', plan: a.tier, status: a.ent.status })
         user = a.user
         const kind = req.body?.game ? 'analyses' : 'followups'
+        // a follow-up continues an analysis: at least question, answer, next question
+        if (kind === 'followups' && !(Array.isArray(req.body?.messages) && req.body.messages.length >= 3)) throw new ApiError(400, 'bad_followup', 'Start with a game analysis, then ask follow-ups.')
         const u = await billing.useQuota(user, a.ent, kind)
         if (u.limit != null) res.setHeader('X-Apex-Usage', `${u.used}/${u.limit}`)
         req.apexQuota = { kind, user }

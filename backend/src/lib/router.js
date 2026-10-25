@@ -29,13 +29,19 @@ function compile(pattern) {
   return { re: new RegExp(`^${re}/?$`), keys }
 }
 
-/** The caller's IP. Behind Google's front end (or APEX_TRUST_PROXY=1) the right-most X-Forwarded-For hop is the one the proxy saw. */
+/**
+ * The caller's IP. Behind Google's front end (or APEX_TRUST_PROXY=1) each trusted proxy appends
+ * the address it saw to X-Forwarded-For, so the real client is APEX_TRUSTED_HOPS from the right
+ * (1 = Cloud Functions called directly; 2 = through a Firebase Hosting rewrite). Anything further
+ * left was written by the client and is never trusted.
+ */
 export function clientIp(req) {
   const trust = Boolean(process.env.K_SERVICE) || process.env.APEX_TRUST_PROXY === '1'
   if (trust) {
     const xff = String(req.headers?.['x-forwarded-for'] || '')
     const parts = xff.split(',').map((s) => s.trim()).filter(Boolean)
-    if (parts.length) return parts[parts.length - 1]
+    const hops = Math.min(4, Math.max(1, Number.parseInt(process.env.APEX_TRUSTED_HOPS || '1', 10) || 1))
+    if (parts.length) return parts[Math.max(0, parts.length - hops)]
   }
   return req.socket?.remoteAddress || req.ip || 'unknown'
 }

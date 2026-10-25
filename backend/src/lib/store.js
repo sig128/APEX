@@ -6,8 +6,23 @@ import { log, errText } from './log.js'
 
 const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)))
 
+/** Serialize work per key inside one process (update() reads, awaits, then writes). */
+function keyLocks() {
+  const locks = new Map()
+  return function withLock(key, fn) {
+    const prev = locks.get(key) || Promise.resolve()
+    const run = prev.then(fn, fn)
+    const tail = run.catch(() => {}).finally(() => {
+      if (locks.get(key) === tail) locks.delete(key)
+    })
+    locks.set(key, tail)
+    return run
+  }
+}
+
 function memoryDriver() {
   const data = new Map()
+  const withLock = keyLocks()
   const ns = (n) => {
     let m = data.get(n)
     if (!m) {
@@ -30,11 +45,13 @@ function memoryDriver() {
     async keys(n) {
       return [...ns(n).keys()]
     },
-    async update(n, k, fn) {
-      const next = await fn(clone(ns(n).get(k)))
-      if (next === undefined) return clone(ns(n).get(k))
-      ns(n).set(k, clone(next))
-      return clone(next)
+    update(n, k, fn) {
+      return withLock(`${n}/${k}`, async () => {
+        const next = await fn(clone(ns(n).get(k)))
+        if (next === undefined) return clone(ns(n).get(k))
+        ns(n).set(k, clone(next))
+        return clone(next)
+      })
     },
   }
 }
@@ -44,7 +61,7 @@ function safeName(k) {
 }
 
 function diskDriver(dir) {
-  const locks = new Map()
+  const withLock = keyLocks()
   const file = (n, k) => path.join(dir, safeName(n), `${safeName(k)}.json`)
   async function read(n, k) {
     try {
@@ -61,17 +78,6 @@ function diskDriver(dir) {
     const tmp = `${f}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
     await fs.writeFile(tmp, JSON.stringify(v))
     await fs.rename(tmp, f)
-  }
-  function withLock(key, fn) {
-    const prev = locks.get(key) || Promise.resolve()
-    const run = prev.then(fn, fn)
-    locks.set(
-      key,
-      run.catch(() => {}).finally(() => {
-        if (locks.get(key) === run) locks.delete(key)
-      }),
-    )
-    return run
   }
   return {
     kind: 'disk',
