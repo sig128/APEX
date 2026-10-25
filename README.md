@@ -27,7 +27,7 @@ backend/     the API (Express). app.js builds it; server.js runs it locally.
   src/billing/    passes: invoices, on-chain checks, grace and lockout, allowances
   src/picks/      user pages, posting, grading, records, feed, leaderboard
   src/security/   sign-in, admin key, rate limits, stream tickets
-  test/           75 tests on recorded ESPN data (Week 7, 2026)
+  test/           77 tests on recorded ESPN data (Week 7, 2026)
 frontend/    the site (React + Vite)
   src/pages/      Today, Props, Game, Prop, Player, Live, Slip, Picks, /u/:handle, Kelly, Plans, Account, Admin
   src/intro/      the opening animation
@@ -57,7 +57,7 @@ replay the intro any time (it otherwise plays at most every 6 hours).
 Tests:
 
 ```bash
-npm test                            # backend: 75 tests, about 15 seconds
+npm test                            # backend: 77 tests, about 15 seconds
 npm test --prefix frontend          # slip, Kelly and wallet math
 ```
 
@@ -73,7 +73,9 @@ npm test --prefix frontend          # slip, Kelly and wallet math
    firebase functions:secrets:set THE_ODDS_API_KEY     # optional, adds sportsbook prices
    ```
 3. **Settings.** `cp functions/.env.example functions/.env`, then set at least
-   `APEX_ADMIN_EMAILS` (your Google account). Leave `APEX_TREASURY_ADDRESS` empty for now.
+   `APEX_ADMIN_EMAILS` (your Google account) and `APEX_PUBLIC_SITE_URL` (your site's address,
+   used for the preview cards when people share their picks pages). Leave
+   `APEX_TREASURY_ADDRESS` empty for now.
 4. **Site config.** `cp frontend/.env.example frontend/.env.production` and fill in the Firebase
    web config, plus `VITE_API_BASE=https://us-central1-<project>.cloudfunctions.net/chat` and
    `VITE_PUBLIC_SITE_URL=https://<project>.web.app`.
