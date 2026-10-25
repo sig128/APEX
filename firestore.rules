@@ -65,31 +65,36 @@ service cloud.firestore {
         && gameOk(d.game) && cardsOk(d.betCards)
         && d.updatedAt == request.time;
     }
-    function quotaBumped() {
+    // The counter moved in this same batch, and it names this document: one bump, one save.
+    function quotaBumped(gameId) {
       let q = /databases/$(database)/documents/pastGamesQuota/$(request.auth.uid);
-      return existsAfter(q) && (getAfter(q).data.windowStart == request.time
-        || (exists(q) && getAfter(q).data.n == get(q).data.n + 1));
+      return existsAfter(q) && getAfter(q).data.last == gameId
+        && (getAfter(q).data.windowStart == request.time
+          || (exists(q) && getAfter(q).data.n == get(q).data.n + 1));
     }
 
     match /pastGames/{gameId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && pastGameOk(request.resource.data)
         && request.resource.data.analyzedAt == request.time
-        && quotaBumped();
+        && quotaBumped(gameId);
+      // only the bet cards change after a save (older saves keep whatever shape they had)
       allow update: if request.auth != null
         && resource.data.userId == request.auth.uid
-        && pastGameOk(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['betCards', 'updatedAt']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['betCards', 'updatedAt'])
+        && cardsOk(request.resource.data.betCards)
+        && request.resource.data.updatedAt == request.time;
       allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
     // One counter per user: a new day-long window starting now with one save, or one more save
-    // in the current window, up to 60.
+    // in the current window, up to 60. `last` is the id of the save it was bumped for.
     match /pastGamesQuota/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['windowStart', 'n'])
+        && request.resource.data.keys().hasOnly(['windowStart', 'n', 'last'])
         && request.resource.data.n is int
+        && request.resource.data.last is string && request.resource.data.last.size() <= 40
         && (
           (request.resource.data.windowStart == request.time && request.resource.data.n == 1
             && (resource == null || request.time > resource.data.windowStart + duration.value(1, 'd')))

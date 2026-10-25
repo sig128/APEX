@@ -10,28 +10,34 @@ function keyFor(pool, day) {
   return pool === 'nfl' ? `spend:${day}` : `spend:${pool}:${day}`
 }
 
-/** Reserve `cost` credits from today's pool. { ok, used } — ok is false once the pool is spent. */
+/**
+ * Reserve `cost` credits from today's pool: { ok, used }, ok false once the pool is spent. A
+ * negative cost gives credits back (a call that returned nothing).
+ */
 export async function takeOddsCredits(store, cost, { pool = 'nfl', daily = 400, now = () => Date.now() } = {}) {
   const day = dayOf(now())
   const key = keyFor(pool, day)
-  if (!(cost > 0)) return { ok: true, used: 0 }
+  if (!Number.isFinite(cost) || cost === 0) return { ok: true, used: 0 }
+  const step = (used) => (cost > 0 && used + cost > daily ? null : Math.max(0, used + cost))
+  if (!store) {
+    const used = local.get(key) || 0
+    const next = step(used)
+    if (next == null) return { ok: false, used }
+    local.set(key, next)
+    if (local.size > 50) local.delete(local.keys().next().value)
+    return { ok: true, used: next }
+  }
   let ok = false
   let used = 0
-  if (!store) {
-    used = local.get(key) || 0
-    if (used + cost > daily) return { ok: false, used }
-    local.set(key, used + cost)
-    if (local.size > 50) local.delete(local.keys().next().value)
-    return { ok: true, used: used + cost }
-  }
   await store.update('oddsprops', key, (cur) => {
     used = cur?.used || 0
-    if (used + cost > daily) {
+    const next = step(used)
+    if (next == null) {
       ok = false
       return undefined
     }
     ok = true
-    used += cost
+    used = next
     return { used, day }
   })
   return { ok, used }

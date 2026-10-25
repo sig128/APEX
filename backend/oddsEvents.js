@@ -661,17 +661,31 @@ async function fetchMlbEventPlayerPropsOdds(apiKey, eventId) {
   if (hit && Date.now() - hit.at < EVENT_ODDS_TTL_MS) return hit.promise
   const markets = mlbEventOddsMarketKeysForFetch()
   const p = (async () => {
-    if (oddsBudget && !(await oddsBudget(markets.length))) {
+    // only games on the schedule (listing it is free) can cost credits
+    const { events } = await fetchOddsEventsSafe(apiKey, ['baseball_mlb'])
+    if (!events.some((ev) => ev.id === id)) throw Object.assign(new Error('That game isn’t on the MLB schedule right now.'), { status: 404, code: 'no_event' })
+    const cost = markets.length
+    if (oddsBudget && !(await oddsBudget(cost))) {
       throw Object.assign(new Error('Live odds are paused until tomorrow: today’s Odds API budget is used up.'), { status: 503, code: 'odds_budget' })
     }
-    const url = new URL(`${ODDS_BASE}/sports/baseball_mlb/events/${encodeURIComponent(id)}/odds`)
-    url.searchParams.set('apiKey', apiKey)
-    url.searchParams.set('regions', 'us')
-    url.searchParams.set('oddsFormat', 'american')
-    url.searchParams.set('markets', markets.join(','))
-    const res = await fetch(url, { headers: { Accept: 'application/json' } })
-    const text = await res.text()
+    // a call that didn't return odds gives its credits back
+    const refund = () => (oddsBudget ? oddsBudget(-cost).catch(() => {}) : null)
+    let res
+    let text
+    try {
+      const url = new URL(`${ODDS_BASE}/sports/baseball_mlb/events/${encodeURIComponent(id)}/odds`)
+      url.searchParams.set('apiKey', apiKey)
+      url.searchParams.set('regions', 'us')
+      url.searchParams.set('oddsFormat', 'american')
+      url.searchParams.set('markets', markets.join(','))
+      res = await fetch(url, { headers: { Accept: 'application/json' } })
+      text = await res.text()
+    } catch (e) {
+      await refund()
+      throw e
+    }
     if (!res.ok) {
+      await refund()
       throw new Error(parseOddsApiErrorMessage(text, res.status))
     }
     try {

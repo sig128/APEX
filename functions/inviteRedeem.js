@@ -10,28 +10,34 @@ if (!getApps().length) {
 
 const db = getFirestore()
 
-// Wrong guesses per account: 8 an hour. A sign-in is needed to try at all, and every kind of
-// miss gets the same answer, so there's nothing to learn from probing.
+// Tries per account: 8 an hour (a code that works is given back). A sign-in is needed to try at
+// all, and every kind of miss gets the same answer, so there's nothing to learn from probing.
 const MAX_MISSES = 8
 const MISS_WINDOW_MS = 60 * 60_000
 const MISS = 'That code isn’t valid, or it has expired or been used up.'
 
-async function guardMisses(uid) {
-  const ref = db.collection('inviteAttempts').doc(uid)
-  const snap = await ref.get()
-  const d = snap.exists ? snap.data() : null
-  if (d && d.windowStart > Date.now() - MISS_WINDOW_MS && d.n >= MAX_MISSES) {
-    throw new HttpsError('resource-exhausted', 'Too many tries. Wait an hour and check the code with whoever gave it to you.')
-  }
-}
-
-async function noteMiss(uid) {
+/** Every try is counted before the code is looked at (so parallel guesses can't slip past). */
+async function takeTry(uid) {
   const ref = db.collection('inviteAttempts').doc(uid)
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref)
     const d = snap.exists ? snap.data() : null
-    const fresh = !d || d.windowStart <= Date.now() - MISS_WINDOW_MS
-    tx.set(ref, { n: fresh ? 1 : (d.n || 0) + 1, windowStart: fresh ? Date.now() : d.windowStart, updatedAt: Date.now() })
+    const t = Date.now()
+    const fresh = !d || !(d.windowStart > t - MISS_WINDOW_MS)
+    const n = fresh ? 0 : d.n || 0
+    if (n >= MAX_MISSES) throw new HttpsError('resource-exhausted', 'Too many tries. Wait an hour and check the code with whoever gave it to you.')
+    tx.set(ref, { n: n + 1, windowStart: fresh ? t : d.windowStart, updatedAt: t })
+  })
+}
+
+/** A code that worked doesn't count against anyone. */
+async function giveBackTry(uid) {
+  const ref = db.collection('inviteAttempts').doc(uid)
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) return
+    const d = snap.data()
+    tx.set(ref, { ...d, n: Math.max(0, (d.n || 0) - 1), updatedAt: Date.now() })
   })
 }
 
@@ -63,7 +69,7 @@ export const redeemInvite = onCall(
     }
 
     const uid = request.auth.uid
-    await guardMisses(uid)
+    await takeTry(uid)
     const token = request.auth.token
     const userRef = db.collection('users').doc(uid)
     const codeRef = db.collection('inviteCodes').doc(code)
@@ -71,7 +77,7 @@ export const redeemInvite = onCall(
     const subRef = db.collection('subscriptions').doc(uid)
     const cfg = billingConfig()
 
-    const miss = () => new HttpsError('not-found', MISS, { miss: true })
+    const miss = () => new HttpsError('not-found', MISS)
     return db.runTransaction(async (transaction) => {
       const [userSnap, codeSnap, redemptionSnap, subSnap] = await Promise.all([transaction.get(userRef), transaction.get(codeRef), transaction.get(redemptionRef), transaction.get(subRef)])
       const verified = userSnap.exists && userSnap.data()?.inviteVerifiedAt != null
@@ -133,9 +139,9 @@ export const redeemInvite = onCall(
       )
 
       return { ok: true, alreadyVerified: verified, plan, entitlement: ent }
-    }).catch(async (e) => {
-      if (e instanceof HttpsError && e.details?.miss) await noteMiss(uid).catch(() => {})
-      throw e
+    }).then(async (out) => {
+      await giveBackTry(uid).catch(() => {})
+      return out
     })
   },
 )

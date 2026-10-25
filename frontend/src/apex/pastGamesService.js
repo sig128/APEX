@@ -85,7 +85,7 @@ export async function createPastGame(userId, { game, betCards }) {
   const save = async (fresh) => {
     const ref = doc(collection(db, PAST_GAMES_COLLECTION))
     const batch = writeBatch(db)
-    batch.set(qref, fresh ? { windowStart: serverTimestamp(), n: 1 } : { windowStart: cur.windowStart, n: (cur.n || 0) + 1 })
+    batch.set(qref, fresh ? { windowStart: serverTimestamp(), n: 1, last: ref.id } : { windowStart: cur.windowStart, n: (cur.n || 0) + 1, last: ref.id })
     batch.set(ref, {
       userId,
       homeTeam: g.homeTeam ?? '',

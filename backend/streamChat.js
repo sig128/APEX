@@ -85,6 +85,19 @@ function buildGameUserMessage(body, effectivePromptMode, mlbBettingScope, resolv
   return `===== GAME TO ANALYZE =====\n${g}${applyGameContext(body, sk)}\n\n${important}`
 }
 
+// What a game form can hold. Anything longer is cut, anything else is dropped, so an analysis
+// prompt is always one the server wrote from a few short fields.
+const GAME_FIELDS = { homeTeam: 80, awayTeam: 80, date: 40, gameTime: 40, stadium: 120, homeStarter: 80, awayStarter: 80, bankroll: 40, mlOdds: 80, totalOu: 80, context: 4000, sportKey: 60, oddsEventId: 64, commenceTimeIso: 40 }
+function cleanGame(game) {
+  const out = {}
+  for (const [k, max] of Object.entries(GAME_FIELDS)) {
+    const v = game[k]
+    if (typeof v === 'string') out[k] = v.slice(0, max)
+    else if (typeof v === 'number' && Number.isFinite(v)) out[k] = String(v).slice(0, max)
+  }
+  return out
+}
+
 /** @returns {Array<{role:'user'|'assistant',content:string}>|null} */
 function validateMessages(raw) {
   if (!Array.isArray(raw) || raw.length === 0) return null
@@ -116,8 +129,8 @@ export function extractTextFromMessage(msg) {
  * @returns {{ ok: false, status: number, error: string } | { ok: true, messagesForApi: Array, model: string, maxTokens: number, system: string, resolvedSportKey?: string }}
  */
 export function parseChatBody(req) {
+  let { game } = req.body || {}
   const {
-    game,
     messages: rawMessages,
     sportKey: bodySportKey,
     apexPromptMode,
@@ -138,7 +151,13 @@ export function parseChatBody(req) {
   const mlbBettingScope = normalizeMlbBettingScope(apexMlbBettingScope)
 
   let messagesForApi
-  if (game && typeof game === 'object') {
+  let kind
+  if (game != null && (typeof game !== 'object' || Array.isArray(game))) {
+    return { ok: false, status: 400, error: '`game` must be an object with homeTeam, awayTeam and date.' }
+  }
+  if (game) {
+    kind = 'analysis'
+    game = cleanGame(game)
     const { homeTeam, awayTeam, date, commenceTimeIso } = game
     if (!homeTeam?.trim() || !awayTeam?.trim() || !date?.trim()) {
       return {
@@ -167,6 +186,7 @@ export function parseChatBody(req) {
       },
     ]
   } else if (rawMessages != null) {
+    kind = 'followup'
     const v = validateMessages(rawMessages)
     if (!v) {
       return {
@@ -193,6 +213,8 @@ export function parseChatBody(req) {
 
   return {
     ok: true,
+    // 'analysis' (the server wrote the prompt from `game`) or 'followup' (the client sent the thread)
+    kind,
     messagesForApi,
     model,
     maxTokens,

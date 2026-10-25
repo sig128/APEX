@@ -159,7 +159,9 @@ export function createApexApp({
   const THREAD_MS = 48 * 3600_000
   const followupsPerThread = () => envInt('APEX_FOLLOWUPS_PER_ANALYSIS', 10, { min: 1, max: 100 })
   const fingerprint = (text) => crypto.createHash('sha256').update(String(text)).digest('base64url').slice(0, 22)
-  async function thread(uid, first, start) {
+  // mode: 'start' (an analysis registers its prompt), 'use' (a follow-up spends one of its
+  // follow-ups), 'drop' / 'undo' (the call failed: take it back)
+  async function thread(uid, first, mode) {
     const fp = fingerprint(first)
     let verdict = 'ok'
     await engineStore.update('chatThreads', uid, (cur) => {
@@ -167,9 +169,15 @@ export function createApexApp({
       const t = Date.now()
       const list = (cur?.list || []).filter((x) => t - x.at < THREAD_MS)
       const hit = list.find((x) => x.fp === fp)
-      if (start) {
+      if (mode === 'start') {
         if (hit) return undefined
         list.push({ fp, at: t, n: 0 })
+      } else if (mode === 'drop') {
+        if (!hit) return undefined
+        list.splice(list.indexOf(hit), 1)
+      } else if (mode === 'undo') {
+        if (!hit || !hit.n) return undefined
+        hit.n--
       } else if (!hit) {
         verdict = 'unknown'
         return undefined
@@ -197,36 +205,48 @@ export function createApexApp({
 
   async function chatGate(req, res, next) {
     try {
+      // What kind of call this is comes from how the prompt was built, never from the body: an
+      // analysis prompt is written by the server from a few short game fields; anything else is
+      // a follow-up and has to look like one.
+      const parsed = parseChatBody(req)
+      if (!parsed.ok) throw new ApiError(parsed.status, 'bad_request', parsed.error)
+      req.apexParsed = parsed
+      const kind = parsed.kind === 'analysis' ? 'analyses' : 'followups'
+      const first = parsed.messagesForApi[0].content
+      if (kind === 'followups' && !followupShapeOk(req.body?.messages)) throw new ApiError(400, 'bad_followup', 'Start with a game analysis, then ask follow-ups. Keep each question under 4,000 characters.')
       let user = null
+      let ent = null
       if (billingConfig().paywall) {
         const a = await access.resolve(req)
         if (!a.user) throw new ApiError(401, 'signin', 'Sign in to use the AI analyzer.', { need: 'pro' })
         if (!atLeast(a.tier, 'pro')) throw new ApiError(402, 'upgrade', 'The AI analyzer is part of Pro and Elite.', { need: 'pro', plan: a.tier, status: a.ent.status })
         user = a.user
-        const kind = req.body?.game ? 'analyses' : 'followups'
-        const parsed = parseChatBody(req)
-        if (!parsed.ok) throw new ApiError(parsed.status, 'bad_request', parsed.error)
-        req.apexParsed = parsed
-        if (kind === 'followups') {
-          if (!followupShapeOk(req.body?.messages)) throw new ApiError(400, 'bad_followup', 'Start with a game analysis, then ask follow-ups. Keep each question under 4,000 characters.')
-          const v = await thread(user.uid, parsed.messagesForApi[0].content, false)
-          if (v === 'unknown') throw new ApiError(400, 'bad_followup', 'Follow-ups continue an analysis you ran in the last two days. Start a new analysis first.')
-          if (v === 'full') throw new ApiError(429, 'thread_full', `That analysis has had its ${followupsPerThread()} follow-ups. Start a new one to keep going.`)
-        }
-        const u = await billing.useQuota(user, a.ent, kind)
-        if (u.limit != null) res.setHeader('X-Apex-Usage', `${u.used}/${u.limit}`)
-        req.apexQuota = { kind, user }
-        if (kind === 'analyses') await thread(user.uid, parsed.messagesForApi[0].content, true)
+        ent = a.ent
       } else if (authMode() !== 'optional') {
         user = await auth.authenticate(req)
         if (!(await auth.inviteVerified(user))) throw new ApiError(403, 'invite', 'Redeem an invite code to use the AI analyzer.')
       }
       if (user) {
         const lim = (user.admin ? adminHourly : chatHourly).take(user.uid)
-        if (!lim.ok) {
-          if (req.apexQuota) await billing.refundQuota(req.apexQuota.user, req.apexQuota.kind).catch(() => {})
-          throw new ApiError(429, 'slow_down', 'That is a lot of analyses this hour. Take a breather and try again soon.', { retryAfter: lim.retryAfter })
+        if (!lim.ok) throw new ApiError(429, 'slow_down', 'That is a lot of analyses this hour. Take a breather and try again soon.', { retryAfter: lim.retryAfter })
+      }
+      if (ent) {
+        if (kind === 'followups') {
+          const v = await thread(user.uid, first, 'use')
+          if (v === 'unknown') throw new ApiError(400, 'bad_followup', 'Follow-ups continue an analysis you ran in the last two days. Start a new analysis first.')
+          if (v === 'full') throw new ApiError(429, 'thread_full', `That analysis has had its ${followupsPerThread()} follow-ups. Start a new one to keep going.`)
         }
+        let u
+        try {
+          u = await billing.useQuota(user, ent, kind)
+        } catch (e) {
+          if (kind === 'followups') await thread(user.uid, first, 'undo').catch(() => {})
+          throw e
+        }
+        if (u.limit != null) res.setHeader('X-Apex-Usage', `${u.used}/${u.limit}`)
+        req.apexQuota = { kind, user }
+        req.apexThread = { uid: user.uid, first, kind }
+        if (kind === 'analyses') await thread(user.uid, first, 'start')
       }
       next()
     } catch (e) {
@@ -236,8 +256,11 @@ export function createApexApp({
     }
   }
 
+  /** A call that produced nothing gives its allowance back, and a failed analysis can't be continued. */
   async function refundIfEmpty(req, out) {
-    if (req.apexQuota && !out?.produced) await billing.refundQuota(req.apexQuota.user, req.apexQuota.kind).catch(() => {})
+    if (out?.produced) return
+    if (req.apexQuota) await billing.refundQuota(req.apexQuota.user, req.apexQuota.kind).catch(() => {})
+    if (req.apexThread) await thread(req.apexThread.uid, req.apexThread.first, req.apexThread.kind === 'analyses' ? 'drop' : 'undo').catch(() => {})
   }
 
   app.post('/api/chat/stream', chatGate, async (req, res) => {
