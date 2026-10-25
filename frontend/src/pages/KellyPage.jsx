@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { simulate, kellyFraction } from '../lib/kelly.js'
-import { decimalOf, parseOdds, pct, odds, parseAnyOdds, americanOf, impliedOf, noVigOf } from '../lib/format.js'
+import { parseOdds, pct, odds, parseAnyOdds, americanOf, noVigOf } from '../lib/format.js'
 import { RULES } from '../lib/rules.js'
 import { ImpliedHint } from '../ui/Odds.jsx'
 import { useTitle, useWidth } from '../lib/hooks.js'

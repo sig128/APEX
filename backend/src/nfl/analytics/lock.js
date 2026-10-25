@@ -89,7 +89,9 @@ export function certifyLeg(row, { now = Date.now(), injury = null } = {}) {
   const implied = price != null ? americanToProb(price) : null
   const edge = implied != null ? p - implied : null
   const ev = price != null ? p * americanToDecimal(price) - 1 : null
-  if (price == null) add('edge', 'Edge over the vig', 'pending', `No sportsbook price posted. Playable at ${fmt(playableAt(p))} or better`)
+  if (price == null && playableAt(p) <= RULES.maxFavorite) add('edge', 'Edge over the vig', 'fail', `Even a fair price would be ${fmt(playableAt(p))}: too short to beat the vig (the cap is ${fmt(RULES.maxFavorite)})`)
+  else if (price == null) add('edge', 'Edge over the vig', 'pending', `No sportsbook price posted. Playable at ${fmt(playableAt(p))} or better`)
+  else if (price <= RULES.maxFavorite) add('edge', 'Edge over the vig', 'fail', `${fmt(price)} is too short: at ${fmt(RULES.maxFavorite)} or shorter the book's margin swamps any edge`)
   else add('edge', 'Edge over the vig', edge >= RULES.edgeMin && ev > 0 ? 'pass' : 'fail', `${fmt(price)} implies ${pctTxt(implied)}; APEX ${pctTxt(p)}, edge ${(edge * 100).toFixed(1)} pts, EV ${ev >= 0 ? '+' : ''}${(ev * 100).toFixed(1)}%`)
 
   const sample = row.sample ?? 0
@@ -356,8 +358,8 @@ function nearMiss(cands) {
 }
 
 function passReason(f, near) {
-  if (!f.prob) return 'No prop on the board reaches 65% this week.'
-  if (f.certified < 3) return `Only ${f.certified} leg${f.certified === 1 ? '' : 's'} passed every check. A lock needs three.`
+  if (!f.prob) return 'No prop on the board reaches 65% right now.'
+  if (f.certified < 3) return f.certified ? `Only ${f.certified} leg${f.certified === 1 ? '' : 's'} passed every check. A lock needs three.` : 'No leg passed every check. A lock needs three.'
   if (!f.combos) return `No three certified legs multiply to over 45%${near ? `; the closest is ${Math.round(near.independent * 100)}%` : ''}.`
   if (f.negative >= f.combos) return 'Every combination over 45% has legs that pull against each other.'
   return 'No combination over 45% has positive expected value at the posted prices.'

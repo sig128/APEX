@@ -16,6 +16,7 @@ import { AskApex } from '../ui/AskApex.jsx'
 import { Locked } from '../ui/Locked.jsx'
 import { Skeleton, ErrorBox, Section } from '../ui/Bits.jsx'
 import { Odds, ImpliedHint } from '../ui/Odds.jsx'
+import { useSport, apiOf, sp } from '../lib/sport.js'
 
 /** Which of the last 20 games belong to a window tab. */
 function gamesFor(key, prop) {
@@ -45,14 +46,15 @@ function gamesFor(key, prop) {
 }
 
 export function PropPage() {
+  const sport = useSport()
   const { id } = useParams()
-  const { data, error, loading, refresh } = useApi(`/api/nfl/props/${encodeURIComponent(id)}`, { maxAgeMs: 30_000 })
+  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/props/${encodeURIComponent(id)}`, { maxAgeMs: 30_000 })
   const p = data?.prop
   useTitle(p ? `${p.name} ${p.shortLabel}` : 'Prop')
   const [win, setWin] = useState('L10')
   const slip = useSlip()
   const games = useMemo(() => (p ? gamesFor(win, p) : []), [p, win])
-  const path = `/api/nfl/props/${encodeURIComponent(id)}`
+  const path = `${apiOf(sport)}/props/${encodeURIComponent(id)}`
   // while its game is on, the prop's progress moves with every box score update
   useLive(data?.game?.status?.state === 'in' ? `game:${data.game.id}` : null, (lg) => {
     const row = lg?.props?.find((x) => x.id === p?.id)
@@ -64,7 +66,7 @@ export function PropPage() {
       <div className="container page">
         <ErrorBox error={error} onRetry={refresh} />
         <p>
-          <Link to="/nfl/props" className="link">
+          <Link to={sp(sport, '/props')} className="link">
             Back to all props
           </Link>
         </p>
@@ -90,16 +92,16 @@ export function PropPage() {
   return (
     <div className="container page prop-page">
       <header className="prop-head">
-        {p.kind === 'team' ? <TeamLogo src={logoFor(p.teamAbbr)} abbr={p.teamAbbr} size={72} /> : <Headshot src={p.headshot} name={p.name} size={76} className="prop-head__img" />}
+        {p.kind === 'team' ? <TeamLogo src={p.logo || logoFor(p.teamAbbr, sport)} abbr={p.teamAbbr} size={72} /> : <Headshot src={p.headshot} name={p.name} size={76} className="prop-head__img" />}
         <div className="prop-head__who">
-          <h1 className="prop-head__name">{p.kind === 'team' ? p.name : <Link to={`/nfl/player/${p.playerId}`}>{p.name}</Link>}</h1>
+          <h1 className="prop-head__name">{p.kind === 'team' ? p.name : <Link to={sp(sport, `/player/${p.playerId}`)}>{p.name}</Link>}</h1>
           <p className="prop-head__meta">
             {p.pos ? `${p.pos}, ` : ''}
             {p.teamAbbr} {p.home ? 'vs' : 'at'} {p.oppAbbr}
             {g && (
               <>
                 {', '}
-                <Link to={`/nfl/game/${g.id}`} className="link">
+                <Link to={sp(sport, `/game/${g.id}`)} className="link">
                   {clock(g.status, g.date) || kickoff(p.kickoff)}
                 </Link>
               </>
@@ -172,7 +174,7 @@ export function PropPage() {
               {on ? 'On your slip' : 'Add to slip'}
             </button>
             {flipId && (
-              <Link to={`/nfl/prop/${encodeURIComponent(flipId)}`} className="btn btn--quiet">
+              <Link to={sp(sport, `/prop/${encodeURIComponent(flipId)}`)} className="btn btn--quiet">
                 See the {p.side === 'o' ? 'under' : 'over'}
               </Link>
             )}
@@ -182,7 +184,7 @@ export function PropPage() {
               <p className="alts__k">Other lines</p>
               <div className="alts__list">
                 {data.alts.map((a) => (
-                  <Link key={a.id} to={`/nfl/prop/${encodeURIComponent(a.id)}`} className="alt">
+                  <Link key={a.id} to={sp(sport, `/prop/${encodeURIComponent(a.id)}`)} className="alt">
                     <span className="num">{a.line}</span>
                     <span>{pct(a.prob)}</span>
                   </Link>

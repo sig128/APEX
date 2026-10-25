@@ -5,6 +5,7 @@ import { kellyFraction, simulate, rng, edgeOf } from '../src/lib/kelly.js'
 import { parlayMath, parseShare, shareUrl } from '../src/lib/slip.js'
 import { pct, odds, parseOdds, decimalOf, americanOf, fairOf, clock } from '../src/lib/format.js'
 import { transferData } from '../src/lib/wallet.js'
+import { legRef, shareRef, splitRef, sp, slateLabel, leagueSwitchPath, isSharedPath, byLeague, legsSport } from '../src/lib/leagues.js'
 
 test('odds helpers', () => {
   assert.equal(parseOdds('-110'), -110)
@@ -100,3 +101,41 @@ test('USDC transfer calldata', () => {
   assert.throws(() => transferData('0x123', '1'))
   assert.throws(() => transferData('0x1111111111111111111111111111111111111111', '0'))
 })
+
+test('leagues: refs, links, slates and switching', () => {
+  const nfl = { id: '1.rec.o.4.5', sport: 'nfl' }
+  const nba = { id: '101.pts.o.27.5', sport: 'nba' }
+  assert.equal(legRef(nfl), 'nfl:1.rec.o.4.5', 'the API always hears the league')
+  assert.equal(legRef({ id: 'x' }), 'nfl:x', 'legs saved before leagues are NFL')
+  assert.equal(shareRef(nfl), '1.rec.o.4.5', 'old links stay valid')
+  assert.equal(shareRef(nba), 'nba:101.pts.o.27.5')
+  assert.deepEqual(splitRef('nba:101.pts.o.27.5'), { sport: 'nba', id: '101.pts.o.27.5' })
+  assert.deepEqual(splitRef('1.rec.o.4.5'), { sport: 'nfl', id: '1.rec.o.4.5' })
+  assert.deepEqual(splitRef('zzz:1.rec.o.4.5'), { sport: 'nfl', id: 'zzz:1.rec.o.4.5' }, 'an unknown league is not a league')
+  assert.equal(sp('nfl', ''), '/')
+  assert.equal(sp('nba', ''), '/nba')
+  assert.equal(sp('nba', '/props'), '/nba/props')
+  assert.equal(slateLabel(8), 'Week 8')
+  assert.equal(slateLabel('2026-10-25'), 'Sun, Oct 25')
+  assert.equal(slateLabel('2026-10-25', 'tiny'), 'Oct 25')
+  assert.equal(leagueSwitchPath('/nfl/props', 'nba'), '/nba/props', 'props stays props')
+  assert.equal(leagueSwitchPath('/lock', 'nhl'), '/nhl/lock')
+  assert.equal(leagueSwitchPath('/nba/game/401', 'nfl'), '/', 'a game page goes home')
+  assert.equal(isSharedPath('/tools/sim'), true)
+  assert.equal(isSharedPath('/nba/props'), false)
+  assert.deepEqual([...byLeague([nfl, nba, { id: 'y', sport: 'nfl' }]).keys()], ['nfl', 'nba'])
+  assert.equal(legsSport([nba, nfl]), 'nba')
+})
+
+test('a shared slip across leagues', () => {
+  const legs = [
+    { id: '1.rec.o.4.5', sport: 'nfl', price: -110, prob: 0.6 },
+    { id: '101.pts.o.27.5', sport: 'nba', price: 120, prob: 0.5 },
+  ]
+  const q = new URL(shareUrl(legs), 'https://apex.test')
+  assert.equal(q.pathname, '/slip')
+  const back = parseShare(q.search)
+  assert.deepEqual(back.refs, [{ sport: 'nfl', id: '1.rec.o.4.5' }, { sport: 'nba', id: '101.pts.o.27.5' }])
+  assert.deepEqual(back.prices, { '1.rec.o.4.5': -110, 'nba:101.pts.o.27.5': 120 })
+})
+

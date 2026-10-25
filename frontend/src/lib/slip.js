@@ -2,6 +2,7 @@
 // parlay. Kept in this browser (localStorage) and shareable as a link anyone can open.
 import { decimalOf, americanOf, fairOf, odds as fmtOdds, pct } from './format.js'
 import { SITE_URL } from './config.js'
+import { legRef, shareRef, splitRef } from './leagues.js'
 
 const KEY = 'apex_slip_v1'
 export const MAX_LEGS = 12
@@ -37,7 +38,7 @@ export function onSlip(fn) {
 export function snapshot(c) {
   const kickoff = typeof c.kickoff === 'number' ? new Date(c.kickoff).toISOString() : c.kickoff
   const oneSided = c.oneSided ?? (c.market === 'anyTd' || c.market === 'td2')
-  return { id: c.id, name: c.name, short: c.short, label: c.label, shortLabel: c.shortLabel || c.label, prob: c.prob, fair: c.fair, headshot: c.headshot || null, logo: c.logo || null, teamAbbr: c.teamAbbr, oppAbbr: c.oppAbbr, gameId: c.gameId, kickoff, market: c.market, side: c.side, line: c.line, oneSided: Boolean(oneSided), playerId: c.playerId || null, teamId: c.teamId || null, kind: c.kind || (c.teamId && !c.playerId ? 'team' : 'player') }
+  return { id: c.id, sport: c.sport || 'nfl', name: c.name, short: c.short, label: c.label, shortLabel: c.shortLabel || c.label, prob: c.prob, fair: c.fair, headshot: c.headshot || null, logo: c.logo || null, teamAbbr: c.teamAbbr, oppAbbr: c.oppAbbr, gameId: c.gameId, kickoff, market: c.market, side: c.side, line: c.line, oneSided: Boolean(oneSided), playerId: c.playerId || null, teamId: c.teamId || null, kind: c.kind || (c.teamId && !c.playerId ? 'team' : 'player') }
 }
 
 export const inSlip = (id) => state.legs.some((l) => l.id === id)
@@ -46,7 +47,7 @@ export const inSlip = (id) => state.legs.some((l) => l.id === id)
 export function addLeg(card) {
   if (inSlip(card.id)) return { ok: true }
   if (state.legs.length >= MAX_LEGS) return { ok: false, reason: `A slip holds ${MAX_LEGS} legs.` }
-  const key = (l) => `${l.playerId || l.teamId}:${l.market}`
+  const key = (l) => `${l.sport || 'nfl'}:${l.playerId || l.teamId}:${l.market}`
   const legs = state.legs.filter((l) => key(l) !== key(card))
   const replaced = legs.length < state.legs.length
   // line shopping: the best price across books, else the headline book's
@@ -61,14 +62,16 @@ export function toggleLeg(card) {
   return addLeg(card)
 }
 
+/** Remove by prop id or by ref ("nba:<id>", as the API names legs). */
 export function removeLeg(id) {
-  state = { ...state, legs: state.legs.filter((l) => l.id !== id) }
+  state = { ...state, legs: state.legs.filter((l) => l.id !== id && legRef(l) !== id) }
   save()
   return { ok: true }
 }
 
+/** Your price for one leg, by ref ("nba:<id>") or prop id. */
 export function setLegPrice(id, price) {
-  state = { ...state, legs: state.legs.map((l) => (l.id === id ? { ...l, price } : l)) }
+  state = { ...state, legs: state.legs.map((l) => (legRef(l) === id || l.id === id ? { ...l, price } : l)) }
   save()
 }
 
@@ -87,9 +90,9 @@ export function clearSlip() {
   save()
 }
 
-/** Replace the slip with legs from a shared link (cards come from /api/nfl/track). */
+/** Replace the slip with legs from a shared link, a pick or the lock (cards from /api/<league>/track). */
 export function importLegs(cards, prices = {}) {
-  state = { ...state, legs: cards.slice(0, MAX_LEGS).map((c) => ({ ...snapshot(c), price: prices[c.id] ?? null })) }
+  state = { ...state, legs: cards.slice(0, MAX_LEGS).map((c) => ({ ...snapshot(c), price: prices[legRef(c)] ?? prices[c.id] ?? null, book: c.book || null })) }
   save()
 }
 
@@ -113,24 +116,27 @@ export function parlayMath(legs, parlayPrice) {
   return { prob, fair, book, bookDecimal, ev, kelly, sameGame, priced: Boolean(bookDecimal) }
 }
 
-export function shareUrl(legs) {
-  const ids = legs.map((l) => l.id).join(',')
+/** The slip page path for these legs ("nba:<id>" for legs outside the NFL). */
+export function sharePath(legs) {
+  const refs = legs.map(shareRef).join(',')
   const prices = legs.map((l) => (Number.isFinite(l.price) ? l.price : '')).join(',')
-  const q = new URLSearchParams({ legs: ids })
+  const q = new URLSearchParams({ legs: refs })
   if (prices.replace(/,/g, '')) q.set('odds', prices)
-  return `${SITE_URL}/nfl/slip?${q.toString()}`
+  return `/slip?${q.toString()}`
 }
+export const shareUrl = (legs) => `${SITE_URL}${sharePath(legs)}`
 
+/** A shared link: the legs as refs (with their league) and any prices, keyed by ref. */
 export function parseShare(search) {
   const q = new URLSearchParams(search)
-  const ids = String(q.get('legs') || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, MAX_LEGS)
+  const refs = String(q.get('legs') || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, MAX_LEGS)
   const prices = String(q.get('odds') || '').split(',')
   const out = {}
-  ids.forEach((id, i) => {
+  refs.forEach((ref, i) => {
     const n = Number(prices[i])
-    if (Number.isFinite(n) && Math.abs(n) >= 100) out[id] = n
+    if (Number.isFinite(n) && Math.abs(n) >= 100) out[ref] = n
   })
-  return { ids, prices: out }
+  return { ids: refs, refs: refs.map(splitRef), prices: out }
 }
 
 /** Plain text for a group chat, a note, or to type into a sportsbook. */

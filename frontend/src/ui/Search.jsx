@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import { useDebounced } from '../lib/hooks.js'
 import { Headshot } from './Img.jsx'
+import { useSport, apiOf, sp, sportInfo } from '../lib/sport.js'
 
 /** Find a player: type a name, arrow to a result, Enter to open it. */
 export function Search({ autoFocus = false, onDone }) {
+  const sport = useSport()
   const [q, setQ] = useState('')
   const [res, setRes] = useState(null)
   const [i, setI] = useState(0)
@@ -21,13 +23,13 @@ export function Search({ autoFocus = false, onDone }) {
       return undefined
     }
     let live = true
-    api(`/api/nfl/search?q=${encodeURIComponent(dq)}`, { auth: false })
+    api(`${apiOf(sport)}/search?q=${encodeURIComponent(dq)}`, { auth: false })
       .then((r) => live && (setRes(r), setI(0)))
       .catch(() => live && setRes({ players: [], teams: [] }))
     return () => {
       live = false
     }
-  }, [dq])
+  }, [dq, sport])
 
   useEffect(() => {
     const off = (e) => box.current && !box.current.contains(e.target) && setOpen(false)
@@ -40,7 +42,7 @@ export function Search({ autoFocus = false, onDone }) {
     setOpen(false)
     setQ('')
     onDone?.()
-    nav(`/nfl/player/${p.id}`)
+    nav(sp(sport, `/player/${p.id}`))
   }
 
   return (
@@ -52,8 +54,8 @@ export function Search({ autoFocus = false, onDone }) {
       <input
         className="search__input"
         type="search"
-        placeholder="Search players"
-        aria-label="Search players"
+        placeholder={`Search ${sportInfo(sport).name} players`}
+        aria-label={`Search ${sportInfo(sport).name} players`}
         autoFocus={autoFocus}
         value={q}
         onChange={(e) => {
@@ -80,7 +82,7 @@ export function Search({ autoFocus = false, onDone }) {
       />
       {open && res && dq.length >= 2 && (
         <ul className="search__results" id={listId} role="listbox">
-          {players.length === 0 && <li className="search__none">No player matches “{dq}” this week.</li>}
+          {players.length === 0 && <li className="search__none">No {sportInfo(sport).name} player matches “{dq}”.</li>}
           {players.map((p, k) => (
             <li key={p.id} role="option" aria-selected={k === i}>
               <button type="button" className={`search__item${k === i ? ' is-on' : ''}`} onMouseEnter={() => setI(k)} onClick={() => go(p)}>

@@ -53,6 +53,8 @@ export function clock(status, date) {
   if (!status) return kickoff(date)
   if (status.state === 'post') return status.short || 'Final'
   if (status.state === 'in') {
+    // the server words the clock for each sport ("2nd 12:33", "Top 5th"); this is the football fallback
+    if (status.text) return status.text
     if (status.halftime) return 'Halftime'
     const q = status.period > 4 ? 'OT' : `Q${status.period}`
     return `${q} ${status.clock || ''}`.trim()

@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom'
 import { TeamLogo } from './Img.jsx'
 import { clock, isLive, isFinal } from '../lib/format.js'
 import { WatchButton } from './WatchButton.jsx'
+import { useSport, sp } from '../lib/sport.js'
 
 /** This week's games as one scoreboard band: scores and clocks move live. */
 export function GameStrip({ games }) {
+  const sport = useSport()
   if (!games?.length) return null
   const order = { in: 0, pre: 1, post: 2 }
   const list = [...games].sort((a, b) => (order[a.status?.state] ?? 3) - (order[b.status?.state] ?? 3) || String(a.date).localeCompare(String(b.date)))
@@ -13,7 +15,7 @@ export function GameStrip({ games }) {
       <div className="strip__track">
         {list.map((g) => (
           <div key={g.id} className="strip__cell">
-            <Link to={`/nfl/game/${g.id}`} className={`strip__game${isLive(g) ? ' is-live' : ''}${isFinal(g) ? ' is-final' : ''}`}>
+            <Link to={sp(sport, `/game/${g.id}`)} className={`strip__game${isLive(g) ? ' is-live' : ''}${isFinal(g) ? ' is-final' : ''}`}>
               <Team t={g.away} other={g.home} g={g} />
               <Team t={g.home} other={g.away} g={g} />
               <span className="strip__clock">{clock(g.status, g.date)}</span>

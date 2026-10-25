@@ -95,11 +95,25 @@ export function createViews(engine) {
   const gameRows = (id) => allRows().byGame.get(String(id)) || []
 
   // ---- shapes ----------------------------------------------------------------------------------
+  const ORD = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
+  /** The game clock the way each sport says it: "Q3 5:21", "H2 4:10", "2nd 12:33", "Top 5th". */
+  function clockText(st) {
+    if (!st || st.state !== 'in') return null
+    if (st.halftime) return 'Halftime'
+    if (S.family === 'baseball' || st.name === 'STATUS_END_PERIOD') return st.short || null
+    const p = st.period || 0
+    const c = st.clock && st.clock !== '0:00' ? ` ${st.clock}` : ''
+    const n = CLOCK.periods
+    if (p > n) return S.family === 'hockey' ? st.short || `OT${c}` : `${p - n > 1 ? p - n : ''}OT${c}`
+    if (S.family === 'hockey') return `${ORD[p] || `P${p}`}${c}`
+    return `${n === 2 ? 'H' : 'Q'}${p}${c}`
+  }
+  const statusOut = (st) => (st && st.state === 'in' ? { ...st, text: clockText(st) } : st)
   const gameCard = (g) => ({
     id: g.id,
     date: g.date,
     shortName: g.shortName,
-    status: g.status,
+    status: statusOut(g.status),
     home: g.home && { id: g.home.id, abbr: g.home.abbr, name: g.home.name, short: g.home.short, logo: g.home.logo, color: g.home.color, score: g.home.score, record: g.home.record?.total || null },
     away: g.away && { id: g.away.id, abbr: g.away.abbr, name: g.away.name, short: g.away.short, logo: g.away.logo, color: g.away.color, score: g.away.score, record: g.away.record?.total || null },
     broadcast: g.broadcast,
@@ -111,6 +125,7 @@ export function createViews(engine) {
   const card = (r) =>
     r && {
       id: r.id,
+      sport: S.key,
       kind: r.kind,
       playerId: r.playerId || null,
       teamId: r.teamId,
@@ -313,7 +328,7 @@ export function createViews(engine) {
         .sort((a, b) => order(a.p.status) - order(b.p.status) || b.r.score - a.r.score)
       return {
         id: g.id,
-        status: g.status,
+        status: statusOut(g.status),
         home: gameCard(g).home,
         away: gameCard(g).away,
         situation: g.situation,
@@ -570,6 +585,7 @@ export function createViews(engine) {
     const t = engine.now()
     return cached('lock', `${wh.aVersion}:${Math.floor(t / (15 * 60_000))}`, () => {
       const out = findLock(lockRows(), { now: t, injuryOf: (id) => wh.injuryOf(id) })
+      if (out.lock) out.lock.legs = out.lock.legs.map((l) => ({ ...l, sport: S.key }))
       return { ...out, sport: S.key, calendar: S.calendar, season: wh.season, week: engine.slate ? engine.slate() : wh.week, at: t }
     })
   }

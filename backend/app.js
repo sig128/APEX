@@ -153,14 +153,14 @@ export function createApexApp({
   }
   const billing = billingIn || createBilling({ getFirestore, store: engineStore, lookupUid: lookupUidByEmail, ...(now ? { now } : {}) })
   const access = createAccess({ auth, billing })
-  const picks = createPicks({ docs: billing.docs, engine, billing, ...(now ? { now } : {}) })
+  const picks = createPicks({ docs: billing.docs, engine, engines, billing, ...(now ? { now } : {}) })
   billing.onChange((uid) => {
     picks.syncPlan(uid).catch((e) => log.warn('plan sync failed', { uid, err: errText(e) }))
   })
   setGameContextProvider(gameContextFrom(engine))
 
   for (const [key, eng] of Object.entries(engines)) {
-    const router = createNflRouter(eng, { anthropicKey, auth, access, billing })
+    const router = createNflRouter(eng, { anthropicKey, auth, access, billing, engines })
     app.use(`/api/${key}`, (req, res, next) => {
       router.handle(req, res, next).catch(next)
     })

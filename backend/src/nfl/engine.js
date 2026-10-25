@@ -5,7 +5,7 @@
 // lazy mode (Cloud Functions): no idle timers; requests refresh whatever is stale and the live
 // loop only runs while someone is connected to the stream.
 import { createEspnClient } from '../providers/espn/client.js'
-import { createOddsApi } from '../providers/oddsapi/nfl.js'
+import { createOddsApi, ODDS_SPORTS } from '../providers/oddsapi/props.js'
 import { createWarehouse } from './warehouse.js'
 import { createScheduler } from '../lib/scheduler.js'
 import { createViews } from './services/views.js'
@@ -24,13 +24,22 @@ export function etDay(ms, days = 0) {
   return `${get('year')}${get('month')}${get('day')}`
 }
 
+/** APEX_ODDS_SPORTS=nfl,nba,nhl: the leagues that get The Odds API's prices (credits per league). */
+export function oddsLeagues(env = process.env) {
+  const raw = String(env.APEX_ODDS_SPORTS || 'nfl').toLowerCase()
+  if (raw === 'all') return Object.keys(ODDS_SPORTS)
+  return raw.split(',').map((s) => s.trim()).filter((s) => ODDS_SPORTS[s])
+}
+
 export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl', oddsApiKey = process.env.THE_ODDS_API_KEY, now = () => Date.now(), backfillBatch } = {}) {
   const S = sportOf(sport)
   const NS = S.key // store namespace: 'nfl' stays where it always was
   const espn = createEspnClient({ http, sport: S.espn.sport, league: S.espn.league, fam: S.fam, headshots: S.headshots })
   const wh = createWarehouse()
-  // sportsbook prices from The Odds API (NFL); the other sports' prices come with ESPN's lines
-  const odds = oddsApiKey && S.key === 'nfl' ? createOddsApi({ http, store, apiKey: oddsApiKey, now }) : null
+  // every book's prices from The Odds API, for the leagues in APEX_ODDS_SPORTS (default the NFL;
+  // each league added spends its own daily credit budget). The NBA, MLB, NHL and WNBA lines carry
+  // DraftKings' prices from ESPN either way.
+  const odds = oddsApiKey && ODDS_SPORTS[S.key] && oddsLeagues().includes(S.key) ? createOddsApi({ http, store, apiKey: oddsApiKey, sport: S.key, now }) : null
   let started = null
   let restored = false
   const staleLogs = new Set() // players whose current-season log needs a refetch (their game ended)
@@ -346,8 +355,21 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     }
   }
 
-  /** The slate the lock and its ledger belong to: the week, or the day for daily sports. */
-  const slate = () => (S.calendar === 'week' ? wh.week : `${etDay(now()).slice(0, 4)}-${etDay(now()).slice(4, 6)}-${etDay(now()).slice(6)}`)
+  /**
+   * The slate the lock and its ledger belong to: the week, or for daily sports the day of the next
+   * game still to finish (at 11 PM, once tonight's games are final, that's tomorrow).
+   */
+  const slate = () => {
+    if (S.calendar === 'week') return wh.week
+    const t = now()
+    const next = [...wh.games.values()]
+      .filter((g) => g.status?.state !== 'post')
+      .map((g) => Date.parse(g.date))
+      .filter((ms) => Number.isFinite(ms) && ms > t - 12 * 3_600_000)
+      .sort((a, b) => a - b)[0]
+    const d = etDay(next ?? t)
+    return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`
+  }
 
   const engine = {
     sport: S,

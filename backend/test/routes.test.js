@@ -8,6 +8,7 @@ import { createStore } from '../src/lib/store.js'
 import { _resetAdminKeyFails } from '../src/security/adminKey.js'
 import { fixtureHttp } from './helpers.js'
 import { clock, loadAll, fakeChain, testAuth, USERS, bearer, withEnv, serve, TREASURY, txHash } from './support.js'
+import { nbaFixtures } from './fixtures/nba.js'
 
 const ADMIN_KEY = 'test-admin-key-0123456789'
 const restoreEnv = withEnv({
@@ -56,6 +57,8 @@ const ai = {
 
 let api
 let engine
+let engines
+let picksSvc
 let chain
 let now
 
@@ -66,10 +69,14 @@ before(async () => {
   chain = fakeChain()
   const store = createStore({ driver: 'memory' })
   const billing = createBilling({ docs: createStoreDocs(store), chainFor: () => chain, now })
-  const { http } = fixtureHttp()
+  // the NFL week plus an NBA day, so slips can cross leagues
+  const { http } = fixtureHttp(nbaFixtures({ now: now() }))
   const made = createApexApp({ engineMode: 'lazy', http, store, auth: testAuth(USERS), billing, anthropicKey: () => 'sk-test', oddsKey: () => null, now })
   engine = made.engine
+  engines = made.engines
+  picksSvc = made.picks
   await loadAll(engine)
+  await loadAll(engines.nba)
   api = await serve(made.app)
 })
 after(async () => {
@@ -455,4 +462,59 @@ test('3-Leg Lock: Pro only, every prop through the rules, and a public season le
   assert.equal(led.status, 200)
   assert.equal(led.body.weeks.length, 1, 'this week is on the ledger')
   assert.equal(led.body.full, false)
+})
+
+test('one slip across leagues: simulate, shop, post a pick, grade it on its own league', async () => {
+  const nfl = (await api.get('/api/nfl/games/401873020')).body.props.find((p) => p.kind === 'player' && !p.oneSided && p.posted === 'main')
+  const nbaId = '101.pts.o.23.5'
+  const board = await api.get('/api/nba/home')
+  assert.equal(board.status, 200)
+  assert.equal(board.body.sport, 'nba')
+  assert.equal(board.body.calendar, 'day')
+  assert.ok(board.body.tabs.apex.every((c) => c.sport === 'nba'), 'cards say which league they belong to')
+
+  // the simulator: any league's endpoint takes the other league's legs by ref
+  const sim = await api.post('/api/nfl/sim', { legs: [nfl.id, `nba:${nbaId}`], iterations: 10000 }, { headers: bearer('u_pro') })
+  assert.equal(sim.status, 200, JSON.stringify(sim.body))
+  assert.deepEqual(sim.body.legs.map((l) => l.id), [nfl.id, nbaId])
+  assert.equal(sim.body.parlay.correlated.length, 0, 'an NFL leg and an NBA leg never move together')
+  const indep = sim.body.legs[0].hitRate * sim.body.legs[1].hitRate
+  assert.ok(Math.abs(sim.body.parlay.hitRate - indep) < 0.02, `${sim.body.parlay.hitRate} vs ${indep}`)
+  const back = await api.post('/api/nba/sim', { legs: [nbaId, `nfl:${nfl.id}`], iterations: 10000 }, { headers: bearer('u_pro') })
+  assert.equal(back.status, 200)
+  assert.equal((await api.post('/api/nba/sim', { legs: ['nhl:1.sog.o.2.5'] }, { headers: bearer('u_pro') })).status, 404, 'a leg not on its board')
+  assert.equal((await api.post('/api/nba/sim', { legs: ['__proto__:1.sog.o.2.5', 'constructor:1.pts.o.2.5'] }, { headers: bearer('u_pro') })).status, 404, 'junk league keys are just missing legs')
+  assert.equal((await api.post('/api/picks/check', { legs: ['__proto__:1.pts.o.2.5'] })).body.legs[0].code, 'bad_leg')
+
+  // line shopping: the NBA leg carries DraftKings' price from ESPN
+  const shop = await api.post('/api/nba/shop', { legs: [nbaId, `nfl:${nfl.id}`] })
+  assert.equal(shop.status, 200, JSON.stringify(shop.body))
+  assert.equal(shop.body.legs.length, 2)
+  assert.equal(shop.body.legs[0].books.find((b) => b.book === 'draftkings')?.price, -115)
+
+  // picks: an NBA leg goes on the record and is graded from the NBA box score
+  assert.equal((await api.put('/api/picks/me', { handle: 'hoops_pro', name: 'Hoops' }, { headers: bearer('u_pro') })).status, 200)
+  const check = await api.post('/api/picks/check', { legs: [`nba:${nbaId}`, 'nba:999.pts.o.9.5'] })
+  assert.deepEqual(check.body.legs.map((l) => l.id), ['nba:999.pts.o.9.5'], 'problems come back under the ref that was sent')
+  const post = await api.post('/api/picks', { legs: [`nba:${nbaId}`], units: 1 }, { headers: bearer('u_pro') })
+  assert.equal(post.status, 200, JSON.stringify(post.body))
+  const leg = post.body.picks[0].legs[0]
+  assert.equal(leg.sport, 'nba')
+  assert.equal(leg.price, -115)
+  const nba = engines.nba
+  const g = [...nba.wh.games.values()][0]
+  const t0 = now()
+  try {
+    now.set(Date.parse(g.date) + 3 * 3600_000)
+    nba.wh.setSummary(g.id, { ...(nba.wh.summaries.get(g.id)?.data || {}), status: { state: 'post', completed: true, name: 'STATUS_FINAL', short: 'Final', detail: 'Final', period: 4, clock: '0:00' }, players: { 101: { id: '101', name: 'Laker Guard', teamId: '13', stats: { pts: 31, reb: 4, ast: 8 } } } }, now())
+    const graded = await picksSvc.gradeOpen()
+    assert.ok(graded.graded >= 1)
+    const page = await api.get('/api/picks/u/hoops_pro', { headers: bearer('u_pro') })
+    const pick = page.body.history.find((p) => p.id === post.body.picks[0].id)
+    assert.equal(pick?.result, 'win', JSON.stringify(page.body))
+    assert.equal(pick.legs[0].value, 31)
+    assert.equal(pick.legs[0].sport, 'nba')
+  } finally {
+    now.set(t0)
+  }
 })

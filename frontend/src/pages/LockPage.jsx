@@ -11,31 +11,35 @@ import { Headshot } from '../ui/Img.jsx'
 import { ErrorBox, Skeleton } from '../ui/Bits.jsx'
 import { ImpliedHint } from '../ui/Odds.jsx'
 import { SendToBook } from '../ui/Books.jsx'
+import { useSport, apiOf, sp, sportInfo, slateLabel, seasonLabel } from '../lib/sport.js'
 
 const CHECK_SHORT = { prob: '65%+', edge: 'Edge', sample: 'Sample', recency: '15 days', regression: 'Regression', role: 'Role', market: 'Market' }
 const STATUS = {
   certified: { label: 'Certified', note: 'Every leg passed all seven checks at posted prices, and the parlay has positive expected value.' },
   price_needed: { label: 'Needs your price', note: 'Every leg passed the checks that don’t need a price. No sportsbook price is posted yet, so it’s only a bet at the break-even price or better.' },
-  pass: { label: 'Pass', note: 'Nothing on the board meets the rules this week. Edge or Pass.' },
+  pass: { label: 'Pass', note: 'Nothing on the board meets the rules right now. Edge or Pass.' },
 }
+const isDaily = (sport) => sportInfo(sport).calendar === 'day'
 
 /** The 3-Leg Lock: the board run through the APEX rules, the one parlay that survives, and its record. */
 export function LockPage() {
-  useTitle('3-Leg Lock')
+  const sport = useSport()
+  const daily = isDaily(sport)
+  useTitle(`${sportInfo(sport).name} 3-Leg Lock`)
   const { paywall, has } = useBilling()
   const allowed = !paywall || has('pro')
-  const lock = useApi(allowed ? '/api/nfl/lock' : null, { maxAgeMs: 60_000 })
-  const ledger = useApi('/api/nfl/lock/ledger', { maxAgeMs: 60_000 })
+  const lock = useApi(allowed ? `${apiOf(sport)}/lock` : null, { maxAgeMs: 60_000 })
+  const ledger = useApi(`${apiOf(sport)}/lock/ledger`, { maxAgeMs: 60_000 })
   const d = lock.data
 
   return (
     <div className="container page lockpage">
       <header className="page-head">
-        <h1 className="page-title">The 3-Leg Lock</h1>
+        <h1 className="page-title">The {sportInfo(sport).name} 3-Leg Lock</h1>
         <p className="page-sub">Every prop on the board, run through the APEX rules. Three legs that each clear 65%, together over 45% before any correlation bonus, with an edge over the price. If nothing survives, it’s a pass.</p>
       </header>
 
-      <Locked need="pro" title="This week’s 3-Leg Lock">
+      <Locked need="pro" title={daily ? 'Today’s 3-Leg Lock' : 'This week’s 3-Leg Lock'}>
         {lock.error && !d && <ErrorBox error={lock.error} onRetry={lock.refresh} />}
         {!d && !lock.error && <Skeleton kind="hero" rows={3} />}
         {d && (
@@ -47,13 +51,14 @@ export function LockPage() {
         )}
       </Locked>
 
-      <Ledger data={ledger.data} error={ledger.error} />
+      <Ledger data={ledger.data} error={ledger.error} daily={daily} sport={sport} />
       <Principles />
     </div>
   )
 }
 
 function Ticket({ d }) {
+  const sport = useSport()
   const L = d.lock
   const st = STATUS[d.status]
   const [prices, setPrices] = useState({})
@@ -72,7 +77,7 @@ function Ticket({ d }) {
     <article className={`ticket ticket--${d.status}`} aria-labelledby="ticket-title">
       <header className="ticket__head">
         <div>
-          <p className="ticket__week">Week {d.week}</p>
+          <p className="ticket__week">{slateLabel(d.week, 'long')}</p>
           <h2 className="ticket__title" id="ticket-title">
             {L.legs.map((l) => l.short || l.name).join(' + ')}
           </h2>
@@ -83,7 +88,7 @@ function Ticket({ d }) {
       <div className="ticket__numbers">
         <div className="ticket__big">
           <span className="num">{pct(L.simulated, 1)}</span>
-          <span className="ticket__big-k">cashes in {L.iterations.toLocaleString()} simulated weeks</span>
+          <span className="ticket__big-k">cashes in {L.iterations.toLocaleString()} simulated {isDaily(sport) ? 'nights' : 'weeks'}</span>
         </div>
         <Meter sim={L.simulated} indep={L.independent} />
         <dl className="ticket__facts">
@@ -119,7 +124,7 @@ function Ticket({ d }) {
               <Headshot src={l.headshot} name={l.name} size={44} />
               <div className="tleg__who">
                 <p className="tleg__name">
-                  {l.playerId ? <Link to={`/nfl/player/${l.playerId}`}>{l.name}</Link> : l.name}
+                  {l.playerId ? <Link to={sp(sport, `/player/${l.playerId}`)}>{l.name}</Link> : l.name}
                   <span className="muted">
                     {' '}
                     {l.pos ? `${l.pos} ` : ''}
@@ -127,7 +132,7 @@ function Ticket({ d }) {
                   </span>
                 </p>
                 <p className="tleg__bet">
-                  <Link to={`/nfl/prop/${encodeURIComponent(l.id)}`}>{l.label}</Link>
+                  <Link to={sp(sport, `/prop/${encodeURIComponent(l.id)}`)}>{l.label}</Link>
                   {l.posted === 'alt' && <span className="tleg__alt">alt line</span>}
                 </p>
               </div>
@@ -239,11 +244,12 @@ function RuleStrip({ checks, open, onToggle }) {
 }
 
 function PassCard({ d }) {
+  const sport = useSport()
   return (
     <article className="ticket ticket--pass">
       <header className="ticket__head">
         <div>
-          <p className="ticket__week">Week {d.week}</p>
+          <p className="ticket__week">{slateLabel(d.week, 'long')}</p>
           <h2 className="ticket__pass num">Pass</h2>
         </div>
         <span className="ticket__status ticket__status--pass">No lock</span>
@@ -256,7 +262,7 @@ function PassCard({ d }) {
           <ul>
             {d.near.legs.map((l) => (
               <li key={l.id}>
-                <Link to={`/nfl/prop/${encodeURIComponent(l.id)}`}>
+                <Link to={sp(sport, `/prop/${encodeURIComponent(l.id)}`)}>
                   <b>{l.short || l.name}</b> {l.label}
                 </Link>
                 <span className="num">{pct(l.prob)}</span>
@@ -309,6 +315,7 @@ function Funnel({ f }) {
 }
 
 function CloseCalls({ list }) {
+  const sport = useSport()
   return (
     <section className="close" aria-labelledby="close-h">
       <h2 className="section-h" id="close-h">
@@ -319,7 +326,7 @@ function CloseCalls({ list }) {
         {list.map((c) => (
           <li key={c.id}>
             <div>
-              <Link to={`/nfl/prop/${encodeURIComponent(c.id)}`}>
+              <Link to={sp(sport, `/prop/${encodeURIComponent(c.id)}`)}>
                 <b>{c.short || c.name}</b> {c.label}
               </Link>
               <span className="num close__p">{pct(c.prob)}</span>
@@ -340,7 +347,7 @@ function CloseCalls({ list }) {
 
 const RESULT = { win: 'Win', loss: 'Loss', push: 'Push' }
 
-function Ledger({ data, error }) {
+function Ledger({ data, error, daily = false, sport = 'nfl' }) {
   const weeks = data?.weeks || []
   const r = data?.record
   const line = useMemo(() => {
@@ -352,7 +359,7 @@ function Ledger({ data, error }) {
     <section className="ledger" aria-labelledby="ledger-h">
       <div className="ledger__head">
         <h2 className="section-h" id="ledger-h">
-          Season ledger {data?.season ? data.season : ''}
+          Season ledger {seasonLabel(sport, data?.season)}
         </h2>
         {r && (
           <p className="ledger__rec">
@@ -367,19 +374,19 @@ function Ledger({ data, error }) {
           </p>
         )}
       </div>
-      <p className="muted">Every week’s lock as it stood when its first leg kicked off, graded from the box scores. 1 unit = 1% of bankroll.</p>
+      <p className="muted">{daily ? 'Every day’s lock as it stood when its first game started' : 'Every week’s lock as it stood when its first leg kicked off'}, graded from the box scores. 1 unit = 1% of bankroll.</p>
       {error && !data && <p className="muted">The ledger isn’t available right now.</p>}
-      {data && !weeks.length && <p className="muted">The first lock goes on the ledger this week.</p>}
+      {data && !weeks.length && <p className="muted">The first lock goes on the ledger {daily ? 'on the next slate' : 'this week'}.</p>}
       {weeks.length > 0 && (
         <ul className="ledger__list">
           {weeks.map((w) => {
             const tag = w.status === 'graded' ? RESULT[w.result] : w.status === 'pass' ? 'Pass' : w.status === 'live' ? 'Live' : 'Open'
             return (
               <li key={w.key} className={`lrow lrow--${(w.result || w.status).toLowerCase()}`}>
-                <span className="lrow__wk num">W{w.week}</span>
+                <span className="lrow__wk num">{daily ? slateLabel(w.week, 'tiny') : `W${w.week}`}</span>
                 <span className="lrow__legs">
                   {w.lock?.hidden
-                    ? `${w.lock.legs} legs, shown to Pro until kickoff`
+                    ? `${w.lock.legs} legs, shown to Pro until ${daily ? 'the first game starts' : 'kickoff'}`
                     : w.lock
                       ? w.lock.legs.map((l) => (
                           <span key={l.id} className={`lrow__leg${l.result ? ` is-${l.result}` : ''}`}>

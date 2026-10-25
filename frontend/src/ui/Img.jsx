@@ -23,4 +23,6 @@ export function TeamLogo({ src, abbr, size = 20, className = '' }) {
 }
 
 /** Logo URL for a team abbreviation (ESPN's CDN); used where the API only gives the abbreviation. */
-export const logoFor = (abbr) => (abbr ? `https://a.espncdn.com/i/teamlogos/nfl/500/${String(abbr).toLowerCase()}.png` : null)
+// ESPN keeps a logo per league folder; college teams go by id, so their cards carry the logo
+const LOGO_DIR = { nfl: 'nfl', nba: 'nba', mlb: 'mlb', nhl: 'nhl', wnba: 'wnba' }
+export const logoFor = (abbr, sport = 'nfl') => (abbr && LOGO_DIR[sport] ? `https://a.espncdn.com/i/teamlogos/${LOGO_DIR[sport]}/500/${String(abbr).toLowerCase()}.png` : null)

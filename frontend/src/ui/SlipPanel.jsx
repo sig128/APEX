@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSlip } from '../lib/useSlip.js'
-import { removeLeg, setLegPrice, setParlayPrice, setMode, clearSlip, parlayMath, shareUrl, slipText } from '../lib/slip.js'
+import { removeLeg, setLegPrice, setParlayPrice, setMode, clearSlip, parlayMath, shareUrl, sharePath, slipText } from '../lib/slip.js'
+import { useSport, sp, legRef, sportInfo } from '../lib/sport.js'
+import { trackLegs } from '../lib/track.js'
 import { pct, odds, parseOdds, decimalOf, bookName } from '../lib/format.js'
 import { kellyFraction } from '../lib/kelly.js'
 import { RULES } from '../lib/rules.js'
@@ -55,6 +57,7 @@ function OddsInput({ value, onChange, label, placeholder = '-110' }) {
 }
 
 export function SlipPanel({ open, onClose }) {
+  const sport = useSport()
   const slip = useSlip()
   const { legs, mode } = slip
   const { user } = useAuth()
@@ -68,6 +71,8 @@ export function SlipPanel({ open, onClose }) {
   const [sending, setSending] = useState(false)
   const [live, setLive] = useState({})
   const math = useMemo(() => parlayMath(legs, slip.parlayPrice), [legs, slip.parlayPrice])
+  // a slip across leagues tags each leg with its league
+  const mixed = new Set(legs.map((l) => l.sport || 'nfl')).size > 1
   const canKelly = !paywall || has('pro')
 
   useEffect(() => {
@@ -85,8 +90,8 @@ export function SlipPanel({ open, onClose }) {
     if (!started) return undefined
     let stop = false
     const tick = () =>
-      api(`/api/nfl/track?ids=${encodeURIComponent(legs.map((l) => l.id).join(','))}`, { auth: false })
-        .then((r) => !stop && setLive(Object.fromEntries(r.legs.filter((x) => x.live).map((x) => [x.id, x.live]))))
+      trackLegs(legs)
+        .then((list) => !stop && setLive(Object.fromEntries(list.filter((x) => x?.live).map((x) => [legRef(x), x.live]))))
         .catch(() => {})
     tick()
     const t = setInterval(tick, 15_000)
@@ -145,7 +150,7 @@ export function SlipPanel({ open, onClose }) {
           <div className="slip__empty">
             <p>Your slip is empty.</p>
             <p className="muted">Tap + on any prop to add it. APEX multiplies the probabilities, prices the parlay fairly, and sizes your stake.</p>
-            <Link to="/nfl/props" className="btn btn--quiet" onClick={onClose}>
+            <Link to={sp(sport, '/props')} className="btn btn--quiet" onClick={onClose}>
               Find props
             </Link>
           </div>
@@ -153,15 +158,16 @@ export function SlipPanel({ open, onClose }) {
           <>
             <ul className="slip__legs">
               {legs.map((l) => {
-                const lv = live[l.id]
+                const lv = live[legRef(l)]
                 const d = decimalOf(l.price)
                 const k = d ? kellyFraction(l.prob, d) : null
                 return (
-                  <li key={l.id} className={`slip-leg${lv ? ` is-${lv.status}` : ''}`}>
+                  <li key={legRef(l)} className={`slip-leg${lv ? ` is-${lv.status}` : ''}`}>
                     <Headshot src={l.headshot} name={l.name} size={34} />
                     <div className="slip-leg__what">
-                      <Link to={`/nfl/prop/${encodeURIComponent(l.id)}`} onClick={onClose} className="slip-leg__name">
+                      <Link to={sp(l.sport, `/prop/${encodeURIComponent(l.id)}`)} onClick={onClose} className="slip-leg__name">
                         {l.name}
+                        {mixed && <span className="slip-leg__league">{sportInfo(l.sport).name}</span>}
                       </Link>
                       <span className="slip-leg__label">{l.label}</span>
                       <span className="slip-leg__read">
@@ -176,10 +182,10 @@ export function SlipPanel({ open, onClose }) {
                       </span>
                     </div>
                     <span className="odds-field">
-                      <OddsInput value={l.price} onChange={(n) => setLegPrice(l.id, n)} label={`Your odds for ${l.name} ${l.shortLabel || l.label}`} />
+                      <OddsInput value={l.price} onChange={(n) => setLegPrice(legRef(l), n)} label={`Your odds for ${l.name} ${l.shortLabel || l.label}`} />
                       <ImpliedHint a={l.price} />
                     </span>
-                    <button type="button" className="icon-btn" onClick={() => removeLeg(l.id)} aria-label={`Remove ${l.name}`}>
+                    <button type="button" className="icon-btn" onClick={() => removeLeg(legRef(l))} aria-label={`Remove ${l.name}`}>
                       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
                         <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                       </svg>
@@ -271,11 +277,7 @@ export function SlipPanel({ open, onClose }) {
               >
                 Post as pick
               </button>
-              <Link
-                className="btn btn--quiet"
-                to={`/nfl/slip?legs=${encodeURIComponent(legs.map((l) => l.id).join(','))}`}
-                onClick={onClose}
-              >
+              <Link className="btn btn--quiet" to={sharePath(legs)} onClick={onClose}>
                 Track
               </Link>
               <button type="button" className="linkish slip__clear" onClick={clearSlip}>
@@ -319,13 +321,13 @@ function PostPick({ open, onClose, legs, mode }) {
     setChecked([])
     // ask up front which legs can go on a record, so nobody fills in the form for nothing
     const ac = new AbortController()
-    api('/api/picks/check', { method: 'POST', body: { legs: legs.map((l) => l.id) }, signal: ac.signal })
+    api('/api/picks/check', { method: 'POST', body: { legs: legs.map(legRef) }, signal: ac.signal })
       .then((r) => setChecked(r.legs || []))
       .catch(() => {})
     return () => ac.abort()
   }, [open, mode])
   // legs that can't go on a record and are still on the slip (from the check or from a post)
-  const onSlip = (b) => legs.some((l) => l.id === b.id)
+  const onSlip = (b) => legs.some((l) => legRef(l) === b.id)
   const bad = [...new Map([...checked, ...(state.err?.body?.legs || [])].filter(onSlip).map((b) => [b.id, b])).values()]
   const blocked = bad.length > 0
   useEffect(() => {
@@ -335,7 +337,7 @@ function PostPick({ open, onClose, legs, mode }) {
     e.preventDefault()
     setState({ busy: true, err: null, done: null })
     try {
-      const out = await api('/api/picks', { method: 'POST', body: { legs: legs.map((l) => l.id), mode: separate ? 'separate' : 'parlay', units, note } })
+      const out = await api('/api/picks', { method: 'POST', body: { legs: legs.map(legRef), mode: separate ? 'separate' : 'parlay', units, note } })
       setState({ busy: false, err: null, done: out })
     } catch (err) {
       setState({ busy: false, err, done: null })
@@ -346,7 +348,7 @@ function PostPick({ open, onClose, legs, mode }) {
       {state.done ? (
         <div className="stack">
           <p>
-            Posted {state.done.picks.length === 1 ? 'your pick' : `${state.done.picks.length} picks`}. {state.done.picks[0].legs.length > 1 ? 'The parlay' : 'It'} locks at kickoff and grades itself when the game ends.
+            Posted {state.done.picks.length === 1 ? 'your pick' : `${state.done.picks.length} picks`}. {state.done.picks[0].legs.length > 1 ? 'The parlay' : 'It'} locks when its first game starts and grades itself when the games end.
           </p>
           <div className="row">
             <button
@@ -420,7 +422,7 @@ function PostPick({ open, onClose, legs, mode }) {
               Cancel
             </button>
           </div>
-          <p className="muted small">Only lines a sportsbook posted count, graded at the price it posted when you post (main lines with no listed price grade at -110), not the odds you typed, so every record is scored the same way. You can delete a pick until kickoff.</p>
+          <p className="muted small">Only lines a sportsbook posted count, graded at the price it posted when you post (main lines with no listed price grade at -110), not the odds you typed, so every record is scored the same way. You can delete a pick until its first game starts.</p>
         </form>
       )}
     </Dialog>

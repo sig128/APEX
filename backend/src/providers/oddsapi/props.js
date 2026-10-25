@@ -1,13 +1,14 @@
-// Optional: multi-book player prop prices from The Odds API (https://the-odds-api.com).
-// ESPN gives DraftKings lines without prices; with a key we add real prices for the edge math.
-// Every event-odds call costs credits (markets x regions), so spend is capped per day and the
-// counter lives in the shared store, which all instances read before spending.
+// Optional: multi-book player prop prices from The Odds API (https://the-odds-api.com), for any
+// league. ESPN carries one book (DraftKings, and for the NFL no prices at all); with a key we add
+// every book's prices for line shopping and the edge math. Every event-odds call costs credits
+// (markets x regions), so spend is capped per league per day and the counter lives in the shared
+// store, which all instances read before spending.
 import { nameKey } from '../../lib/util.js'
 import { log, errText } from '../../lib/log.js'
 import { takeOddsCredits } from '../../lib/oddsBudget.js'
+import { MARKETS as APEX_MARKETS } from '../../nfl/markets.js'
 
-const BASE = 'https://api.the-odds-api.com/v4/sports/americanfootball_nfl'
-const MARKETS = {
+const FOOTBALL = {
   player_pass_yds: 'passYds',
   player_pass_attempts: 'passAtt',
   player_pass_completions: 'passCmp',
@@ -19,6 +20,55 @@ const MARKETS = {
   player_reception_yds: 'recYds',
   player_rush_reception_yds: 'rushRecYds',
   player_anytime_td: 'anyTd',
+}
+const BASKETBALL = {
+  player_points: 'pts',
+  player_rebounds: 'reb',
+  player_assists: 'ast',
+  player_threes: 'threes',
+  player_blocks: 'blk',
+  player_steals: 'stl',
+  player_blocks_steals: 'stlBlk',
+  player_points_rebounds_assists: 'pra',
+  player_points_rebounds: 'pr',
+  player_points_assists: 'pa',
+  player_rebounds_assists: 'ra',
+}
+const HOCKEY = {
+  player_points: 'hPts',
+  player_assists: 'hAst',
+  player_goals: 'goals',
+  player_shots_on_goal: 'sog',
+  player_total_saves: 'saves',
+  player_goal_scorer_anytime: 'anyGoal',
+}
+const BASEBALL = {
+  batter_hits: 'hits',
+  batter_total_bases: 'tb',
+  batter_home_runs: 'hr',
+  batter_rbis: 'rbi',
+  batter_runs_scored: 'runs',
+  batter_hits_runs_rbis: 'hrr',
+  batter_singles: 'singles',
+  batter_doubles: 'doubles',
+  batter_walks: 'bbB',
+  batter_strikeouts: 'soB',
+  batter_stolen_bases: 'sbB',
+  pitcher_strikeouts: 'kP',
+  pitcher_outs: 'outs',
+  pitcher_earned_runs: 'erP',
+  pitcher_hits_allowed: 'haP',
+  pitcher_walks: 'bbP',
+}
+/** APEX league -> The Odds API sport key and the player markets it carries there. */
+export const ODDS_SPORTS = {
+  nfl: { key: 'americanfootball_nfl', markets: FOOTBALL },
+  ncaaf: { key: 'americanfootball_ncaaf', markets: FOOTBALL },
+  nba: { key: 'basketball_nba', markets: BASKETBALL },
+  ncaab: { key: 'basketball_ncaab', markets: BASKETBALL },
+  wnba: { key: 'basketball_wnba', markets: BASKETBALL },
+  nhl: { key: 'icehockey_nhl', markets: HOCKEY },
+  mlb: { key: 'baseball_mlb', markets: BASEBALL },
 }
 // Line shopping: every book the feed carries for US player props. Up to ten bookmakers cost the
 // same credits as one region. bet365 has no US feed; Fanatics and Caesars need a paid plan.
@@ -41,7 +91,12 @@ export function safeLink(u) {
   }
 }
 
-export function createOddsApi({ http, store, apiKey, now = () => Date.now(), dailyCredits = Number(process.env.APEX_ODDS_DAILY_CREDITS) || 400, perGameEveryMs = 3 * 3600e3 }) {
+export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => Date.now(), dailyCredits = Number(process.env.APEX_ODDS_DAILY_CREDITS) || 400, perGameEveryMs = 3 * 3600e3 }) {
+  const conf = ODDS_SPORTS[sport] || ODDS_SPORTS.nfl
+  const BASE = `https://api.the-odds-api.com/v4/sports/${conf.key}`
+  const MARKETS = conf.markets
+  // the NFL keeps the keys it always had
+  const SNAP = sport === 'nfl' ? 'all' : `all-${sport}`
   let events = null
   let eventsAt = 0
   const snapshots = new Map() // espnGameId -> { at, rows }
@@ -52,7 +107,7 @@ export function createOddsApi({ http, store, apiKey, now = () => Date.now(), dai
     if (loaded || !store) return
     loaded = true
     try {
-      const saved = await store.get('oddsprops', 'all')
+      const saved = await store.get('oddsprops', SNAP)
       for (const [id, s] of saved || []) snapshots.set(id, s)
     } catch (e) {
       log.warn('odds snapshot load failed', { err: errText(e) })
@@ -62,7 +117,7 @@ export function createOddsApi({ http, store, apiKey, now = () => Date.now(), dai
   /** Reserve credits in the shared counter. Returns false when today's budget is spent. */
   async function spend(cost) {
     if (!store) return true
-    const { ok, used } = await takeOddsCredits(store, cost, { pool: 'nfl', daily: dailyCredits, now })
+    const { ok, used } = await takeOddsCredits(store, cost, { pool: sport, daily: dailyCredits, now })
     state.spentToday = used
     return ok
   }
@@ -93,11 +148,14 @@ export function createOddsApi({ http, store, apiKey, now = () => Date.now(), dai
         for (const o of m.outcomes || []) {
           const pid = byName.get(nameKey(o.description))
           if (!pid) continue
-          const line = market === 'anyTd' ? 0.5 : Number(o.point)
+          // "yes only" markets (anytime TD, anytime goal) sit at their fixed line
+          const one = APEX_MARKETS[market]?.oneSided
+          if (one && /^no$/i.test(o.name)) continue
+          const line = one ? APEX_MARKETS[market].fixedLine ?? 0.5 : Number(o.point)
           if (!Number.isFinite(line)) continue
           // the deepest link the book gives: the selection on its bet slip, then the market, then the event
           const link = safeLink(o.link) || safeLink(m.link) || safeLink(b.link) || null
-          rows.push({ pid, market, line, side: /under|no/i.test(o.name) ? 'under' : market === 'anyTd' ? 'yes' : 'over', price: Number(o.price), book: b.key, link, deep: Boolean(safeLink(o.link)) })
+          rows.push({ pid, market, line, side: one ? 'yes' : /under/i.test(o.name) ? 'under' : 'over', price: Number(o.price), book: b.key, link, deep: Boolean(safeLink(o.link)) })
         }
       }
     }
@@ -144,7 +202,7 @@ export function createOddsApi({ http, store, apiKey, now = () => Date.now(), dai
   }
 
   return {
-    status: () => ({ enabled: true, ...state, games: snapshots.size, budget: dailyCredits }),
+    status: () => ({ enabled: true, sport, ...state, games: snapshots.size, budget: dailyCredits }),
     async refresh({ games, players }) {
       await loadSnapshots()
       try {
@@ -174,7 +232,7 @@ export function createOddsApi({ http, store, apiKey, now = () => Date.now(), dai
       state.lastRefresh = now()
       if (changed && store) {
         try {
-          await store.set('oddsprops', 'all', [...snapshots])
+          await store.set('oddsprops', SNAP, [...snapshots])
         } catch (e) {
           log.warn('odds snapshot save failed', { err: errText(e) })
         }

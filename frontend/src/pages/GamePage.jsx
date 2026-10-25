@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useApi } from '../lib/useApi.js'
 import { useLive } from '../lib/live.js'
 import { useTitle } from '../lib/hooks.js'
-import { clock, odds, pct, kickoff } from '../lib/format.js'
+import { clock, pct, kickoff } from '../lib/format.js'
 import { TeamLogo } from '../ui/Img.jsx'
 import { PropRow } from '../ui/PropRow.jsx'
 import { Tabs, Pills, Skeleton, ErrorBox, Empty, Section } from '../ui/Bits.jsx'
@@ -14,10 +14,12 @@ import { WatchButton } from '../ui/WatchButton.jsx'
 import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
 import { Headshot } from '../ui/Img.jsx'
+import { useSport, apiOf, sp } from '../lib/sport.js'
 
 export function GamePage() {
+  const sport = useSport()
   const { id } = useParams()
-  const { data, error, loading, refresh } = useApi(`/api/nfl/games/${id}`, { maxAgeMs: 15_000 })
+  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/games/${id}`, { maxAgeMs: 15_000 })
   const g = data?.game
   const started = g && g.status?.state !== 'pre'
   useLive('scoreboard', () => {})
@@ -212,6 +214,7 @@ function GameProps({ data }) {
 }
 
 function Trends({ data }) {
+  const sport = useSport()
   return (
     <div className="two-col">
       {[data.away, data.home].map((s) => (
@@ -232,7 +235,7 @@ function Trends({ data }) {
           </div>
           <div className="last5" aria-label="Last five games">
             {(s.form.last5 || []).map((x) => (
-              <Link key={x.id} to={`/nfl/game/${x.id}`} className={`last5__g is-${x.result === 'W' ? 'w' : x.result === 'L' ? 'l' : 't'}`} title={`${x.result} ${x.score} ${x.home ? 'vs' : 'at'} ${x.opp}`}>
+              <Link key={x.id} to={sp(sport, `/game/${x.id}`)} className={`last5__g is-${x.result === 'W' ? 'w' : x.result === 'L' ? 'l' : 't'}`} title={`${x.result} ${x.score} ${x.home ? 'vs' : 'at'} ${x.opp}`}>
                 <b>{x.result}</b>
                 <span>{x.opp}</span>
               </Link>
@@ -252,7 +255,7 @@ function Trends({ data }) {
                 <div key={l.stat}>
                   <dt>{l.label}</dt>
                   <dd>
-                    <Link to={`/nfl/player/${l.athleteId}`}>{l.short}</Link> {l.value}
+                    <Link to={sp(sport, `/player/${l.athleteId}`)}>{l.short}</Link> {l.value}
                   </dd>
                 </div>
               ))}
@@ -265,6 +268,7 @@ function Trends({ data }) {
 }
 
 function Injuries({ data }) {
+  const sport = useSport()
   const order = { out: 0, doubtful: 1, questionable: 2, probable: 3, other: 4 }
   return (
     <div className="two-col">
@@ -283,7 +287,7 @@ function Injuries({ data }) {
                   <li key={i.athleteId} className={`inj is-${i.severity}`}>
                     <span className="inj__status">{i.status}</span>
                     <span className="inj__who">
-                      <Link to={`/nfl/player/${i.athleteId}`}>{i.name}</Link> {i.pos}
+                      <Link to={sp(sport, `/player/${i.athleteId}`)}>{i.name}</Link> {i.pos}
                       {i.detail ? <span className="muted">, {i.detail}</span> : null}
                     </span>
                     {i.boosts?.length > 0 && (
@@ -292,7 +296,7 @@ function Injuries({ data }) {
                         {i.boosts.map((b, k) => (
                           <span key={b.id}>
                             {k ? ', ' : ''}
-                            <Link to={`/nfl/prop/${encodeURIComponent(b.id)}`}>
+                            <Link to={sp(sport, `/prop/${encodeURIComponent(b.id)}`)}>
                               {b.short} {b.label}
                             </Link>{' '}
                             <b className="is-plus">+{Math.round(b.lift * 100)}%</b>
@@ -311,6 +315,7 @@ function Injuries({ data }) {
 }
 
 function LiveBox({ data }) {
+  const sport = useSport()
   const live = data.live
   if (!live) return <Skeleton rows={6} />
   const g = data.game
@@ -327,7 +332,7 @@ function LiveBox({ data }) {
             <ul className="box-leaders">
               {(live.leaders?.[t.id] || []).map((l) => (
                 <li key={l.id}>
-                  <Link to={`/nfl/player/${l.id}`}>{l.short || l.name}</Link> <span className="muted">{l.line}</span>
+                  <Link to={sp(sport, `/player/${l.id}`)}>{l.short || l.name}</Link> <span className="muted">{l.line}</span>
                 </li>
               ))}
             </ul>
@@ -418,8 +423,9 @@ export { kickoff }
  * opponent, weighted with the APEX probability. Meetings are few, so every line shows its sample.
  */
 function HeadToHead({ data }) {
+  const sport = useSport()
   const g = data.game
-  const { data: h, error, loading, refresh } = useApi(`/api/nfl/games/${g.id}/h2h`, { maxAgeMs: 120_000 })
+  const { data: h, error, loading, refresh } = useApi(`${apiOf(sport)}/games/${g.id}/h2h`, { maxAgeMs: 120_000 })
   const [team, setTeam] = useState(null)
   const [market, setMarket] = useState(null)
   const [all, setAll] = useState(false)
@@ -480,10 +486,10 @@ function HeadToHead({ data }) {
                 <Headshot src={r.headshot} name={r.name} size={40} />
                 <div className="h2hrow__who">
                   <p className="h2hrow__name">
-                    <Link to={`/nfl/player/${r.playerId}`}>{r.name}</Link> <span className="muted">{r.pos} {r.teamAbbr}</span>
+                    <Link to={sp(sport, `/player/${r.playerId}`)}>{r.name}</Link> <span className="muted">{r.pos} {r.teamAbbr}</span>
                   </p>
                   <p className="h2hrow__bet">
-                    <Link to={`/nfl/prop/${encodeURIComponent(r.id)}`}>{r.label}</Link>
+                    <Link to={sp(sport, `/prop/${encodeURIComponent(r.id)}`)}>{r.label}</Link>
                   </p>
                   <p className="h2hrow__games" aria-label={`Against ${r.oppAbbr}`}>
                     {r.h2h.games.map((x, i) => (

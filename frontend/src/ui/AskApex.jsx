@@ -5,6 +5,7 @@ import { Locked } from './Locked.jsx'
 import { useBilling } from '../context/BillingContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { Link } from 'react-router-dom'
+import { useSport, apiOf } from '../lib/sport.js'
 
 /** Turn the read's "VERDICT: ...", "WHY: ..." lines into labeled blocks. */
 function sections(text) {
@@ -46,7 +47,7 @@ function put(key, patch) {
   for (const fn of subs.get(key) || []) fn()
 }
 
-async function startRead(key, propId, onDone) {
+async function startRead(key, propId, onDone, sport = 'nfl') {
   reads.get(key)?.ctrl?.abort()
   const ac = new AbortController()
   put(key, { text: '', state: 'streaming', err: null })
@@ -54,7 +55,7 @@ async function startRead(key, propId, onDone) {
   const mine = () => reads.get(key)?.ctrl === ac
   try {
     const { last, usage } = await streamNdjson(
-      streamUrl('/api/nfl/insight'),
+      streamUrl(`${apiOf(sport)}/insight`),
       { propId },
       {
         signal: ac.signal,
@@ -98,11 +99,12 @@ function useRead(key) {
 
 /** The AI read of one prop, written with the APEX ruleset. Pro and Elite. */
 export function AskApex({ propId }) {
+  const sport = useSport()
   const { user, firebaseConfigured } = useAuth()
   const { paywall, refresh } = useBilling()
-  const key = `${user?.uid || ''}|${propId}`
+  const key = `${user?.uid || ''}|${sport}|${propId}`
   const { text, state, err, usage } = useRead(key)
-  const run = () => startRead(key, propId, refresh)
+  const run = () => startRead(key, propId, refresh, sport)
 
   const blocks = sections(text)
   const verdict = blocks.find((b) => b.k === 'VERDICT')?.lines.join(' ') || ''

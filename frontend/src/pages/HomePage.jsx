@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApi } from '../lib/useApi.js'
 import { useLive } from '../lib/live.js'
-import { useTitle } from '../lib/hooks.js'
+import { useTitle, useMedia } from '../lib/hooks.js'
 import { pct, odds, kickoff, clock, ago, ratio } from '../lib/format.js'
 import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
@@ -12,28 +12,58 @@ import { PropList } from '../ui/PropRow.jsx'
 import { HitChart } from '../ui/HitChart.jsx'
 import { Headshot, TeamLogo } from '../ui/Img.jsx'
 import { RateChip, Tabs, Section, Skeleton, ErrorBox, Empty } from '../ui/Bits.jsx'
+import { useSport, apiOf, sp, sportInfo, slateDay, slateLabel } from '../lib/sport.js'
 
 const TABS = [
   { key: 'apex', label: 'APEX picks' },
   { key: 'streaks', label: 'Streaks' },
   { key: 'matchups', label: 'Matchups' },
   { key: 'moves', label: 'Line moves' },
-  { key: 'tds', label: 'Touchdowns' },
 ]
+// the last tab is each league's own: touchdowns, threes, home runs, goal scorers
+const SPECIAL = { nfl: { key: 'tds', label: 'Touchdowns' }, ncaaf: { key: 'tds', label: 'Touchdowns' }, nba: { key: 'threes', label: '3-pointers' }, ncaab: { key: 'threes', label: '3-pointers' }, wnba: { key: 'threes', label: '3-pointers' }, mlb: { key: 'hr', label: 'Home runs' }, nhl: { key: 'goals', label: 'Goal scorers' } }
 const TAB_NOTE = {
   apex: 'The highest APEX scores on the slate: hit rate, projection, matchup and role together.',
   streaks: 'Starters who have cleared this line five or more games in a row.',
   matchups: 'Props facing a defense ranked top or bottom six against the position.',
   moves: 'Lines that moved since they opened. The market is telling you something.',
   tds: 'Anytime touchdown scorers, most likely first.',
+  threes: 'Made threes, the likeliest overs first.',
+  hr: 'Home run props, the likeliest first.',
+  goals: 'Anytime goal scorers, the likeliest first.',
+}
+
+/** The day of the next game on a daily board ("Sunday, October 25"), on ESPN's Eastern-time calendar. */
+function boardDay(data, style = 'long') {
+  const next = (data?.games || [])
+    .filter((g) => g.status?.state !== 'post')
+    .map((g) => Date.parse(g.date))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b)[0]
+  if (!next) return slateDay(data?.slate, style)
+  const o = style === 'long' ? { weekday: 'long', month: 'long', day: 'numeric' } : { weekday: 'short', month: 'short', day: 'numeric' }
+  return new Date(next).toLocaleDateString('en-US', { ...o, timeZone: 'America/New_York' })
 }
 
 export function HomePage() {
-  const { data, error, loading, refresh } = useApi('/api/nfl/home', { maxAgeMs: 20_000 })
+  const sport = useSport()
+  const info = sportInfo(sport)
+  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/home`, { maxAgeMs: 20_000 })
   useLive('scoreboard', () => {})
-  useTitle(data?.week ? `NFL Week ${data.week} props` : 'NFL props')
+  const daily = (data?.calendar || info.calendar) === 'day'
+  const phone = useMedia('(max-width: 759px)')
+  useTitle(daily ? `${info.name} props, ${boardDay(data, 'short') || 'today'}` : data?.week ? `${info.name} Week ${data.week} props` : `${info.name} props`)
   const [tab, setTab] = useState('apex')
   const top = data?.tabs?.apex?.[0]
+  const tabs = [...TABS, data?.special || SPECIAL[sport] || SPECIAL.nfl]
+  // a tab another league has (touchdowns on the NBA board) falls back to APEX picks
+  const cur = tabs.some((t) => t.key === tab) ? tab : 'apex'
+
+  const meta = useApi('/api/sports', { maxAgeMs: 10 * 60_000 }).data
+  const month = new Date().getMonth() + 1
+  const between = meta?.sports?.find((x) => x.key === sport)?.offseason?.includes(month)
+  // the leagues in season right now, for a league with nothing on
+  const inSeason = (meta?.sports || []).filter((x) => x.key !== sport && !x.offseason?.includes(month)).slice(0, 4)
 
   if (error && !data) {
     return (
@@ -43,22 +73,49 @@ export function HomePage() {
     )
   }
 
+  // a league with nothing scheduled: say so once, no empty board
+  if (data && !data.games?.length) {
+    return (
+      <div className="container page home">
+        <header className="week-head">
+          <h1 className="week-head__title">{info.title}</h1>
+        </header>
+        <Empty
+          title={between ? `The ${info.name} is between seasons` : `No ${info.name} games on the board yet`}
+          action={
+            inSeason.length > 0 && (
+              <div className="row empty__leagues">
+                {inSeason.map((x) => (
+                  <Link key={x.key} to={sp(x.key, '')} className="btn btn--quiet">
+                    {x.name} board
+                  </Link>
+                ))}
+              </div>
+            )
+          }
+        >
+          {between ? 'The board comes back when the schedule does: games, lines and the 3-Leg Lock, the day they post.' : daily ? `The next ${info.name} games show up here as soon as the schedule posts.` : 'The new week’s slate shows up as soon as the schedule posts.'}
+        </Empty>
+      </div>
+    )
+  }
+
   return (
     <div className="page home">
       <GameStrip games={data?.games} />
       <div className="container">
         <header className="week-head">
-          <h1 className="week-head__title num">{data?.week ? `Week ${data.week}` : 'This week'}</h1>
+          <h1 className="week-head__title num">{daily ? boardDay(data, phone ? 'short' : 'long') || 'Today' : data?.week ? `Week ${data.week}` : 'This week'}</h1>
           {data && (
             <p className="week-head__facts">
               <span>
-                <b className="num">{data.counts.games}</b> games
+                <b className="num">{data.counts.games}</b> {data.counts.games === 1 ? 'game' : 'games'}
               </span>
               <span>
                 <b className="num">{data.counts.props.toLocaleString()}</b> props graded
               </span>
               {data.counts.live > 0 && (
-                <Link to="/nfl/live" className="week-head__live">
+                <Link to={sp(sport, '/live')} className="week-head__live">
                   <b className="num">{data.counts.live}</b> live now
                 </Link>
               )}
@@ -76,14 +133,14 @@ export function HomePage() {
           id="board"
           title="The board"
           aside={
-            <Link to="/nfl/props" className="link">
+            <Link to={sp(sport, '/props')} className="link">
               All props
             </Link>
           }
         >
-          <Tabs tabs={TABS.map((t) => ({ ...t, count: data?.tabs?.[t.key]?.length }))} value={tab} onChange={setTab} label="Board" className="board-tabs" />
-          <p className="section__note">{TAB_NOTE[tab]}</p>
-          {loading ? <Skeleton rows={8} /> : <PropList rows={data?.tabs?.[tab]} ranked={tab === 'apex'} showGame empty="Nothing qualifies for this list right now. It fills in as lines post." />}
+          <Tabs tabs={tabs.map((t) => ({ ...t, count: data?.tabs?.[t.key]?.length }))} value={cur} onChange={setTab} label="Board" className="board-tabs" />
+          <p className="section__note">{TAB_NOTE[cur] || ''}</p>
+          {loading ? <Skeleton rows={8} /> : <PropList rows={data?.tabs?.[cur]} ranked={cur === 'apex'} showGame empty="Nothing qualifies for this list right now. It fills in as lines post." />}
         </Section>
 
         {data?.cheatsheets?.length > 0 && (
@@ -117,15 +174,14 @@ export function HomePage() {
           </Section>
         )}
 
-        {data && !data.games?.length && <Empty title="No games on the board yet">The new week's slate shows up as soon as the schedule posts.</Empty>}
       </div>
     </div>
   )
 }
 
-/** The No. 1 prop on the board, big: who, the line, the last ten against it, and the read. */
 /** The starred games: straight to their head-to-head view. */
 function MyGames({ games }) {
+  const sport = useSport()
   const watch = useWatch()
   const mine = (games || []).filter((g) => watch.includes(g.id) && g.status?.state !== 'post')
   if (!mine.length) return null
@@ -135,14 +191,14 @@ function MyGames({ games }) {
         <h2 className="section-h" id="mygames-h">
           My games
         </h2>
-        <Link className="link" to={`/nfl/props?game=${mine.map((g) => g.id).join(',')}&window=h2h&sort=hit`}>
+        <Link className="link" to={sp(sport, `/props?game=${mine.map((g) => g.id).join(',')}&window=h2h&sort=hit`)}>
           Their props, ranked by head to head
         </Link>
       </div>
       <ul className="mygames-home__list">
         {mine.map((g) => (
           <li key={g.id}>
-            <Link to={`/nfl/game/${g.id}?tab=h2h`} className="mygame">
+            <Link to={sp(sport, `/game/${g.id}?tab=h2h`)} className="mygame">
               <span className="mygame__teams">
                 {g.away?.abbr} at {g.home?.abbr}
               </span>
@@ -156,16 +212,17 @@ function MyGames({ games }) {
   )
 }
 
-/** This week's 3-Leg Lock and the season record, from the public ledger. */
+/** The current 3-Leg Lock (this week's, or today's) and the season record, from the public ledger. */
 function LockBanner() {
-  const { data } = useApi('/api/nfl/lock/ledger', { maxAgeMs: 60_000 })
+  const sport = useSport()
+  const { data } = useApi(`${apiOf(sport)}/lock/ledger`, { maxAgeMs: 60_000 })
   const wk = data?.weeks?.[0]
   const r = data?.record
   if (!data) return null
   const state = !wk ? 'Checking the board' : wk.status === 'pass' ? 'Pass so far: nothing meets the rules' : wk.status === 'graded' ? (wk.result === 'win' ? 'Cashed' : wk.result === 'loss' ? 'Missed' : 'Pushed') : wk.status === 'live' ? 'Live now' : 'The lock is in'
   return (
-    <Link to="/lock" className={`lockbar lockbar--${wk?.status || 'none'}`}>
-      <span className="lockbar__k">3-Leg Lock{wk ? `, week ${wk.week}` : ''}</span>
+    <Link to={sp(sport, '/lock')} className={`lockbar lockbar--${wk?.status || 'none'}`}>
+      <span className="lockbar__k">3-Leg Lock{wk ? `, ${slateLabel(wk.week)}` : ''}</span>
       <span className="lockbar__state">{state}</span>
       {r && (r.wins || r.losses || r.passes) ? (
         <span className="lockbar__rec num">
@@ -178,8 +235,10 @@ function LockBanner() {
   )
 }
 
+/** The No. 1 prop on the board, big: who, the line, the last ten against it, and the read. */
 function Hero({ card }) {
-  const detail = useApi(`/api/nfl/props/${encodeURIComponent(card.id)}`, { maxAgeMs: 60_000 }).data
+  const sport = useSport()
+  const detail = useApi(`${apiOf(sport)}/props/${encodeURIComponent(card.id)}`, { maxAgeMs: 60_000 }).data
   const slip = useSlip()
   const on = slip.legs.some((l) => l.id === card.id)
   const p = detail?.prop
@@ -192,7 +251,7 @@ function Hero({ card }) {
         <div>
           <p className="hero__rank">No. 1 on the APEX board</p>
           <h2 className="hero__name" id="hero-name">
-            <Link to={`/nfl/player/${card.playerId}`}>{card.name}</Link>
+            <Link to={sp(sport, `/player/${card.playerId}`)}>{card.name}</Link>
           </h2>
           <p className="hero__meta">
             {card.pos} {card.teamAbbr} {card.home ? 'vs' : 'at'} {card.oppAbbr}, {kickoff(card.kickoff)}
@@ -217,7 +276,7 @@ function Hero({ card }) {
           <button type="button" className={`btn ${on ? 'btn--quiet' : 'btn--gold'}`} onClick={() => toggleLeg(card)} aria-pressed={on}>
             {on ? 'On your slip' : 'Add to slip'}
           </button>
-          <Link to={`/nfl/prop/${encodeURIComponent(card.id)}`} className="btn btn--quiet">
+          <Link to={sp(sport, `/prop/${encodeURIComponent(card.id)}`)} className="btn btn--quiet">
             Open the prop
           </Link>
         </div>
@@ -228,6 +287,7 @@ function Hero({ card }) {
 }
 
 function Cheatsheet({ sheet }) {
+  const sport = useSport()
   return (
     <div className="sheet">
       <h3 className="sheet__title">{sheet.title}</h3>
@@ -235,7 +295,7 @@ function Cheatsheet({ sheet }) {
       <ol className="sheet__rows">
         {sheet.rows.map((r) => (
           <li key={r.id}>
-            <Link to={`/nfl/prop/${encodeURIComponent(r.id)}`} className="sheet__row">
+            <Link to={sp(sport, `/prop/${encodeURIComponent(r.id)}`)} className="sheet__row">
               <Headshot src={r.headshot} name={r.name} size={24} />
               <span className="sheet__who">
                 <b>{r.short}</b> {r.shortLabel}
@@ -286,8 +346,9 @@ export function ParlayCard({ p }) {
 }
 
 function MatchupCard({ g }) {
+  const sport = useSport()
   return (
-    <Link to={`/nfl/game/${g.id}`} className={`matchup${g.status?.state === 'in' ? ' is-live' : ''}`}>
+    <Link to={sp(sport, `/game/${g.id}`)} className={`matchup${g.status?.state === 'in' ? ' is-live' : ''}`}>
       <span className="matchup__team">
         <TeamLogo src={g.away?.logo} abbr={g.away?.abbr} size={40} />
         <b>{g.away?.abbr}</b>

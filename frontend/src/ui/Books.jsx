@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
 import { odds, pct, impliedOf, decimalOf } from '../lib/format.js'
 import { Dialog } from './Dialog.jsx'
+import { useSport, apiOf, legRef, legsSport } from '../lib/sport.js'
 
 const STATES = ['AZ', 'CO', 'CT', 'DC', 'IA', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME', 'MI', 'NC', 'NH', 'NJ', 'NY', 'OH', 'PA', 'TN', 'VA', 'VT', 'WV', 'WY']
 const read = (k, d) => {
@@ -23,19 +24,25 @@ const write = (k, v) => {
 const withState = (url, st) => (url && url.includes('{state}') ? url.replaceAll('{state}', st.toLowerCase()) : url)
 
 const memo = new Map()
-/** Every book's prices for these legs (POST /api/nfl/shop), cached for a minute. */
-export function useShop(ids, { enabled = true } = {}) {
-  const key = ids.join(',')
+/**
+ * Every book's prices for these legs (POST /api/<league>/shop), cached for a minute. Legs can
+ * come from several leagues; each is sent as its ref ("nba:<id>").
+ */
+export function useShop(legs, { enabled = true } = {}) {
+  const here = useSport()
+  const withSport = legs.map((l) => (l.sport ? l : { ...l, sport: here }))
+  const refs = withSport.map(legRef)
+  const key = refs.join(',')
   const [st, setSt] = useState(() => memo.get(key)?.v || { data: null, error: null })
   useEffect(() => {
-    if (!enabled || !ids.length) return undefined
+    if (!enabled || !refs.length) return undefined
     const hit = memo.get(key)
     if (hit && Date.now() - hit.at < 60_000) {
       setSt(hit.v)
       return undefined
     }
     let live = true
-    api('/api/nfl/shop', { method: 'POST', body: { legs: ids } })
+    api(`${apiOf(legsSport(withSport, here))}/shop`, { method: 'POST', body: { legs: refs } })
       .then((data) => {
         const v = { data, error: null }
         memo.set(key, { at: Date.now(), v })
@@ -61,8 +68,8 @@ function evText(p, american) {
  * legs on its bet slip where the book's links allow it, otherwise one tap per leg.
  */
 export function SendToBook({ open, onClose, legs, p = null, title = 'Send to sportsbook' }) {
-  const ids = legs.map((l) => l.id)
-  const { data, error } = useShop(ids, { enabled: open })
+  const { data, error } = useShop(legs, { enabled: open })
+  const anyPrice = data?.books?.some((b) => b.priced)
   const [state, setState] = useState(() => read('apex_state', 'NJ'))
   const mine = read('apex_book', '')
   const needsState = data?.books?.some((b) => [b.link, ...(b.legLinks || [])].some((u) => u && u.includes('{state}')))
@@ -76,7 +83,13 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
         </p>
         {error && <p className="ask__err">{error.message}</p>}
         {!data && !error && <p className="muted">Checking every book…</p>}
-        {data && !data.oddsFeed && <p className="shopsheet__note">Live sportsbook prices aren’t switched on for this site yet, so the books below open without a price. Prices appear once the odds feed is connected.</p>}
+        {data && !data.oddsFeed && (
+          <p className="shopsheet__note">
+            {anyPrice
+              ? 'Prices here are the ones DraftKings posts (via ESPN). Every other book fills in once the multi-book odds feed is connected; each one still opens from its button.'
+              : 'Live sportsbook prices aren’t switched on for this site yet, so the books below open without a price. Prices appear once the odds feed is connected.'}
+          </p>
+        )}
         {data && (
           <ol className="shoplist">
             {data.books.map((b) => {
@@ -156,7 +169,7 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
 
 /** One prop at every book, inline on the prop page. */
 export function LineShop({ row }) {
-  const { data } = useShop([row.id])
+  const { data } = useShop([row])
   const leg = data?.legs?.[0]
   const books = (leg?.books || []).slice(0, 8)
   const [open, setOpen] = useState(false)
@@ -188,7 +201,7 @@ export function LineShop({ row }) {
           })}
         </ul>
       ) : (
-        <p className="muted">{data.oddsFeed ? `No book has posted a price on ${row.label} yet.` : 'Sportsbook prices aren’t switched on for this site yet. You can still open any book from the button above.'}</p>
+        <p className="muted">{data.oddsFeed ? `No book has posted a price on ${row.label} yet.` : 'No sportsbook price on this line yet. You can still open any book from the button above.'}</p>
       )}
       <SendToBook open={open} onClose={() => setOpen(false)} legs={[row]} p={row.prob} title="Bet it at a sportsbook" />
     </section>

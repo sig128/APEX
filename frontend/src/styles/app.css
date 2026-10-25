@@ -101,6 +101,115 @@
   display: block;
   color: var(--gold);
 }
+.brand__home {
+  display: flex;
+  align-items: center;
+  color: var(--gold);
+}
+/* the league switcher: the chip plus a caret, opening the list of leagues */
+.league {
+  position: relative;
+}
+.league__btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 4px 4px 0;
+  border: 0;
+  background: none;
+  color: var(--chalk-3);
+  cursor: pointer;
+  border-radius: var(--r-s);
+}
+.league__btn:hover,
+.league__btn[aria-expanded='true'] {
+  color: var(--chalk);
+}
+.league__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.league__caret {
+  transition: transform 0.15s ease;
+}
+.league__btn[aria-expanded='true'] .league__caret {
+  transform: rotate(180deg);
+}
+.league__menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: -8px;
+  z-index: 60;
+  width: 248px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--stand-2);
+  border: 1px solid var(--seat);
+  border-radius: var(--r-m);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+.league__item {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  align-items: baseline;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--r-s);
+  background: none;
+  color: var(--chalk);
+  text-align: left;
+  cursor: pointer;
+}
+.league__item b {
+  font: 800 13px/1 var(--font-ui);
+  letter-spacing: 0.08em;
+}
+.league__item span {
+  font-size: var(--t-s);
+  color: var(--chalk-3);
+}
+.league__item .league__off {
+  font-style: normal;
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+.league__item:hover {
+  background: var(--stand-3);
+}
+.league__item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+.league__item.is-on b {
+  color: var(--gold);
+}
+@media (max-width: 759px) {
+  /* on phones the list drops under the header, full width */
+  .league__menu {
+    position: fixed;
+    top: calc(var(--header) + 6px);
+    left: var(--gutter);
+    right: var(--gutter);
+    width: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .league__caret {
+    transition: none;
+  }
+}
+.slip-leg__league {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border: 1px solid var(--seat-2);
+  border-radius: 4px;
+  font: 700 10px/1.4 var(--font-ui);
+  letter-spacing: 0.06em;
+  color: var(--chalk-2);
+  vertical-align: 2px;
+}
 /* matches the badge the intro flies in, so the hand-off doesn't change its look */
 .brand__chip {
   font: 800 11px/1 var(--font-ui);
@@ -854,6 +963,10 @@ code {
   display: grid;
   justify-items: center;
   gap: 8px;
+}
+.empty__leagues {
+  justify-content: center;
+  margin-top: 6px;
 }
 .empty__title {
   margin: 0;

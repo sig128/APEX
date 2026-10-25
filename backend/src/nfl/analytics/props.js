@@ -63,7 +63,10 @@ export function calibrate(raw, { implied = null, anchor = null, oneSided = false
   // a price beats everything; an alternate line leans on where the main line sits; a posted
   // main line without a price is even money
   const a = implied ?? anchor ?? 0.5
-  return clamp(a + (raw - a) * keep, 0.03, 0.97)
+  // a real price is a sharp opinion: trust the model less against it, and less again far from
+  // even money, where hit rates run hottest and books are hardest to beat
+  const k = implied != null ? Math.min(keep, 0.35) * (1 - 0.9 * Math.abs(implied - 0.5)) : keep
+  return clamp(a + (raw - a) * k, 0.03, 0.97)
 }
 
 function priceFor(ctx, playerId, market, line) {
@@ -112,6 +115,10 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
     if (nv) implied = s === 'o' ? nv[0] : nv[1]
   } else if (price && price.yes != null) {
     implied = americanToProb(price.yes)
+  } else if (price && (s === 'o' ? price.over : price.under) != null) {
+    // one side priced (a milestone like "20+ points"): its chance with a typical book margin out
+    const one = americanToProb(s === 'o' ? price.over : price.under)
+    if (one != null) implied = one / 1.045
   }
   // Lines other than the posted main one: anchor on the main line (or, with nothing posted,
   // on the model) instead of even money, or alternates get dragged toward 50%.
@@ -130,6 +137,7 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
     oppAbbr: opp?.abbr,
     home: isHome,
     without: absences,
+    sport: ctx.sport,
   })
   const best = bestWindow(ws)
   const recent = rows.slice(-20).map((r) => ({ v: r.v, date: r.date, opp: r.oppAbbr, home: r.home, id: r.eventId, o: outcome(r.v, line, s) }))
@@ -216,7 +224,7 @@ export function buildTeamRow({ team, market = 'teamPts', line, side, game, sched
   const p = calibrate(s === 'o' ? pOver : 1 - pOver, { anchor })
   const isHome = game ? game.home?.id === team.id : null
   const opp = game ? (isHome ? game.away : game.home) : null
-  const ws = windows(rows, line, s, { season: ctx.season, lastSeason: ctx.lastSeason, oppId: opp?.id, oppAbbr: opp?.abbr, home: isHome })
+  const ws = windows(rows, line, s, { season: ctx.season, lastSeason: ctx.lastSeason, oppId: opp?.id, oppAbbr: opp?.abbr, home: isHome, sport: ctx.sport })
   const best = bestWindow(ws)
   return {
     id: propId(`t${team.id}`, market, s, line),

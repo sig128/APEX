@@ -6,12 +6,13 @@ export const RULES = {
   legMin: 0.65,
   comboMin: 0.45,
   edgeMin: 0.02,
+  maxFavorite: -500,
   stake: { lock: 0.02, single: 0.03, daily: 0.05 },
   kelly: 0.25,
 }
 
 export const PRINCIPLES = [
-  { k: 'Edge or Pass', v: 'No bet without a calculable edge over the vig.' },
+  { k: 'Edge or Pass', v: 'No bet without a calculable edge over the vig, and nothing priced shorter than -500, where the juice eats any edge.' },
   { k: 'Sample size integrity', v: 'Every number rests on at least 8 games.' },
   { k: 'Sharp money over public', v: 'A line moving against a side since it opened rules it out.' },
   { k: 'Correlation intelligence', v: 'Legs that win together are kept; legs that pull against each other are cut.' },
@@ -27,7 +28,7 @@ export function edgeAt(p, american) {
   const imp = impliedOf(american)
   const d = decimalOf(american)
   if (imp == null || !d) return null
-  return { implied: imp, edge: p - imp, ev: p * d - 1, ok: p - imp >= RULES.edgeMin && p * d - 1 > 0 }
+  return { implied: imp, edge: p - imp, ev: p * d - 1, ok: p - imp >= RULES.edgeMin && p * d - 1 > 0 && american > RULES.maxFavorite }
 }
 
 /** Quarter Kelly at decimal odds d, before the caps. */

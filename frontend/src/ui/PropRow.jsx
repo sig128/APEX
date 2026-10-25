@@ -6,12 +6,14 @@ import { RateChip, SlipToggle } from './Bits.jsx'
 import { pct, odds, clock } from '../lib/format.js'
 import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
+import { useSport, sp } from '../lib/sport.js'
 
 /**
  * One prop in a list: who, what line, how often it has hit, the APEX probability and fair
  * price, and a button to put it on the slip. `live` adds the in-game progress bar.
  */
 export const PropRow = memo(function PropRow({ c, rank, showGame = false, win, live, compact = false, bare = false }) {
+  const sport = useSport()
   const slip = useSlip()
   const on = slip.legs.some((l) => l.id === c.id)
   const isTeam = c.kind === 'team'
@@ -19,8 +21,8 @@ export const PropRow = memo(function PropRow({ c, rank, showGame = false, win, l
   return (
     <div className={`prop-row${compact ? ' prop-row--compact' : ''}${live ? ` prop-row--live is-${live.status}` : ''}`}>
       {rank != null && <span className="prop-row__rank num">{rank}</span>}
-      <Link to={`/nfl/prop/${encodeURIComponent(c.id)}`} className={`prop-row__main${bare ? ' prop-row__main--bare' : ''}`}>
-        {bare ? null : isTeam ? <TeamLogo src={c.logo || logoFor(c.teamAbbr)} abbr={c.teamAbbr} size={36} className="prop-row__img" /> : <Headshot src={c.headshot} name={c.name} size={40} className="prop-row__img" />}
+      <Link to={sp(c.sport || sport, `/prop/${encodeURIComponent(c.id)}`)} className={`prop-row__main${bare ? ' prop-row__main--bare' : ''}`}>
+        {bare ? null : isTeam ? <TeamLogo src={c.logo || logoFor(c.teamAbbr, c.sport || sport)} abbr={c.teamAbbr} size={36} className="prop-row__img" /> : <Headshot src={c.headshot} name={c.name} size={40} className="prop-row__img" />}
         {bare ? (
           <span className="prop-row__who">
             <span className="prop-row__name">{c.label}</span>

@@ -5,6 +5,7 @@ import { shortDate, clock } from '../lib/format.js'
 import { Headshot, TeamLogo } from '../ui/Img.jsx'
 import { PropRow } from '../ui/PropRow.jsx'
 import { Skeleton, ErrorBox, Section, Empty } from '../ui/Bits.jsx'
+import { useSport, apiOf, sp, sportInfo } from '../lib/sport.js'
 
 const COLS = {
   passCmp: 'CMP',
@@ -29,9 +30,22 @@ const COLS = {
   kickPts: 'PTS',
 }
 
+/** Innings pitched from outs (19 -> "6.1"), ice time from minutes (20.1 -> "20:06"). */
+function cell(c, v) {
+  if (v == null) return '–'
+  if (c === 'outs') return `${Math.floor(v / 3)}.${v % 3}`
+  if (c === 'toi') {
+    const m = Math.floor(v)
+    return `${m}:${String(Math.round((v - m) * 60)).padStart(2, '0')}`
+  }
+  return v
+}
+const HEAD = { outs: 'IP' }
+
 export function PlayerPage() {
+  const sport = useSport()
   const { id } = useParams()
-  const { data, error, loading, refresh } = useApi(`/api/nfl/players/${id}`, { maxAgeMs: 60_000 })
+  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/players/${id}`, { maxAgeMs: 60_000 })
   const pl = data?.player
   useTitle(pl ? `${pl.name} props` : 'Player')
   if (error && !data)
@@ -61,7 +75,7 @@ export function PlayerPage() {
           {next && (
             <p className="prop-head__meta">
               Next:{' '}
-              <Link className="link" to={`/nfl/game/${next.id}`}>
+              <Link className="link" to={sp(sport, `/game/${next.id}`)}>
                 {next.shortName}, {clock(next.status, next.date)}
               </Link>
             </p>
@@ -69,7 +83,7 @@ export function PlayerPage() {
           {data.injury && <p className={`prop-head__inj is-${data.injury.severity}`}>{data.injury.status}</p>}
         </div>
       </header>
-      <Section id="player-props" title="This week's props">
+      <Section id="player-props" title={sportInfo(sport).calendar === 'week' ? 'This week’s props' : 'Props on the board'}>
         {data.props.length ? (
           <div className="prop-list">
             {data.props.map((c) => (
@@ -91,7 +105,7 @@ export function PlayerPage() {
                   <th scope="col">Result</th>
                   {data.log.cols.map((c) => (
                     <th key={c} scope="col" className="num-col">
-                      {COLS[c] || c}
+                      {HEAD[c] || data.log.labels?.[c] || COLS[c] || c}
                     </th>
                   ))}
                 </tr>
@@ -108,7 +122,7 @@ export function PlayerPage() {
                     </td>
                     {data.log.cols.map((c) => (
                       <td key={c} className="num-col num">
-                        {r.s?.[c] ?? '–'}
+                        {cell(c, r.s?.[c])}
                       </td>
                     ))}
                   </tr>

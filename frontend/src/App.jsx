@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { isSport } from './lib/sport.js'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { BillingProvider } from './context/BillingContext.jsx'
 import { SportsConfigProvider } from './context/SportsConfigContext.jsx'
@@ -32,6 +33,12 @@ const DvpPage = page(() => import('./pages/DvpPage.jsx'), 'DvpPage')
 const AnalyzerPage = page(() => import('./pages/AnalyzerPage.jsx'), 'AnalyzerPage')
 const AdminSportsPage = page(() => import('./pages/AdminSportsPage.jsx'), 'AdminSportsPage')
 
+/** League pages: an unknown league is a not-found, not an empty board. */
+function League({ children }) {
+  const { sport } = useParams()
+  return isSport(sport) ? children : <NotFound />
+}
+
 const wait = (
   <div className="container page">
     <Skeleton rows={6} />
@@ -47,18 +54,21 @@ export function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/nfl" element={<Navigate to="/" replace />} />
-              <Route path="/nfl/props" element={<PropsPage />} />
-              <Route path="/nfl/game/:id" element={<GamePage />} />
-              <Route path="/nfl/prop/:id" element={<PropPage />} />
-              <Route path="/nfl/player/:id" element={<PlayerPage />} />
-              <Route path="/nfl/live" element={<LivePage />} />
               <Route path="/nfl/slip" element={<SlipPage />} />
-              <Route path="/nfl/dvp" element={<DvpPage />} />
+              <Route path="/slip" element={<SlipPage />} />
+              <Route path="/lock" element={<LockPage />} />
+              <Route path="/:sport" element={<League><HomePage /></League>} />
+              <Route path="/:sport/props" element={<League><PropsPage /></League>} />
+              <Route path="/:sport/game/:id" element={<League><GamePage /></League>} />
+              <Route path="/:sport/prop/:id" element={<League><PropPage /></League>} />
+              <Route path="/:sport/player/:id" element={<League><PlayerPage /></League>} />
+              <Route path="/:sport/live" element={<League><LivePage /></League>} />
+              <Route path="/:sport/dvp" element={<League><DvpPage /></League>} />
+              <Route path="/:sport/lock" element={<League><LockPage /></League>} />
               <Route path="/picks" element={<PicksPage />} />
               <Route path="/u/:handle" element={<UserPage />} />
               <Route path="/me" element={<MePage />} />
               <Route path="/kelly" element={<KellyPage />} />
-              <Route path="/lock" element={<LockPage />} />
               <Route path="/tools" element={<ToolsPage />} />
               <Route path="/tools/sim" element={<SimPage />} />
               <Route path="/tools/check" element={<CheckPage />} />

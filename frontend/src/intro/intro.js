@@ -152,7 +152,8 @@ export function maybePlayIntro(opts = {}) {
  * Play the intro now.
  * opts.stats      object or promise: { week, games, live, props, chips: [[label, value, tone], ...] }
  * opts.logo       selector for the header wordmark to fly into (default [data-apex-logo])
- * opts.chip       selector for the header "NFL" chip (default [data-apex-chip])
+ * opts.chip       selector for the header league chip (default [data-apex-chip])
+ * opts.chipText   the league on that chip (default "NFL")
  * opts.onDone     called once the overlay is gone
  * Returns { done: Promise, skip() } or null when it can't run.
  */
@@ -734,7 +735,7 @@ function paintChips(chips) {
 }
 
 function paintChipBadge(L, scale) {
-  const { chipW, chipH, chipFont } = L
+  const { chipW, chipH, chipFont, chipText } = L
   const p = Math.ceil(chipH * 0.5)
   const [c, ctx] = canvas2d((chipW + p * 2) * scale, (chipH + p * 2) * scale)
   ctx.scale(scale, scale)
@@ -749,7 +750,7 @@ function paintChipBadge(L, scale) {
   ctx.font = F_NUM(chipFont)
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('NFL', p + chipW / 2, p + chipH / 2 + chipFont * 0.05)
+  ctx.fillText(chipText, p + chipW / 2, p + chipH / 2 + chipFont * 0.05)
   return { canvas: c, pad: p }
 }
 
@@ -796,6 +797,7 @@ function normalizeStats(s) {
 
 function createIntro(opts) {
   const q = params()
+  const chipText = String(opts.chipText || 'NFL').toUpperCase().slice(0, 6)
   const seekMode = q.get('intro') === 'seek'
   const W0 = document.documentElement.clientWidth || window.innerWidth
   const H0 = window.innerHeight || document.documentElement.clientHeight
@@ -909,7 +911,7 @@ function createIntro(opts) {
     const chipH = Math.round(m.h * 0.5)
     const chipFont = Math.round(chipH * 0.66)
     measureCtx.font = F_NUM(chipFont)
-    const chipW = Math.round(measureCtx.measureText('NFL').width + chipH * 0.62)
+    const chipW = Math.round(measureCtx.measureText(chipText).width + chipH * 0.62)
     const gap = Math.round(m.h * 0.17)
     const lockW = m.w + gap + chipW
     const cx = W / 2
@@ -927,6 +929,7 @@ function createIntro(opts) {
       chipW,
       chipH,
       chipFont,
+      chipText,
       gap,
       lockW,
       cx,
@@ -1739,7 +1742,7 @@ function createIntro(opts) {
     const s = stats
     const n = (v) => Math.round(v * k).toLocaleString('en-US')
     if (!s || (s.games == null && s.props == null)) {
-      return [['NFL PROPS', 'txt'], ['   ·   ', 'txt'], ['MATCHUPS', 'txt'], ['   ·   ', 'txt'], ['PICKS', 'txt']]
+      return [[`${chipText} PROPS`, 'txt'], ['   ·   ', 'txt'], ['MATCHUPS', 'txt'], ['   ·   ', 'txt'], ['PICKS', 'txt']]
     }
     const out = []
     const sep = () => out.length && out.push(['   ·   ', 'txt'])

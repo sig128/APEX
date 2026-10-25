@@ -123,7 +123,7 @@ export function matchLegs(extracted, engine) {
     const id = subject ? `${subject}.${l.market}.${mk?.oneSided ? 'o' : l.side}.${line}` : null
     const row = id && parsePropId(id) ? engine.views.findProp(id) : null
     if (row) out.push({ id: row.id, odds: l.odds })
-    else unmatched.push({ ...l, marketLabel: (mk?.long || mk?.label || l.market).toLowerCase(), why: subject ? 'no numbers for that bet this week' : 'player not found on this week’s slate' })
+    else unmatched.push({ ...l, marketLabel: (mk?.long || mk?.label || l.market).toLowerCase(), why: subject ? 'no numbers for that bet on this slate' : 'player not found on this slate' })
   }
   return { matched: out, unmatched }
 }
@@ -159,9 +159,18 @@ function legBrief(i, ctx, odds, s, sim) {
  */
 export async function streamParlayCheck({ engine, matched, unmatched = [], parlayOdds = null, notes = '', res, apiKey }) {
   const sport = engine.sport || NFL_SPORT
-  const views = engine.views
-  const ctxs = matched.map((m) => views.propContext(m.id)).filter(Boolean)
+  // each leg is read on its own league's board (a slip can mix leagues)
+  const legs = matched.map((m) => ({ m, eng: m.eng || engine })).map((x) => ({ ...x, c: x.eng.views.propContext(x.m.id) })).filter((x) => x.c)
+  const ctxs = legs.map((x) => x.c)
   const rows = ctxs.map((c) => c.prop)
+  matched = legs.map((x) => x.m)
+  const leagues = new Set(legs.map((x) => x.m.key || sport.key || 'nfl'))
+  // games, teams and players are told apart by league, so legs from two leagues never share a factor
+  const tag = (k, v) => (v == null || leagues.size < 2 ? v : `${k}:${v}`)
+  const simRows = rows.map((r, i) => {
+    const k = legs[i].m.key || sport.key || 'nfl'
+    return leagues.size < 2 ? r : { ...r, gameId: tag(k, r.gameId), teamId: tag(k, r.teamId), oppId: tag(k, r.oppId), playerId: tag(k, r.playerId) }
+  })
   const write = (o) => {
     try {
       res.write(`${JSON.stringify(o)}\n`)
@@ -175,11 +184,11 @@ export async function streamParlayCheck({ engine, matched, unmatched = [], parla
   res.flushHeaders?.()
   let text = ''
   try {
-    const sim = rows.length ? simulateSlip(rows, { iterations: 20_000, price: parlayOdds, bets: 100, seed: 17 }) : null
-    const scores = rows.map((r, i) => scoreLeg(r, matched[i].odds, sim?.legs[i], { injury: r.playerId ? engine.wh.injuryOf?.(r.playerId) : null }))
+    const sim = rows.length ? simulateSlip(simRows, { iterations: 20_000, price: parlayOdds, bets: 100, seed: 17 }) : null
+    const scores = rows.map((r, i) => scoreLeg(r, matched[i].odds, sim?.legs[i], { injury: r.playerId ? legs[i].eng.wh.injuryOf?.(r.playerId) : null }))
     write({
       type: 'legs',
-      legs: rows.map((r, i) => ({ n: i + 1, id: r.id, name: r.name, short: r.short, headshot: r.headshot || null, teamAbbr: r.teamAbbr, oppAbbr: r.oppAbbr, label: r.label, prob: r.prob, fair: r.fair, odds: matched[i].odds, l10: r.windows?.find((w) => w.key === 'L10') || null, ...scores[i] })),
+      legs: rows.map((r, i) => ({ n: i + 1, id: r.id, sport: matched[i].key || sport.key || 'nfl', name: r.name, short: r.short, headshot: r.headshot || null, teamAbbr: r.teamAbbr, oppAbbr: r.oppAbbr, label: r.label, prob: r.prob, fair: r.fair, odds: matched[i].odds, l10: r.windows?.find((w) => w.key === 'L10') || null, ...scores[i] })),
       unmatched,
       notes,
     })

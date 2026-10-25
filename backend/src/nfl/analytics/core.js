@@ -91,16 +91,20 @@ function windowStat(rows, line, side, key, label) {
  * Hit-rate windows like Linemate: L5, L10, L20, this season, last season, vs this opponent,
  * home/away, and "without <teammate>" when a key teammate is out.
  */
-export function windows(rows, line, side, { season, lastSeason, oppId, oppAbbr, home, without } = {}) {
+/** Winter leagues (NBA, NHL, college basketball) name a season by the year it ends: 2027 is "2026-27". */
+export const SPAN_SEASONS = new Set(['nba', 'nhl', 'ncaab'])
+export const seasonName = (sport, y) => (SPAN_SEASONS.has(sport) ? `${y - 1}-${String(y).slice(2)}` : String(y))
+
+export function windows(rows, line, side, { season, lastSeason, oppId, oppAbbr, home, without, sport = 'nfl' } = {}) {
   const out = []
   const last = (k) => rows.slice(-k)
   if (rows.length) out.push(windowStat(last(5), line, side, 'L5', 'L5'))
   if (rows.length > 5) out.push(windowStat(last(10), line, side, 'L10', 'L10'))
   if (rows.length > 10) out.push(windowStat(last(20), line, side, 'L20', 'L20'))
   const cur = rows.filter((r) => r.season === season && !r.post)
-  if (cur.length) out.push(windowStat(cur, line, side, 'season', String(season)))
+  if (cur.length) out.push(windowStat(cur, line, side, 'season', seasonName(sport, season)))
   const prev = rows.filter((r) => r.season === lastSeason)
-  if (prev.length) out.push(windowStat(prev, line, side, 'last', String(lastSeason)))
+  if (prev.length) out.push(windowStat(prev, line, side, 'last', seasonName(sport, lastSeason)))
   if (oppId) {
     const h2h = rows.filter((r) => r.oppId === oppId)
     if (h2h.length) out.push(windowStat(h2h, line, side, 'h2h', `vs ${oppAbbr || 'opp'}`))

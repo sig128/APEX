@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { api } from '../lib/api.js'
 import { parseShare, importLegs, parlayMath } from '../lib/slip.js'
 import { useLive } from '../lib/live.js'
 import { useTitle } from '../lib/hooks.js'
 import { pct, odds } from '../lib/format.js'
 import { PropRow } from '../ui/PropRow.jsx'
 import { Skeleton, Empty, ErrorBox } from '../ui/Bits.jsx'
+import { sp, legRef, shareRef } from '../lib/sport.js'
+import { trackLegs } from '../lib/track.js'
 
-/** A shared slip (/nfl/slip?legs=...): see it, track it live, or copy it into your own slip. */
+/** A shared slip (/slip?legs=...): see it, track it live, or copy it into your own slip. */
 export function SlipPage() {
   const loc = useLocation()
-  const { ids, prices } = useMemo(() => parseShare(loc.search), [loc.search])
+  const { ids, refs, prices } = useMemo(() => parseShare(loc.search), [loc.search])
+  const sport = refs[0]?.sport || 'nfl'
   const [legs, setLegs] = useState(null)
   const [err, setErr] = useState(null)
   const [imported, setImported] = useState(false)
@@ -20,8 +22,8 @@ export function SlipPage() {
     if (!ids.length) return undefined
     let stop = false
     const load = () =>
-      api(`/api/nfl/track?ids=${encodeURIComponent(ids.join(','))}`, { auth: false })
-        .then((r) => !stop && setLegs(r.legs))
+      trackLegs(refs)
+        .then((list) => !stop && setLegs(list))
         .catch((e) => !stop && setErr(e))
     load()
     const t = setInterval(load, 30_000)
@@ -31,11 +33,12 @@ export function SlipPage() {
     }
   }, [ids])
   const anyStarted = legs?.some((l) => l.live)
-  useLive(anyStarted ? 'tracker' : null, (diff) => setLegs((cur) => cur && cur.map((l) => (diff[l.id] ? { ...l, live: diff[l.id] } : l))))
-  if (!ids.length) return <div className="container page"><Empty title="This link has no legs on it" action={<Link to="/nfl/props" className="btn btn--quiet">Find props</Link>} /></div>
+  // the live stream follows the first leg's league; the rest refresh every 30 seconds
+  useLive(anyStarted ? 'tracker' : null, (diff) => setLegs((cur) => cur && cur.map((l) => (l.sport === sport && diff[l.id] ? { ...l, live: diff[l.id] } : l))), sport)
+  if (!ids.length) return <div className="container page"><Empty title="This link has no legs on it" action={<Link to={sp(sport, '/props')} className="btn btn--quiet">Find props</Link>} /></div>
   const found = (legs || []).filter((l) => !l.missing)
   const missing = (legs || []).filter((l) => l.missing)
-  const math = found.length ? parlayMath(found.map((l) => ({ ...l, price: prices[l.id] ?? null })), null) : null
+  const math = found.length ? parlayMath(found.map((l) => ({ ...l, price: prices[shareRef(l)] ?? null })), null) : null
   return (
     <div className="container page">
       <header className="page-head">
@@ -54,10 +57,10 @@ export function SlipPage() {
         <>
           <div className="prop-list">
             {found.map((l) => (
-              <PropRow key={l.id} c={l} live={l.live && !l.live.untracked ? l.live : null} />
+              <PropRow key={legRef(l)} c={l} live={l.live && !l.live.untracked ? l.live : null} />
             ))}
           </div>
-          {missing.length > 0 && <p className="muted">{missing.length === 1 ? 'One leg is' : `${missing.length} legs are`} no longer on this week's board.</p>}
+          {missing.length > 0 && <p className="muted">{missing.length === 1 ? 'One leg is' : `${missing.length} legs are`} no longer on the board.</p>}
           <div className="row">
             <button
               type="button"
@@ -71,7 +74,7 @@ export function SlipPage() {
             >
               {imported ? 'Copied to your slip' : 'Use this slip'}
             </button>
-            <Link to="/nfl/live" className="btn btn--quiet">
+            <Link to={sp(sport, '/live')} className="btn btn--quiet">
               Live tracker
             </Link>
           </div>

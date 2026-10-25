@@ -4,6 +4,7 @@ import { api } from '../lib/api.js'
 import { pct, ago } from '../lib/format.js'
 import { useBilling } from '../context/BillingContext.jsx'
 import { Locked } from './Locked.jsx'
+import { useSport, apiOf, sp } from '../lib/sport.js'
 
 const STEPS = ['Reading the official injury report', 'Checking practice reports and depth charts', 'Reading press conferences and beat coverage', 'Matching it to this week’s props']
 const STATUS_TONE = (s) => (/out|ir|doubt/i.test(s) ? 'is-out' : /quest|limit/i.test(s) ? 'is-q' : 'is-ok')
@@ -17,6 +18,7 @@ const host = (u) => {
 
 /** Injuries and this week's reputable reporting for one game, tied to the props it moves. Pro. */
 export function GameIntel({ gameId, official }) {
+  const sport = useSport()
   const { refresh } = useBilling()
   const [st, setSt] = useState({ busy: false, data: null, err: null })
   const [step, setStep] = useState(0)
@@ -31,7 +33,7 @@ export function GameIntel({ gameId, official }) {
   const scan = async (fresh = false) => {
     setSt((s) => ({ ...s, busy: true, err: null }))
     try {
-      const data = await api('/api/nfl/intel', { method: 'POST', body: { gameId, fresh } })
+      const data = await api(`${apiOf(sport)}/intel`, { method: 'POST', body: { gameId, fresh } })
       setSt({ busy: false, data, err: null })
       if (!data.cached) refresh?.()
     } catch (err) {
@@ -92,12 +94,12 @@ export function GameIntel({ gameId, official }) {
                     <li key={i} className={`angle angle--${a.lean}`}>
                       <span className="angle__lean">{a.lean === 'hurt' ? 'Hurts' : 'Helps'}</span>
                       <div>
-                        <p className="angle__who">{a.playerId ? <Link to={`/nfl/player/${a.playerId}`}>{a.player}</Link> : a.player}</p>
+                        <p className="angle__who">{a.playerId ? <Link to={sp(sport, `/player/${a.playerId}`)}>{a.player}</Link> : a.player}</p>
                         <p className="angle__why">{a.why}</p>
                         {a.props?.length > 0 && (
                           <p className="angle__props">
                             {a.props.map((p) => (
-                              <Link key={p.id} to={`/nfl/prop/${encodeURIComponent(p.id)}`}>
+                              <Link key={p.id} to={sp(sport, `/prop/${encodeURIComponent(p.id)}`)}>
                                 {p.label} <span className="num">{pct(p.prob)}</span>
                               </Link>
                             ))}
@@ -118,7 +120,7 @@ export function GameIntel({ gameId, official }) {
                     <li key={k}>
                       <span className={`inj-status ${STATUS_TONE(i.status)}`}>{i.status}</span>
                       <span className="intel__inj-who">
-                        <b>{i.playerId ? <Link to={`/nfl/player/${i.playerId}`}>{i.player}</Link> : i.player}</b> <span className="muted">{i.team}</span>
+                        <b>{i.playerId ? <Link to={sp(sport, `/player/${i.playerId}`)}>{i.player}</Link> : i.player}</b> <span className="muted">{i.team}</span>
                       </span>
                       <span className="intel__inj-note">
                         {i.note}

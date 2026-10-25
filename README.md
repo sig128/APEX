@@ -1,17 +1,25 @@
-# APEX NFL
+# APEX
 
-Player-prop research for the NFL, live: every prop on the slate with its hit rates, matchup,
-line move and the APEX probability; game pages; a live tracker; a bet slip that prices parlays
-fairly and sizes stakes with Kelly; and a picks showcase where every pick is graded from the box
-score. Stats are free. Two passes, paid in USDC on Base:
+Player-prop research, live, for the NFL, NBA, MLB, NHL, college football, college basketball and
+the WNBA: every prop on the slate with its hit rates, head to head, matchup, line move and the
+APEX probability (shown as a percentage next to every price); game pages; a live tracker; a bet
+slip that prices parlays fairly, shops the line across sportsbooks and sends the parlay to the
+book's app; the 3-Leg Lock; and a picks showcase where every pick is graded from the box score.
+Stats are free. Two passes, paid in USDC on Base:
 
 | | Free | Pro ($29 / 30 days) | Elite ($79 / 30 days) |
 |---|---|---|---|
-| Props, hit rates, cheatsheets, matchups, line moves | yes | yes | yes |
+| Props, hit rates, head to head, cheatsheets, matchups, line moves, My games | yes | yes | yes |
 | Live tracker, bet slip with fair odds, copy and share | yes | yes | yes |
-| Your picks page at /u/handle with an auto-graded record | yes | yes | yes |
+| Line shopping across books, "Send to sportsbook" | yes | yes | yes |
+| Kelly calculator (OddsJam-style) | yes | yes | yes |
+| Your picks page at /u/handle with an auto-graded record, tailing picks | yes | yes | yes |
 | AI read of any prop (your APEX ruleset), AI game analyzer | | 15 / 8 a day | 30 / 15 a day |
-| Kelly stake sizing and the bankroll simulator | | yes | yes |
+| The 3-Leg Lock and its season ledger (the record is public) | | yes | yes |
+| Parlay check: upload a betslip, AI keeps or cuts every leg | | yes | yes |
+| Monte Carlo parlay simulator (10k-100k runs, luck vs skill) | | yes | yes |
+| Game intel: injury reports and on-the-record reporting, tied to the props | | yes | yes |
+| Kelly stake sizing in the slip and the bankroll simulator | | yes | yes |
 | X and Instagram links on your page, Elite badge, the picks feed, the leaderboard | | | yes |
 
 A pass runs 30 days. When it ends there are 7 days of grace with everything still on, then the
@@ -24,11 +32,13 @@ the API checks the transfer on-chain.
 
 ```
 backend/     the API (Express). app.js builds it; server.js runs it locally.
-  src/nfl/        live data engine, analytics, read models, routes
+  src/nfl/        live data engine, analytics, read models, routes (every league runs on it)
+  src/sports/     what differs by sport: markets, positions, game logs, clocks (football,
+                  basketball, hockey, baseball) and the league list (index.js)
   src/billing/    passes: invoices, on-chain checks, grace and lockout, allowances
   src/picks/      user pages, posting, grading, records, feed, leaderboard
   src/security/   sign-in, admin key, rate limits, stream tickets
-  test/           93 tests on recorded ESPN data (Week 7, 2026)
+  test/           123 tests on recorded ESPN data (NFL Week 7, an NBA day, NHL and MLB shapes)
 frontend/    the site (React + Vite)
   src/pages/      Today, Props, Game, Prop, Player, Live, Slip, Picks, /u/:handle, Kelly, Plans, Account, Admin
   src/intro/      the opening animation
@@ -153,6 +163,25 @@ exactly that to the treasury on Base, from a connected wallet or from anywhere, 
 the transfer (or takes the transaction hash), waits for 3 confirmations, and starts the pass.
 A transaction can only ever pay one request.
 
+## Leagues
+
+Every league runs on the same engine, each with its own data, live stream and 3-Leg Lock
+ledger. NFL is the site's root (`/`, `/nfl/props`); the others live under their key (`/nba`,
+`/mlb/props`, `/nhl/lock`). The chip next to the logo switches league.
+
+- `APEX_SPORTS=nfl,nba,mlb,nhl,ncaaf,ncaab,wnba` picks the leagues (all of them by default).
+  A league starts loading on its first visit, so leagues nobody opens cost nothing.
+- Weekly leagues (NFL, college football) key their slate by week; daily leagues by the day of
+  the next game still to finish.
+- Prices: ESPN carries DraftKings' prices for the NBA, MLB, NHL and WNBA lines, so those boards
+  have edges and line shopping with no key. With `THE_ODDS_API_KEY`, the leagues in
+  `APEX_ODDS_SPORTS` (default `nfl`; `all` for every league) get every book's prices: DraftKings,
+  FanDuel, BetMGM, Caesars, Fanatics, BetRivers and theScore Bet. Each league spends its own
+  `APEX_ODDS_DAILY_CREDITS`, so add leagues to match your Odds API plan. bet365 has no US feed;
+  Caesars and Fanatics need a paid Odds API plan.
+- A slip can mix leagues: the simulator, line shopping, the parlay check and picks all take
+  legs from several leagues at once (legs from different leagues are independent).
+
 ## Running it
 
 - **Admin:** signed in with an `APEX_ADMIN_EMAILS` account, the footer shows Admin: comp a pass
@@ -160,15 +189,15 @@ A transaction can only ever pay one request.
   turns sports on and off for the analyzer (with the admin key).
 - **Codes:** invite codes and plan codes (e.g. 30 days of Elite) are explained in
   `firestore/inviteCodes.template.txt`; create them with `npm run seed-invites` in functions/.
-- **Picks:** posts lock at kickoff and grade themselves from the final box score (a player who
-  didn't play is voided after 18 hours). Only lines a sportsbook posted can go on a record,
+- **Picks:** picks on any league lock when their first game starts and grade themselves from
+  the final box score (a player who didn't play is voided after 18 hours). Only lines a sportsbook posted can go on a record,
   graded at the price posted when the pick was made; main lines with no listed price grade at
   -110. Alternate lines and anytime-TD props need a real price, which comes with
   `THE_ODDS_API_KEY`. The leaderboard needs 5 graded picks.
 - **Data:** ESPN's public endpoints (scoreboard, summaries, rosters, game logs, prop lines).
   They are unofficial and can change; the API caches everything in Firestore and keeps
   serving the last good copy if ESPN has a bad minute. Prices come from The Odds API when its
-  key is set. It spends at most `APEX_ODDS_DAILY_CREDITS` a day on NFL prices and
+  key is set. It spends at most `APEX_ODDS_DAILY_CREDITS` a day per league in `APEX_ODDS_SPORTS` and
   `APEX_ODDS_ANALYZER_DAILY_CREDITS` on the analyzer's odds pages; set them from your plan.
 - **Scale:** Cloud Functions scales down to nothing when the site is quiet, so the first visitor
   after a lull waits a few seconds while the data loads; set `APEX_MIN_INSTANCES=1` in

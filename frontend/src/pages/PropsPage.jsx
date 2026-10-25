@@ -5,6 +5,7 @@ import { useApi } from '../lib/useApi.js'
 import { useTitle, useMedia } from '../lib/hooks.js'
 import { PropRow } from '../ui/PropRow.jsx'
 import { Pills, Skeleton, ErrorBox, Empty } from '../ui/Bits.jsx'
+import { useSport, apiOf, sportInfo } from '../lib/sport.js'
 
 const WINDOWS = [
   { key: 'L5', label: 'Last 5' },
@@ -22,7 +23,11 @@ const SORTS = [
   { key: 'move', label: 'Line move' },
   { key: 'kickoff', label: 'Kickoff' },
 ]
-const POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map((k) => ({ key: k, label: k }))
+const POS = ['QB', 'RB', 'WR', 'TE'].map((k) => ({ key: k, label: k }))
+const FOOTBALL = new Set(['nfl', 'ncaaf'])
+/** Position filters from the league's own groups: QB/RB/WR/TE, guards/forwards/centers, hitters/pitchers. */
+const groupPills = (groups, sport) =>
+  groups?.length ? groups.map((g) => ({ key: g.key, label: FOOTBALL.has(sport) ? g.key : g.label.charAt(0).toUpperCase() + g.label.slice(1) })) : POS
 const MIN_HIT = [
   { key: '0.6', label: '60%+' },
   { key: '0.7', label: '70%+' },
@@ -37,6 +42,7 @@ const PAGE = 40
 
 /** Every prop on the slate, filtered and sorted however you like. Filters live in the URL so a view can be shared. */
 export function PropsPage() {
+  const sport = useSport()
   const [q, setQ] = useSearchParams()
   const get = (k, d = '') => q.get(k) ?? d
   const set = (k, v) => {
@@ -63,9 +69,11 @@ export function PropsPage() {
   for (const k of ['side', 'minHit', 'game', 'q']) if (get(k)) params.set(k, get(k))
   if (pos.length) params.set('pos', pos.join(','))
   const base = params.toString()
-  const { data, error, loading, refresh } = useApi(`/api/nfl/board?${base}`, { maxAgeMs: 30_000 })
-  useTitle('NFL prop explorer')
+  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/board?${base}`, { maxAgeMs: 30_000 })
+  useTitle(`${sportInfo(sport).name} prop explorer`)
   const facets = data?.facets
+  const posPills = useMemo(() => groupPills(facets?.groups, sport), [facets, sport])
+  const sorts = useMemo(() => SORTS.map((x) => (x.key === 'kickoff' && !FOOTBALL.has(sport) ? { ...x, label: 'Start time' } : x)), [sport])
   const markets = useMemo(() => [{ key: 'core', label: 'Main markets' }, { key: 'all', label: 'Every market' }, ...(facets?.markets || []).map((m) => ({ key: m.key, label: m.label }))], [facets])
   // on phones the filters fold away behind one button so the props are on the first screen
   const phone = useMedia('(max-width: 759px)')
@@ -128,7 +136,7 @@ export function PropsPage() {
         </label>
         <div className="filters__row">
           <span className="filters__k">Position</span>
-          <Pills label="Position" options={POS} value={pos} multiple onChange={(v) => set('pos', v)} />
+          <Pills label="Position" options={posPills} value={pos} multiple onChange={(v) => set('pos', v)} />
           <span className="filters__k">Side</span>
           <Pills label="Side" options={SIDES} value={get('side') || null} onChange={(v) => set('side', v)} />
         </div>
@@ -147,7 +155,7 @@ export function PropsPage() {
         </div>
         <div className="filters__row">
           <span className="filters__k">Sort by</span>
-          <Pills label="Sort" options={SORTS} value={get('sort', 'score')} onChange={(v) => set('sort', v || 'score')} />
+          <Pills label="Sort" options={sorts} value={get('sort', 'score')} onChange={(v) => set('sort', v || 'score')} />
         </div>
       </div>
       )}
@@ -178,7 +186,8 @@ export function PropsPage() {
 }
 
 function MorePage({ base, offset }) {
-  const { data, loading } = useApi(`/api/nfl/board?${base}&offset=${offset}`, { maxAgeMs: 30_000 })
+  const sport = useSport()
+  const { data, loading } = useApi(`${apiOf(sport)}/board?${base}&offset=${offset}`, { maxAgeMs: 30_000 })
   if (loading) return <Skeleton rows={4} />
   return (data?.rows || []).map((c) => <PropRow key={c.id} c={c} win={c.win} showGame />)
 }

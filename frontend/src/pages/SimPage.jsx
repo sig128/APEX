@@ -4,11 +4,12 @@ import { api } from '../lib/api.js'
 import { useTitle, useWidth } from '../lib/hooks.js'
 import { useSlip } from '../lib/useSlip.js'
 import { parlayMath } from '../lib/slip.js'
-import { pct, odds, parseOdds, impliedOf, fairOf } from '../lib/format.js'
+import { pct, odds, parseOdds, fairOf } from '../lib/format.js'
 import { Locked } from '../ui/Locked.jsx'
 import { ImpliedHint } from '../ui/Odds.jsx'
 import { Headshot } from '../ui/Img.jsx'
 import { ErrorBox } from '../ui/Bits.jsx'
+import { useSport, apiOf, sp, legRef, legsSport } from '../lib/sport.js'
 
 const RUNS = [10_000, 25_000, 50_000, 100_000]
 const BETS = [50, 100, 250, 500]
@@ -16,6 +17,7 @@ const k = (n) => (n >= 1000 ? `${n / 1000}k` : String(n))
 
 /** Play the slip out tens of thousands of times on the APEX distributions. */
 export function SimPage() {
+  const sport = useSport()
   useTitle('Parlay simulator')
   const slip = useSlip()
   const legs = slip.legs
@@ -33,7 +35,8 @@ export function SimPage() {
   const run = async () => {
     setState({ busy: true, err: null, out: state.out })
     try {
-      const out = await api('/api/nfl/sim', { method: 'POST', body: { legs: legs.map((l) => l.id), iterations: runs, price, bets } })
+      // a slip can mix leagues: any league's simulator takes the others' legs by ref
+      const out = await api(`${apiOf(legsSport(legs, sport))}/sim`, { method: 'POST', body: { legs: legs.map(legRef), iterations: runs, price, bets } })
       setState({ busy: false, err: null, out })
     } catch (err) {
       setState({ busy: false, err, out: null })
@@ -51,7 +54,7 @@ export function SimPage() {
           <div className="empty">
             <p className="empty__title">Your slip is empty</p>
             <p>Add two or more props from the board, then come back here to play them out.</p>
-            <Link className="btn btn--gold" to="/nfl/props">
+            <Link className="btn btn--gold" to={sp(sport, '/props')}>
               Find props
             </Link>
           </div>
@@ -60,7 +63,7 @@ export function SimPage() {
             <section className="sim__setup" aria-label="Simulation setup">
               <ul className="sim__legs">
                 {legs.map((l) => (
-                  <li key={l.id}>
+                  <li key={legRef(l)}>
                     <Headshot src={l.headshot} name={l.name} size={28} />
                     <span>
                       <b>{l.short || l.name}</b> {l.shortLabel || l.label}
@@ -146,7 +149,7 @@ function Results({ out }) {
       <section className="sim-legs" aria-label="Each leg">
         <h2 className="section__title">Each leg, {out.iterations.toLocaleString()} times</h2>
         {out.legs.map((l) => (
-          <LegResult key={l.id} l={l} multi={n > 1} />
+          <LegResult key={`${l.id}:${l.label}`} l={l} multi={n > 1} />
         ))}
       </section>
 

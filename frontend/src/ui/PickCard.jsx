@@ -4,6 +4,7 @@ import { Headshot } from './Img.jsx'
 import { EliteBadge } from './Bits.jsx'
 import { odds, units as fmtUnits, ago, kickoff, pct, bookName, impliedOf } from '../lib/format.js'
 import { importLegs } from '../lib/slip.js'
+import { sp, legRef } from '../lib/sport.js'
 import { SITE_URL } from '../lib/config.js'
 import { Odds } from './Odds.jsx'
 import { SendToBook } from './Books.jsx'
@@ -23,7 +24,7 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
   const [sending, setSending] = useState(false)
   const tail = () => {
     // the legs go on your slip at the prices they were posted at; then pick a book
-    importLegs(pick.legs, Object.fromEntries(pick.legs.filter((l) => Number.isFinite(l.price)).map((l) => [l.id, l.price])))
+    importLegs(pick.legs, Object.fromEntries(pick.legs.filter((l) => Number.isFinite(l.price)).map((l) => [legRef(l), l.price])))
     setSending(true)
     if (!tailed) {
       setTailed(true)
@@ -59,7 +60,7 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
           <li key={l.id} className={`pick-leg${l.result ? ` is-${l.result}` : ''}`}>
             <Headshot src={l.headshot} name={l.name} size={30} />
             <span className="pick-leg__what">
-              <Link to={`/nfl/prop/${encodeURIComponent(l.id)}`}>
+              <Link to={sp(l.sport, `/prop/${encodeURIComponent(l.id)}`)}>
                 <b>{l.name}</b> {l.label}
               </Link>
               <span className="muted">

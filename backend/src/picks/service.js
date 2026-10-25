@@ -11,7 +11,7 @@ import { log, errText } from '../lib/log.js'
 import { round } from '../lib/util.js'
 
 export const HANDLE_RE = /^[a-z0-9_]{3,20}$/
-const RESERVED = new Set(['admin', 'apex', 'api', 'me', 'nfl', 'pricing', 'account', 'login', 'support', 'help', 'settings', 'picks', 'feed', 'leaderboard', 'kelly', 'slip', 'null', 'undefined', 'root', 'staff', 'mod', 'moderator', 'official'])
+const RESERVED = new Set(['admin', 'apex', 'api', 'me', 'nfl', 'nba', 'mlb', 'nhl', 'ncaaf', 'ncaab', 'wnba', 'lock', 'tools', 'props', 'live', 'pricing', 'account', 'login', 'support', 'help', 'settings', 'picks', 'feed', 'leaderboard', 'kelly', 'slip', 'null', 'undefined', 'root', 'staff', 'mod', 'moderator', 'official'])
 const MAX_LEGS = 6
 const PICKS_PER_DAY = 20
 const DEFAULT_PRICE = -110
@@ -165,8 +165,16 @@ export function recordFromStats(stats, t, tz) {
   return { all: recordView(stats.all, recent), d30: recordView(d30, recent) }
 }
 
-export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
+export function createPicks({ docs, engine, engines = null, billing, now = () => Date.now() }) {
   const d = docs
+  // Picks can be on any league: a leg id is "<id>" (NFL) or "<league>:<id>", and each leg is
+  // priced, frozen and graded by its own league's engine.
+  const engineOf = (key) => (!key || key === 'nfl' ? engine : engines && Object.hasOwn(engines, key) && engines[key]?.views ? engines[key] : null)
+  function splitRef(ref) {
+    const s = String(ref)
+    const i = s.indexOf(':')
+    return i > 0 ? { key: s.slice(0, i), id: s.slice(i + 1) } : { key: 'nfl', id: s }
+  }
   let lastGrade = 0
   let grading = null
   const memo = new Map()
@@ -252,7 +260,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
       profit: p.profit ?? null,
       note: p.note || '',
       tails: p.tails || 0,
-      legs: p.legs.map((l) => ({ id: l.id, playerId: l.playerId || null, teamId: l.teamId || null, name: l.name, short: l.short, headshot: l.headshot || null, teamAbbr: l.teamAbbr, oppAbbr: l.oppAbbr, market: l.market, label: l.label, line: l.line, side: l.side, kickoff: l.kickoff, price: l.price, book: l.book || null, prob: l.prob, fair: l.fair, score: l.score, result: l.result || null, value: l.value ?? null, gameId: l.gameId })),
+      legs: p.legs.map((l) => ({ id: l.id, sport: l.sport || 'nfl', playerId: l.playerId || null, teamId: l.teamId || null, name: l.name, short: l.short, headshot: l.headshot || null, teamAbbr: l.teamAbbr, oppAbbr: l.oppAbbr, market: l.market, label: l.label, line: l.line, side: l.side, kickoff: l.kickoff, price: l.price, book: l.book || null, prob: l.prob, fair: l.fair, score: l.score, result: l.result || null, value: l.value ?? null, gameId: l.gameId })),
     }
   }
 
@@ -325,16 +333,18 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     return { profile: { ...publicProfile(out), x: out.x, ig: out.ig } }
   }
 
-  /** One leg from a prop id, priced and frozen as it is right now. */
-  function legFrom(id) {
-    const parsed = parsePropId(id)
+  /** One leg from a prop id ("<id>" or "<league>:<id>"), priced and frozen as it is right now. */
+  function legFrom(ref) {
+    const { key, id } = splitRef(ref)
+    const eng = engineOf(key)
+    const parsed = eng ? parsePropId(id) : null
     if (!parsed) throw new ApiError(400, 'bad_leg', 'One of those props is not valid.')
     const mk = marketOf(parsed.market)
     if (mk?.oneSided && parsed.side !== 'o') throw new ApiError(400, 'bad_leg', `${mk.label} only has a yes side.`)
-    const row = engine.views.findProp(parsed.id)
-    if (!row) throw new ApiError(404, 'no_prop', 'That prop is not on this week’s board anymore.')
-    const g = row.gameId ? engine.wh.games.get(row.gameId) : null
-    if (!g) throw new ApiError(400, 'no_game', 'That prop is not tied to a game this week.')
+    const row = eng.views.findProp(parsed.id)
+    if (!row) throw new ApiError(404, 'no_prop', 'That prop is not on the board anymore.')
+    const g = row.gameId ? eng.wh.games.get(row.gameId) : null
+    if (!g) throw new ApiError(400, 'no_game', 'That prop is not tied to a game on this slate.')
     const kick = Date.parse(g.date)
     if (g.status.state !== 'pre' || !(kick - now() > 60_000)) throw new ApiError(400, 'started', `${g.shortName} has started, so picks on it are locked.`)
     const price = row.side === 'u' ? row.price?.under : row.oneSided ? row.price?.yes : row.price?.over
@@ -350,6 +360,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     }
     return {
       id: row.id,
+      sport: key,
       playerId: row.playerId || null,
       teamId: row.kind === 'team' ? row.teamId : null,
       name: row.name,
@@ -407,7 +418,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
       const msg = problems.length === 1 ? first.error : `${problems.length} of these legs can’t go on a record. ${first.error}`
       throw new ApiError(first.status, first.code, msg, { legs: problems.map(({ id, code, error }) => ({ id, code, error })) })
     }
-    const players = legs.map((l) => `${l.playerId || l.teamId}:${l.market}`)
+    const players = legs.map((l) => `${l.sport}:${l.playerId || l.teamId}:${l.market}`)
     if (new Set(players).size !== players.length) throw new ApiError(400, 'conflict', 'Two picks on the same player and stat cancel out. Keep one.')
     const separate = body.mode === 'separate' && legs.length > 1
     const units = Math.min(10, Math.max(0.1, Math.round((Number(body.units) || 1) * 10) / 10))
@@ -421,7 +432,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
       const keys = new Set(usage.keys || [])
       const out = []
       for (const g of groups) {
-        const k = g.map((l) => l.id).sort().join('~')
+        const k = g.map((l) => (l.sport === 'nfl' ? l.id : `${l.sport}:${l.id}`)).sort().join('~')
         if (keys.has(k)) throw new ApiError(409, 'dup_pick', 'You already posted that pick today.')
         keys.add(k)
         const dec = g.reduce((x, l) => x * decimalOf(l.price), 1)
@@ -563,14 +574,17 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
   }
 
   const summaryCache = new Map()
-  async function finalSummary(gameId) {
-    const s = engine.wh.summaries.get(gameId)?.data
+  async function finalSummary(gameId, key = 'nfl') {
+    const eng = engineOf(key)
+    if (!eng) return null
+    const s = eng.wh.summaries.get(gameId)?.data
     if (s?.status?.state === 'post') return s
-    const hit = summaryCache.get(gameId)
+    const ck = `${key}:${gameId}`
+    const hit = summaryCache.get(ck)
     if (hit && now() - hit.at < 5 * 60_000) return hit.s
     try {
-      const fresh = await engine.espn.summary(gameId, { priority: 'background' })
-      summaryCache.set(gameId, { s: fresh, at: now() })
+      const fresh = await eng.espn.summary(gameId, { priority: 'background' })
+      summaryCache.set(ck, { s: fresh, at: now() })
       if (summaryCache.size > 300) summaryCache.delete(summaryCache.keys().next().value)
       return fresh
     } catch (e) {
@@ -586,17 +600,20 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     const tz = billingConfig().usageTz
     const touched = new Set()
     const logs = new Map()
-    async function logRow(playerId, gameId, kickoff) {
-      const season = seasonOf(kickoff)
-      const k = `${playerId}:${season}`
+    async function logRow(playerId, gameId, kickoff, key = 'nfl') {
+      const eng = engineOf(key)
+      if (!eng) return null
+      // NFL seasons are named for the year they start; the engine knows every other league's
+      const season = key === 'nfl' ? seasonOf(kickoff) : eng.wh.season || seasonOf(kickoff)
+      const k = `${key}:${playerId}:${season}`
       if (!logs.has(k)) {
         try {
-          logs.set(k, await engine.espn.gamelog(playerId, season, { priority: 'background' }))
+          logs.set(k, await eng.espn.gamelog(playerId, season, { priority: 'background' }))
         } catch {
-          logs.set(k, engine.wh.logs.get(playerId) || [])
+          logs.set(k, eng.wh.logs.get(playerId) || [])
         }
       }
-      return logs.get(k).find((r) => r.eventId === gameId) || null
+      return (logs.get(k) || []).find((r) => r.eventId === gameId) || null
     }
     for (const p of open) {
       const results = []
@@ -605,12 +622,13 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
           results.push({ result: leg.result, value: leg.value })
           continue
         }
-        const s = await finalSummary(leg.gameId)
+        const key = leg.sport || 'nfl'
+        const s = await finalSummary(leg.gameId, key)
         const finalAt = leg.kickoff + 3.5 * 3600_000
         const mk = MARKETS[leg.market]
         const box = s?.players?.[leg.playerId]?.stats
         const needLog = s?.status?.state === 'post' && leg.playerId && !(box && (!mk?.keys || mk.keys.some((k) => box[k] != null)))
-        const row = needLog ? await logRow(leg.playerId, leg.gameId, leg.kickoff) : null
+        const row = needLog ? await logRow(leg.playerId, leg.gameId, leg.kickoff, key) : null
         results.push(gradeLeg(leg, s, { finalAt, now: t, logRow: row }))
       }
       const done = settle(p, results)

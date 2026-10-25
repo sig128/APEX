@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { SPORTS, sportInfo, useSport, apiOf, sp, isSharedPath, setLeague, leagueSwitchPath } from '../lib/sport.js'
 import { WORDMARK } from '../brand/wordmark.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useBilling } from '../context/BillingContext.jsx'
@@ -19,14 +20,78 @@ export function Wordmark({ height = 20 }) {
   )
 }
 
-const NAV = [
-  { to: '/', label: 'Today', end: true },
-  { to: '/lock', label: 'Lock' },
-  { to: '/nfl/props', label: 'Props' },
-  { to: '/nfl/live', label: 'Live' },
+/** The main links for the league on screen (Picks and Tools are the same everywhere). */
+const navFor = (sport) => [
+  { to: sp(sport, ''), label: 'Today', end: true },
+  { to: sp(sport, '/lock'), label: 'Lock' },
+  { to: sp(sport, '/props'), label: 'Props' },
+  { to: sp(sport, '/live'), label: 'Live', live: true },
   { to: '/picks', label: 'Picks' },
   { to: '/tools', label: 'Tools' },
 ]
+
+/** The league switcher: the chip next to the wordmark. */
+function SportPicker() {
+  const sport = useSport()
+  const nav = useNavigate()
+  const { pathname } = useLocation()
+  const [open, setOpen] = useState(false)
+  // which leagues this site runs, and which are between seasons
+  const meta = useApi('/api/sports', { maxAgeMs: 10 * 60_000 }).data
+  const month = new Date().getMonth() + 1
+  const on = meta?.sports ? new Map(meta.sports.map((x) => [x.key, x])) : null
+  const list = SPORTS.filter((s) => !on || on.has(s.key) || s.key === sport)
+  // on a league's pages, go to the same section of the other league; on the tools and picks
+  // pages, stay put and switch the league they work on
+  const choose = (key) => {
+    setOpen(false)
+    if (isSharedPath(pathname)) setLeague(key)
+    else nav(leagueSwitchPath(pathname, key))
+  }
+  useEffect(() => {
+    if (!open) return undefined
+    const close = (e) => {
+      if (e.type === 'keydown' && e.key !== 'Escape') return
+      if (e.type === 'pointerdown' && e.target.closest?.('.league')) return
+      setOpen(false)
+    }
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [open])
+  useEffect(() => setOpen(false), [pathname])
+  return (
+    <div className="league">
+      <button type="button" className="league__btn" aria-expanded={open} aria-controls="league-menu" aria-label={`League: ${sportInfo(sport).title}. Change league`} onClick={() => setOpen((o) => !o)}>
+        <span className="brand__chip" data-apex-chip>
+          {sportInfo(sport).name}
+        </span>
+        <svg className="league__caret" viewBox="0 0 10 6" width="9" height="6" aria-hidden="true">
+          <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <ul className="league__menu" id="league-menu">
+          {list.map((s) => {
+            const off = on?.get(s.key)?.offseason?.includes(month)
+            return (
+              <li key={s.key}>
+                <button type="button" aria-current={s.key === sport ? 'true' : undefined} className={`league__item${s.key === sport ? ' is-on' : ''}`} onClick={() => choose(s.key)}>
+                  <b>{s.name}</b>
+                  <span>{s.title !== s.name ? s.title : ''}</span>
+                  {off && <em className="league__off">Off-season</em>}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
 
 export function Shell({ children }) {
   const [slipOpen, setSlipOpen] = useState(false)
@@ -70,22 +135,23 @@ export function Shell({ children }) {
 function Header({ onSlip, slipCount, onSearch }) {
   const { user } = useAuth()
   const { plan, paywall, isAdmin } = useBilling()
-  const week = useApi('/api/nfl/week', { maxAgeMs: 60_000 }).data
+  const sport = useSport()
+  const week = useApi(`${apiOf(sport)}/week`, { maxAgeMs: 60_000 }).data
   const liveCount = (week?.games || []).filter((g) => g.status?.state === 'in').length
   return (
     <header className="header">
       <div className="header__inner">
-        <Link to="/" className="brand" aria-label="APEX home">
-          <Wordmark height={20} />
-          <span className="brand__chip" data-apex-chip>
-            NFL
-          </span>
-        </Link>
+        <div className="brand">
+          <Link to={sp(sport, '')} className="brand__home" aria-label="APEX home">
+            <Wordmark height={20} />
+          </Link>
+          <SportPicker />
+        </div>
         <nav className="header__nav" aria-label="Main">
-          {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => `header__link${isActive ? ' is-on' : ''}`}>
+          {navFor(sport).map((n) => (
+            <NavLink key={n.label} to={n.to} end={n.end} className={({ isActive }) => `header__link${isActive ? ' is-on' : ''}`}>
               {n.label}
-              {n.to === '/nfl/live' && liveCount > 0 && <span className="header__count num">{liveCount}</span>}
+              {n.live && liveCount > 0 && <span className="header__count num">{liveCount}</span>}
             </NavLink>
           ))}
         </nav>
@@ -121,17 +187,18 @@ function Header({ onSlip, slipCount, onSearch }) {
 }
 
 function TabBar({ slipCount, onSlip }) {
+  const sport = useSport()
   return (
     <nav className="tabbar" aria-label="Main">
-      <NavLink to="/" end className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
+      <NavLink to={sp(sport, '')} end className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
         <Icon d="M3 10.5L10 4l7 6.5V17h-4.5v-4h-5v4H3z" />
         Today
       </NavLink>
-      <NavLink to="/nfl/props" className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
+      <NavLink to={sp(sport, '/props')} className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
         <Icon d="M4 5h12M4 10h12M4 15h7" />
         Props
       </NavLink>
-      <NavLink to="/nfl/live" className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
+      <NavLink to={sp(sport, '/live')} className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
         <Icon d="M10 3v7l4 3M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
         Live
       </NavLink>
@@ -201,6 +268,7 @@ function RenewBanner() {
 
 function Footer() {
   const { isAdmin } = useBilling()
+  const sport = useSport()
   return (
     <footer className="footer">
       <div className="footer__inner">
@@ -208,10 +276,10 @@ function Footer() {
         <p className="footer__note">Stats and probabilities for research. APEX doesn't take bets. Bet within your means; if gambling stops being fun, call 1-800-GAMBLER.</p>
         <nav className="footer__links" aria-label="More">
           <Link to="/pricing">Plans</Link>
-          <Link to="/nfl/dvp">Defense vs position</Link>
+          <Link to={sp(sport, '/dvp')}>Defense vs position</Link>
           <Link to="/apex">Game analyzer</Link>
           {isAdmin && <Link to="/admin">Admin</Link>}
-          <button type="button" className="linkish" onClick={() => playIntro({ force: true })}>
+          <button type="button" className="linkish" onClick={() => playIntro({ force: true, chipText: sportInfo(sport).name })}>
             Replay intro
           </button>
         </nav>

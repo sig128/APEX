@@ -1,19 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApi } from '../lib/useApi.js'
 import { useLive, useLiveState } from '../lib/live.js'
 import { useTitle } from '../lib/hooks.js'
 import { clock, kickoff } from '../lib/format.js'
-import { api } from '../lib/api.js'
 import { useSlip } from '../lib/useSlip.js'
 import { TeamLogo } from '../ui/Img.jsx'
 import { PropRow } from '../ui/PropRow.jsx'
 import { Section, Skeleton, Empty, Pills } from '../ui/Bits.jsx'
+import { useSport, apiOf, sp, sportInfo, legRef } from '../lib/sport.js'
+import { trackLegs } from '../lib/track.js'
 
 /** Every game in progress (and the ones that just ended) with where each prop stands. */
 export function LivePage() {
-  const { data, loading } = useApi('/api/nfl/live', { maxAgeMs: 10_000 })
-  const week = useApi('/api/nfl/week', { maxAgeMs: 30_000 }).data
+  const sport = useSport()
+  const { data, loading } = useApi(`${apiOf(sport)}/live`, { maxAgeMs: 10_000 })
+  const week = useApi(`${apiOf(sport)}/week`, { maxAgeMs: 30_000 }).data
   const stream = useLiveState()
   useTitle('Live tracker')
   const games = data?.games || []
@@ -34,12 +36,14 @@ export function LivePage() {
         games.map((g) => <LiveGame key={g.id} g={g} />)
       ) : (
         <Empty title="No games on right now">
-          {nextKick(week) ? `Next kickoff: ${nextKick(week)}.` : 'Live tracking starts at kickoff.'} Props on your slip are tracked here once their games start.
+          {nextKick(week) ? `${FOOTBALL.has(sport) ? 'Next kickoff' : 'Next game'}: ${nextKick(week)}.` : `Live tracking starts when the next ${sportInfo(sport).name} game does.`} Props on your slip are tracked here once their games start.
         </Empty>
       )}
     </div>
   )
 }
+
+const FOOTBALL = new Set(['nfl', 'ncaaf'])
 
 function nextKick(week) {
   const pre = (week?.games || []).filter((g) => g.status?.state === 'pre').sort((a, b) => String(a.date).localeCompare(String(b.date)))[0]
@@ -58,6 +62,7 @@ const FILTERS = [
 ]
 
 function LiveGame({ g }) {
+  const sport = useSport()
   const [f, setF] = useState(null)
   const props = (g.props || []).filter((p) => !f || (f === 'close' ? !['hit', 'miss', 'push'].includes(p.live.status) : p.live.status === f))
   const [open, setOpen] = useState(g.status?.state === 'in')
@@ -81,7 +86,7 @@ function LiveGame({ g }) {
               <PropRow key={p.id} c={p} live={p.live} compact />
             ))}
           </div>
-          <Link className="link" to={`/nfl/game/${g.id}`}>
+          <Link className="link" to={sp(sport, `/game/${g.id}`)}>
             Full game page
           </Link>
         </div>
@@ -90,18 +95,19 @@ function LiveGame({ g }) {
   )
 }
 
-/** The slip's legs with live progress, refreshed by the tracker stream. */
+/** The slip's legs with live progress (any league), refreshed by the tracker stream of the league on screen. */
 function SlipTracker() {
+  const sport = useSport()
   const slip = useSlip()
-  const ids = useMemo(() => slip.legs.map((l) => l.id), [slip.legs])
+  const key = slip.legs.map(legRef).join(',')
   const [legs, setLegs] = useState(null)
   const started = slip.legs.some((l) => Date.parse(l.kickoff) < Date.now())
   useEffect(() => {
-    if (!ids.length || !started) return undefined
+    if (!key || !started) return undefined
     let stop = false
     const load = () =>
-      api(`/api/nfl/track?ids=${encodeURIComponent(ids.join(','))}`, { auth: false })
-        .then((r) => !stop && setLegs(r.legs))
+      trackLegs(slip.legs)
+        .then((list) => !stop && setLegs(list))
         .catch(() => {})
     load()
     const t = setInterval(load, 20_000)
@@ -109,10 +115,11 @@ function SlipTracker() {
       stop = true
       clearInterval(t)
     }
-  }, [ids, started])
-  useLive(ids.length && started ? 'tracker' : null, (diff) => {
-    setLegs((cur) => cur && cur.map((l) => (diff[l.id] ? { ...l, live: diff[l.id] } : l)))
+  }, [key, started])
+  useLive(key && started ? 'tracker' : null, (diff) => {
+    setLegs((cur) => cur && cur.map((l) => ((l.sport || 'nfl') === sport && diff[l.id] ? { ...l, live: diff[l.id] } : l)))
   })
+  const ids = key ? key.split(',') : []
   if (!ids.length || !started || !legs) return null
   const tracked = legs.filter((l) => l.live && !l.live.untracked)
   if (!tracked.length) return null
@@ -122,7 +129,7 @@ function SlipTracker() {
     <Section id="my-slip" title="Your slip" aside={<span className={`slip-state${lost ? ' is-minus' : ''}`}>{lost ? 'A leg missed' : `${decided.length} of ${tracked.length} decided`}</span>}>
       <div className="prop-list">
         {tracked.map((l) => (
-          <PropRow key={l.id} c={l} live={l.live} compact />
+          <PropRow key={legRef(l)} c={l} live={l.live} compact />
         ))}
       </div>
     </Section>
