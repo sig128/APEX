@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { streamUrl } from './config.js'
 import { api } from './api.js'
-import { mutate, load } from './useApi.js'
+import { mutate, load, peek } from './useApi.js'
 
 const listeners = new Map() // topic -> Set<fn>
 let es = null
@@ -30,8 +30,18 @@ const withScores = (g, live) => (g && live ? { ...g, status: live.status, situat
 
 function deliver(topic, data) {
   if (topic === 'scoreboard' && data?.games) {
+    const before = peek('/api/nfl/week')?.games || []
     mutate('/api/nfl/week', data)
     mutate('/api/nfl/home', (cur) => (cur ? { ...cur, games: data.games } : undefined))
+    // a game that just kicked off or ended: its page (and the board) need a fresh read
+    for (const g of data.games) {
+      const old = before.find((x) => x.id === g.id)
+      if (old && old.status?.state !== g.status?.state) {
+        if (peek(`/api/nfl/games/${g.id}`)) load(`/api/nfl/games/${g.id}`, { force: true }).catch(() => {})
+        if (peek('/api/nfl/home')) load('/api/nfl/home', { force: true }).catch(() => {})
+        if (peek('/api/nfl/live')) load('/api/nfl/live', { force: true }).catch(() => {})
+      }
+    }
   }
   if (topic.startsWith('game:') && data) {
     const id = topic.slice(5)
@@ -177,8 +187,28 @@ export function useLiveState() {
   return s
 }
 
+// A tab in the background lets go of the stream after half a minute (an open stream is billed
+// server time) and picks it back up, with fresh data, when it's looked at again.
+let hiddenTimer = null
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && wanted().length && !es && state !== 'polling') open(true)
+    if (document.visibilityState === 'hidden') {
+      clearTimeout(hiddenTimer)
+      hiddenTimer = setTimeout(() => {
+        close()
+        clearInterval(pollTimer)
+        openTopics = ''
+        setState('idle')
+      }, 30_000)
+      return
+    }
+    clearTimeout(hiddenTimer)
+    if (wanted().length && !es && state !== 'polling') {
+      for (const t of wanted()) {
+        if (t === 'scoreboard') load('/api/nfl/week', { force: true }).catch(() => {})
+        if (t.startsWith('game:')) load(`/api/nfl/games/${t.slice(5)}`, { force: true }).catch(() => {})
+      }
+      open(true)
+    }
   })
 }

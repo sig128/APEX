@@ -1,11 +1,11 @@
 {
-  "name": "APEX MLB Betting Intelligence",
-  "short_name": "APEX MLB",
-  "description": "MLB betting intelligence and analysis.",
+  "name": "APEX NFL: props, hit rates and live tracking",
+  "short_name": "APEX",
+  "description": "Every NFL player prop with hit rates, matchups, line moves and live tracking.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#050a14",
+  "theme_color": "#050a14",
   "icons": [
     {
       "src": "/logo.png",

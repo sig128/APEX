@@ -30,7 +30,7 @@ const TITLES = { VERDICT: 'Verdict', WHY: 'Why', RISKS: 'Risks', SIZING: 'Sizing
 
 /** The AI read of one prop, written with the APEX ruleset. Pro and Elite. */
 export function AskApex({ propId }) {
-  const { user } = useAuth()
+  const { user, firebaseConfigured } = useAuth()
   const { paywall, refresh } = useBilling()
   const [text, setText] = useState('')
   const [state, setState] = useState('idle') // idle | streaming | done | error
@@ -78,7 +78,9 @@ export function AskApex({ propId }) {
   const blocks = sections(text)
   const verdict = blocks.find((b) => b.k === 'VERDICT')?.lines.join(' ') || ''
   const tone = /prime/i.test(verdict) ? 'is-prime' : /no play/i.test(verdict) ? 'is-pass' : /monitor/i.test(verdict) ? 'is-watch' : ''
-  const needsSignIn = !paywall && !user
+  // with the paywall off the server still wants a signed-in, invited user (except in local dev
+  // without Firebase, where it's open)
+  const needsSignIn = !paywall && !user && firebaseConfigured
 
   return (
     <Locked need="pro" title="AI read of this prop">

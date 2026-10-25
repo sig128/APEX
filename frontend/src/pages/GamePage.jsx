@@ -14,11 +14,13 @@ export function GamePage() {
   const { data, error, loading, refresh } = useApi(`/api/nfl/games/${id}`, { maxAgeMs: 15_000 })
   const g = data?.game
   const started = g && g.status?.state !== 'pre'
+  useLive('scoreboard', () => {})
   useLive(started && g.status.state === 'in' ? `game:${id}` : null, () => {})
   useLive(!started ? `props:${id}` : null, () => {})
   useTitle(g ? `${g.shortName} props` : 'Game')
   const [tab, setTab] = useState(null)
-  const cur = tab || (g?.status?.state === 'in' ? 'live' : 'props')
+  // once a game starts, open on where the props stand (live, then the final box)
+  const cur = tab || (g && g.status?.state !== 'pre' ? 'live' : 'props')
 
   if (error && !data) {
     return (

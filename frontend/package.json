@@ -6,7 +6,8 @@
     "dev": "vite",
     "prebuild": "cp src/assets/logo.png public/logo.png",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "firebase": "^11.6.0",

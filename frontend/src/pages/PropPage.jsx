@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useApi } from '../lib/useApi.js'
+import { useApi, mutate } from '../lib/useApi.js'
+import { useLive } from '../lib/live.js'
 import { useTitle } from '../lib/hooks.js'
 import { pct, odds, kickoff, num, clock, decimalOf, parseOdds } from '../lib/format.js'
 import { kellyFraction } from '../lib/kelly.js'
@@ -48,6 +49,12 @@ export function PropPage() {
   const [win, setWin] = useState('L10')
   const slip = useSlip()
   const games = useMemo(() => (p ? gamesFor(win, p) : []), [p, win])
+  const path = `/api/nfl/props/${encodeURIComponent(id)}`
+  // while its game is on, the prop's progress moves with every box score update
+  useLive(data?.game?.status?.state === 'in' ? `game:${data.game.id}` : null, (lg) => {
+    const row = lg?.props?.find((x) => x.id === p?.id)
+    mutate(path, (cur) => (cur ? { ...cur, live: row?.live || cur.live, game: cur.game && lg ? { ...cur.game, status: lg.status, home: { ...cur.game.home, score: lg.home?.score }, away: { ...cur.game.away, score: lg.away?.score } } : cur.game } : undefined))
+  })
 
   if (error && !data) {
     return (

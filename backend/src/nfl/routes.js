@@ -6,7 +6,7 @@ import { atLeast } from '../billing/service.js'
 import { billingConfig } from '../billing/config.js'
 import { createLimiter } from '../security/rateLimit.js'
 import { signTicket, verifyTicket } from '../security/ticket.js'
-import { defaultAuthInstance } from '../security/auth.js'
+import { defaultAuthInstance, authMode } from '../security/auth.js'
 import { parsePropId } from './analytics/core.js'
 import { envInt } from '../lib/util.js'
 
@@ -144,6 +144,9 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
       if (!atLeast(a.tier, 'pro')) throw new ApiError(402, 'upgrade', 'AI picks are part of Pro and Elite.', { need: 'pro', plan: a.tier, status: a.ent.status })
       user = a.user
       ent = a.ent
+    } else if (authMode() === 'optional') {
+      // local `npm run dev` without Firebase: the AI is open, like the analyzer
+      user = (await auth.identify(req).catch(() => null)) || { uid: `dev:${clientIp(req)}` }
     } else {
       user = await auth.authenticate(req)
       if (!(await auth.inviteVerified(user))) throw new ApiError(403, 'invite', 'Redeem an invite code to use AI reads.')
