@@ -21,6 +21,9 @@ import { NotFound } from './pages/NotFound.jsx'
 const page = (load, name) => lazy(() => load().then((m) => ({ default: m[name] })))
 const MePage = page(() => import('./pages/MePage.jsx'), 'MePage')
 const KellyPage = page(() => import('./pages/KellyPage.jsx'), 'KellyPage')
+const ToolsPage = page(() => import('./pages/ToolsPage.jsx'), 'ToolsPage')
+const SimPage = page(() => import('./pages/SimPage.jsx'), 'SimPage')
+const CheckPage = page(() => import('./pages/CheckPage.jsx'), 'CheckPage')
 const PricingPage = page(() => import('./pages/PricingPage.jsx'), 'PricingPage')
 const AccountPage = page(() => import('./pages/AccountPage.jsx'), 'AccountPage')
 const AdminPage = page(() => import('./pages/AdminPage.jsx'), 'AdminPage')
@@ -54,6 +57,9 @@ export function App() {
               <Route path="/u/:handle" element={<UserPage />} />
               <Route path="/me" element={<MePage />} />
               <Route path="/kelly" element={<KellyPage />} />
+              <Route path="/tools" element={<ToolsPage />} />
+              <Route path="/tools/sim" element={<SimPage />} />
+              <Route path="/tools/check" element={<CheckPage />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/login" element={<LoginPage />} />

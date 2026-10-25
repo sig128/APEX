@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Headshot } from './Img.jsx'
 import { EliteBadge } from './Bits.jsx'
-import { odds, units as fmtUnits, ago, kickoff, pct, bookName } from '../lib/format.js'
+import { odds, units as fmtUnits, ago, kickoff, pct, bookName, impliedOf } from '../lib/format.js'
 import { importLegs } from '../lib/slip.js'
 import { SITE_URL } from '../lib/config.js'
+import { Odds } from './Odds.jsx'
 
 const RESULT = { win: 'Won', loss: 'Lost', push: 'Push', void: 'Void' }
 
@@ -45,7 +46,7 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
                 <b>{l.name}</b> {l.label}
               </Link>
               <span className="muted">
-                {l.teamAbbr} {l.oppAbbr ? `vs ${l.oppAbbr}` : ''}, APEX {pct(l.prob)} when posted, {Number.isFinite(l.price) ? `${odds(l.price)}${l.book ? ` at ${bookName(l.book)}` : ''}` : 'no price listed (graded at -110)'}
+                {l.teamAbbr} {l.oppAbbr ? `vs ${l.oppAbbr}` : ''}, APEX {pct(l.prob)} when posted, {Number.isFinite(l.price) ? `${odds(l.price)} (${pct(impliedOf(l.price), 1)})${l.book ? ` at ${bookName(l.book)}` : ''}` : 'no price listed (graded at -110)'}
               </span>
             </span>
             <span className="pick-leg__res">{l.result ? `${RESULT[l.result] || l.result}${l.value != null ? ` (${l.value})` : ''}` : ''}</span>
@@ -54,7 +55,7 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
       </ul>
       {pick.note && <p className="pick__note">{pick.note}</p>}
       <footer className="pick__foot">
-        <span className="pick__price num">{odds(pick.price)}</span>
+        <Odds a={pick.price} className="pick__price" />
         <span className="pick__units num">{pick.units}u</span>
         <span className={`pick__status is-${status}`}>
           {status === 'open' && `Locks ${kickoff(new Date(pick.lockAt).toISOString())}`}

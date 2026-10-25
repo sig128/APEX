@@ -93,3 +93,28 @@ export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many
 const BOOKS = { draftkings: 'DraftKings', fanduel: 'FanDuel', betmgm: 'BetMGM', williamhill_us: 'Caesars', espnbet: 'ESPN BET' }
 /** "draftkings" -> "DraftKings"; names that are already readable pass through. */
 export const bookName = (k) => (k ? BOOKS[k] || BOOKS[String(k).toLowerCase()] || k : '')
+
+/** American odds -> the probability the price implies (vig included): -110 -> 0.5238. */
+export function impliedOf(american) {
+  const n = Number(american)
+  if (!Number.isFinite(n) || Math.abs(n) < 100) return null
+  return n < 0 ? -n / (-n + 100) : 100 / (n + 100)
+}
+
+/** Two sides of one market -> the book's cut and each side's chance with the cut taken out. */
+export function noVigOf(a, b) {
+  const pa = impliedOf(a)
+  const pb = impliedOf(b)
+  if (pa == null || pb == null) return null
+  const sum = pa + pb
+  return { vig: sum - 1, a: pa / sum, b: pb / sum }
+}
+
+/** "What does -110 mean" in one sentence. */
+export function oddsMeaning(american) {
+  const n = Number(american)
+  const p = impliedOf(n)
+  if (p == null) return ''
+  const pp = `${(p * 100).toFixed(1)}%`
+  return n < 0 ? `${n}: risk $${-n} to win $100. The book is saying this happens ${pp} of the time.` : `+${n}: risk $100 to win $${n}. The book is saying this happens ${pp} of the time.`
+}

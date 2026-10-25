@@ -8,6 +8,7 @@ import { TeamLogo } from '../ui/Img.jsx'
 import { PropRow } from '../ui/PropRow.jsx'
 import { Tabs, Pills, Skeleton, ErrorBox, Empty, Section } from '../ui/Bits.jsx'
 import { ParlayCard } from './HomePage.jsx'
+import { Odds } from '../ui/Odds.jsx'
 
 export function GamePage() {
   const { id } = useParams()
@@ -87,7 +88,7 @@ function Scoreboard({ data }) {
         )}
         {o?.awayMl != null && (
           <span>
-            Moneyline <b>{g.away.abbr} {odds(o.awayMl)}</b>, <b>{g.home.abbr} {odds(o.homeMl)}</b>
+            Moneyline <b>{g.away.abbr}</b> <Odds a={o.awayMl} />, <b>{g.home.abbr}</b> <Odds a={o.homeMl} />
           </span>
         )}
         {data.home.implied != null && (

@@ -198,6 +198,8 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
     fit: round(fit, 2),
     rank: Math.round(score * (0.55 + 0.45 * role) * fit),
     proj: prob.proj ? round(prob.proj.mean ?? prob.proj.lambda, 1) : null,
+    // spread of the projection (normal markets); the parlay simulator draws from it
+    sd: prob.proj?.sd ? round(prob.proj.sd, 2) : null,
     avg: sum.avg,
     median: sum.median,
     sample: prob.sample,
@@ -270,6 +272,7 @@ export function buildTeamRow({ team, market = 'teamPts', line, side, game, sched
     role: 1,
     fit: 1,
     proj: round(m, 1),
+    sd: round(sdv, 2),
     avg: round(mean(rows.slice(-20).map((r) => r.v)), 1),
     sample: nO,
     windows: ws.map((w) => ({ key: w.key, label: w.label, hits: w.hits, n: w.n })),

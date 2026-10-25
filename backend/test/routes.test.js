@@ -49,7 +49,7 @@ const ai = {
   async create(params) {
     ai.calls.push(params)
     if (ai.mode === 'fail') throw Object.assign(new Error('overloaded'), { status: 529 })
-    return { id: 'msg_once', usage: {}, content: [{ type: 'text', text: 'One-shot analysis.' }] }
+    return { id: 'msg_once', usage: {}, content: [{ type: 'text', text: ai.createText || 'One-shot analysis.' }] }
   },
 }
 
@@ -241,6 +241,24 @@ test('the game analyzer: Pro only, follow-ups must continue an analysis', async 
   }
 })
 
+test('parlay simulator: Pro only, real legs, numbers that add up', async () => {
+  const props = (await api.get('/api/nfl/games/401873020')).body.props.filter((p) => p.kind === 'player').slice(0, 3).map((p) => p.id)
+  assert.equal((await api.post('/api/nfl/sim', { legs: props })).status, 401)
+  assert.equal((await api.post('/api/nfl/sim', { legs: props }, { headers: bearer('u_free') })).status, 402)
+  assert.equal((await api.post('/api/nfl/sim', { legs: [] }, { headers: bearer('u_pro') })).status, 400)
+  assert.equal((await api.post('/api/nfl/sim', { legs: ['1.passYds.o.250.5'] }, { headers: bearer('u_pro') })).status, 404)
+  const r = await api.post('/api/nfl/sim', { legs: props, iterations: 25000, price: 600, bets: 50 }, { headers: bearer('u_pro') })
+  assert.equal(r.status, 200, JSON.stringify(r.body))
+  assert.equal(r.body.iterations, 25000)
+  assert.equal(r.body.legs.length, 3)
+  for (const l of r.body.legs) assert.ok(Math.abs(l.hitRate + l.pushRate * 0 - l.apex) < 0.03, `${l.label}: ${l.hitRate} vs APEX ${l.apex}`)
+  const sumHit = r.body.parlay.legsHit.reduce((a, b) => a + b, 0)
+  assert.ok(Math.abs(sumHit - 1) < 1e-9, 'every run lands somewhere')
+  assert.ok(r.body.price.implied > 0.14 && r.body.price.implied < 0.15)
+  assert.equal(r.body.luck.bets, 50)
+  assert.equal(r.headers.get('cache-control'), 'no-store')
+})
+
 test('buying a pass with USDC: invoice, transfer, confirm, Elite unlocked', async () => {
   assert.equal((await api.post('/api/billing/invoice', { plan: 'elite' })).status, 401)
   const inv = await api.post('/api/billing/invoice', { plan: 'elite' }, { headers: bearer('u_elite') })
@@ -329,4 +347,42 @@ test('lapsed passes lock the AI after the grace week', async () => {
   const stats = await api.get('/api/nfl/home', { headers: bearer('u_pro') })
   assert.equal(stats.status, 200, 'stats stay free after a pass lapses')
   now.set(start)
+})
+
+test('parlay check: Pro only, reads a typed slip, simulates, then a verdict per leg', async () => {
+  const props = (await api.get('/api/nfl/games/401873020')).body.props.filter((p) => p.kind !== 'team' && !p.oneSided)
+  const [a, b] = props
+  assert.equal((await api.post('/api/nfl/check', { legs: [a.id] })).status, 401)
+  assert.equal((await api.post('/api/nfl/check', { legs: [a.id] }, { headers: bearer('u_free') })).status, 402)
+  const grant = await api.post('/api/billing/admin/grant', { email: 'two@example.com', uid: 'u_elite2', plan: 'elite', days: 30 }, { headers: bearer('u_admin') })
+  assert.equal(grant.status, 200, JSON.stringify(grant.body))
+  const who = 'u_elite2'
+  const empty = await api.post('/api/nfl/check', {}, { headers: bearer(who) })
+  assert.equal(empty.status, 400)
+  const badImg = await api.post('/api/nfl/check', { image: { type: 'image/svg+xml', data: 'PHN2Zz4=' } }, { headers: bearer(who) })
+  assert.equal(badImg.status, 400, 'only raster screenshots')
+
+  ai.createText = JSON.stringify({
+    legs: [
+      { player: a.name, market: a.market, side: a.side, line: a.line, odds: -120 },
+      { player: 'Nobody McFake', market: 'recYds', side: 'o', line: 40.5, odds: null },
+    ],
+    parlayOdds: 250,
+    notes: '',
+  })
+  const r = await api.post('/api/nfl/check', { text: `${a.name} over ${a.line}`, legs: [b.id] }, { headers: bearer(who) })
+  ai.createText = null
+  assert.equal(r.status, 200, r.text)
+  const ev = ndjson(r.text)
+  const legs = ev.find((e) => e.type === 'legs')
+  assert.equal(legs.legs.length, 2, 'the board leg plus the matched typed leg')
+  assert.ok(legs.legs.some((l) => l.id === a.id && l.odds === -120), 'the slip price is kept')
+  assert.equal(legs.unmatched.length, 1)
+  assert.ok(['keep', 'cut', 'risky'].includes(legs.legs[0].lean))
+  const sim = ev.find((e) => e.type === 'sim')
+  assert.ok(sim.parlay.hitRate > 0 && sim.parlay.hitRate < 1)
+  assert.equal(sim.price.price, 250)
+  assert.equal(ev.at(-1).type, 'complete')
+  assert.match(ai.calls.at(-1).system, /KEEP/, 'the verdict prompt')
+  assert.match(ai.calls.at(-1).messages[0].content, /LEG 2/)
 })

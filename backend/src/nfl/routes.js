@@ -2,12 +2,14 @@
 import { createRouter, ApiError, RAW, clientIp } from '../lib/router.js'
 import { ROUTE_TIER, TOPIC_RE, topicAllowed } from './gate.js'
 import { streamPropInsight } from './ai.js'
+import { extractLegs, matchLegs, streamParlayCheck, cleanImage, MAX_TEXT } from './parlay.js'
 import { atLeast } from '../billing/service.js'
 import { billingConfig } from '../billing/config.js'
 import { createLimiter } from '../security/rateLimit.js'
 import { signTicket, verifyTicket } from '../security/ticket.js'
 import { defaultAuthInstance, authMode } from '../security/auth.js'
 import { parsePropId } from './analytics/core.js'
+import { simulateSlip } from './analytics/sim.js'
 import { envInt } from '../lib/util.js'
 
 /** Optional: make every read require sign-in (APEX_READS_NEED_AUTH=1). Off by default: stats are free. */
@@ -18,6 +20,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
   const views = engine.views
   const limiter = createLimiter({ burst: envInt('APEX_RATE_BURST', 600, { min: 10 }), perSec: envInt('APEX_RATE_RPS', 20, { min: 1 }) })
   const insightLimiter = createLimiter({ burst: 6, perSec: 1 / 5 })
+  const checkLimiter = createLimiter({ burst: 3, perSec: 1 / 10 })
   const paywallOn = () => Boolean(access && billing && billingConfig().paywall)
   const OPEN = { ok: true, user: null, ent: { plan: 'elite', status: 'open' }, tier: 'elite' }
 
@@ -134,18 +137,43 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     return RAW
   })
 
-  /** AI read of one prop. Pro and Elite (or the invite rule while the paywall is off). */
-  r.post('/insight', { selfAuth: true }, async (ctx) => {
-    const { req, res } = ctx
+  // Parlay simulator: 10,000-100,000 runs of the slip on the APEX distributions. Pro.
+  const simLimiter = createLimiter({ burst: 12, perSec: 1 / 3 })
+  r.post('/sim', { tier: t('sim') }, (ctx) => {
     ctx.cache = null
-    const propId = String(req.body?.propId || '')
-    if (!parsePropId(propId)) throw new ApiError(400, 'bad_prop', 'That prop id is not valid.')
+    const who = ctx.user?.uid || clientIp(ctx.req)
+    const lim = simLimiter.take(who)
+    if (!lim.ok) throw new ApiError(429, 'rate', 'A few seconds between simulations, please.', { retryAfter: lim.retryAfter })
+    const body = ctx.req.body || {}
+    const ids = Array.isArray(body.legs) ? [...new Set(body.legs.map(String))] : []
+    if (!ids.length || ids.length > 12) throw new ApiError(400, 'bad_legs', 'Simulate 1 to 12 legs.')
+    const rows = []
+    const missing = []
+    for (const id of ids) {
+      const row = parsePropId(id) ? views.findProp(id) : null
+      if (row) rows.push(row)
+      else missing.push(id)
+    }
+    if (missing.length) throw new ApiError(404, 'no_prop', `${missing.length === 1 ? 'One leg isn’t' : `${missing.length} legs aren’t`} on this week’s board anymore. Remove ${missing.length === 1 ? 'it' : 'them'} and try again.`, { legs: missing })
+    const iterations = [10_000, 25_000, 50_000, 100_000].includes(Number(body.iterations)) ? Number(body.iterations) : 10_000
+    const price = Number.isFinite(Number(body.price)) && Math.abs(Number(body.price)) >= 100 ? Math.round(Number(body.price)) : null
+    const bets = Math.min(1000, Math.max(10, Math.round(Number(body.bets) || 100)))
+    const seed = Math.floor(Math.random() * 2 ** 31)
+    return { ...simulateSlip(rows, { iterations, price, bets, seed }), at: Date.now() }
+  })
+
+  /**
+   * Who may spend an AI read: Pro and Elite with the paywall on, an invited user while it's off
+   * (open in local dev without Firebase). Takes one read off today's allowance; `refund()` gives
+   * it back when nothing was produced.
+   */
+  async function aiGate(req, res, { what = 'AI reads', limiterFor = insightLimiter } = {}) {
     let user
     let ent
     if (paywallOn()) {
       const a = await access.resolve(req)
-      if (!a.user) throw new ApiError(401, 'signin', 'Sign in to get AI reads.', { need: 'pro' })
-      if (!atLeast(a.tier, 'pro')) throw new ApiError(402, 'upgrade', 'AI picks are part of Pro and Elite.', { need: 'pro', plan: a.tier, status: a.ent.status })
+      if (!a.user) throw new ApiError(401, 'signin', `Sign in to use ${what}.`, { need: 'pro' })
+      if (!atLeast(a.tier, 'pro')) throw new ApiError(402, 'upgrade', `${what[0].toUpperCase()}${what.slice(1)} are part of Pro and Elite.`, { need: 'pro', plan: a.tier, status: a.ent.status })
       user = a.user
       ent = a.ent
     } else if (authMode() === 'optional') {
@@ -153,17 +181,80 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
       user = (await auth.identify(req).catch(() => null)) || { uid: `dev:${clientIp(req)}` }
     } else {
       user = await auth.authenticate(req)
-      if (!(await auth.inviteVerified(user))) throw new ApiError(403, 'invite', 'Redeem an invite code to use AI reads.')
+      if (!(await auth.inviteVerified(user))) throw new ApiError(403, 'invite', `Redeem an invite code to use ${what}.`)
     }
-    const lim = insightLimiter.take(user.uid)
-    if (!lim.ok) throw new ApiError(429, 'slow_down', 'One AI read at a time. Try again in a few seconds.', { retryAfter: lim.retryAfter })
+    const lim = limiterFor.take(user.uid)
+    if (!lim.ok) throw new ApiError(429, 'slow_down', 'One at a time. Try again in a few seconds.', { retryAfter: lim.retryAfter })
     let usage = null
     if (paywallOn()) {
       usage = await billing.useQuota(user, ent, 'aiReads')
       if (usage.limit != null) res.setHeader('X-Apex-Usage', `${usage.used}/${usage.limit}`)
     }
-    const out = await streamPropInsight({ propId, views, res, apiKey: typeof anthropicKey === 'function' ? anthropicKey() : anthropicKey })
-    if (paywallOn() && usage && !out.produced) await billing.refundQuota(user, 'aiReads').catch(() => {})
+    return {
+      user,
+      refund: async () => {
+        if (paywallOn() && usage) await billing.refundQuota(user, 'aiReads').catch(() => {})
+      },
+    }
+  }
+  const key = () => (typeof anthropicKey === 'function' ? anthropicKey() : anthropicKey)
+
+  /** AI read of one prop. Pro and Elite (or the invite rule while the paywall is off). */
+  r.post('/insight', { selfAuth: true }, async (ctx) => {
+    const { req, res } = ctx
+    ctx.cache = null
+    const propId = String(req.body?.propId || '')
+    if (!parsePropId(propId)) throw new ApiError(400, 'bad_prop', 'That prop id is not valid.')
+    const gate = await aiGate(req, res)
+    const out = await streamPropInsight({ propId, views, res, apiKey: key() })
+    if (!out.produced) await gate.refund()
+    return RAW
+  })
+
+  /**
+   * Parlay check: legs from the board, typed out, or a betslip screenshot. Reads the slip,
+   * matches it to the board, simulates it, then the AI keeps or cuts each leg. One AI read.
+   */
+  r.post('/check', { selfAuth: true }, async (ctx) => {
+    const { req, res } = ctx
+    ctx.cache = null
+    const body = req.body || {}
+    const ids = Array.isArray(body.legs) ? [...new Set(body.legs.map(String))].slice(0, 12) : []
+    const text = typeof body.text === 'string' ? body.text.trim().slice(0, MAX_TEXT) : ''
+    const image = body.image ? cleanImage(body.image) : null
+    if (body.image && !image) throw new ApiError(400, 'bad_image', 'Upload a JPEG, PNG or WebP screenshot under 1.2 MB.')
+    if (!ids.length && !text && !image) throw new ApiError(400, 'empty', 'Add legs from the board, paste your slip, or upload a screenshot.')
+    if (ids.some((id) => !parsePropId(id))) throw new ApiError(400, 'bad_legs', 'One of those legs is not a valid prop.')
+    const apiKey = key()
+    if (!apiKey) throw new ApiError(503, 'ai_off', 'AI is not configured on this server (ANTHROPIC_API_KEY).')
+    const gate = await aiGate(req, res, { what: 'parlay checks', limiterFor: checkLimiter })
+    let matched = ids.map((id) => ({ id, odds: null }))
+    let unmatched = []
+    let notes = ''
+    let parlayOdds = Number.isFinite(Number(body.price)) && Math.abs(Number(body.price)) >= 100 ? Math.round(Number(body.price)) : null
+    const prices = body.prices && typeof body.prices === 'object' ? body.prices : {}
+    matched = matched.map((m) => ({ ...m, odds: Number.isFinite(Number(prices[m.id])) && Math.abs(Number(prices[m.id])) >= 100 ? Math.round(Number(prices[m.id])) : null }))
+    try {
+      if (text || image) {
+        const ex = await extractLegs({ apiKey, text, image })
+        const found = matchLegs(ex.legs, engine)
+        const seen = new Set(matched.map((m) => m.id))
+        matched = [...matched, ...found.matched.filter((m) => !seen.has(m.id))].slice(0, 12)
+        unmatched = found.unmatched
+        notes = ex.notes
+        if (parlayOdds == null) parlayOdds = ex.parlayOdds
+      }
+      matched = matched.filter((m) => views.findProp(m.id))
+    } catch (e) {
+      await gate.refund()
+      throw e instanceof ApiError ? e : new ApiError(502, 'read_failed', 'Could not read that slip. Try again, or paste it as text.')
+    }
+    if (!matched.length) {
+      await gate.refund()
+      throw new ApiError(422, 'no_legs', unmatched.length ? 'None of those legs are on this week’s board.' : 'No NFL player props found on that slip.', { unmatched, notes })
+    }
+    const out = await streamParlayCheck({ engine, matched, unmatched, parlayOdds, notes, res, apiKey })
+    if (!out.produced) await gate.refund()
     return RAW
   })
 

@@ -13,6 +13,7 @@ import { PropRow } from '../ui/PropRow.jsx'
 import { AskApex } from '../ui/AskApex.jsx'
 import { Locked } from '../ui/Locked.jsx'
 import { Skeleton, ErrorBox, Section } from '../ui/Bits.jsx'
+import { Odds, ImpliedHint } from '../ui/Odds.jsx'
 
 /** Which of the last 20 games belong to a window tab. */
 function gamesFor(key, prop) {
@@ -158,7 +159,9 @@ export function PropPage() {
             {p.price && (
               <div>
                 <dt>{bookName(p.price.book) || 'Book'}</dt>
-                <dd className="num">{odds(p.side === 'u' ? p.price.under : p.oneSided ? p.price.yes : p.price.over)}</dd>
+                <dd>
+                  <Odds a={p.side === 'u' ? p.price.under : p.oneSided ? p.price.yes : p.price.over} />
+                </dd>
               </div>
             )}
           </dl>
@@ -266,7 +269,10 @@ function KellyBox({ p }) {
         <div className="kelly-box__in">
           <label className="field">
             <span>Your odds</span>
-            <input inputMode="numeric" value={price} placeholder="e.g. -110" onChange={(e) => setPrice(e.target.value)} aria-invalid={Boolean(price) && !n} />
+            <span className="odds-field">
+              <input inputMode="numeric" value={price} placeholder="e.g. -110" onChange={(e) => setPrice(e.target.value)} aria-invalid={Boolean(price) && !n} />
+              <ImpliedHint a={n} />
+            </span>
           </label>
           <label className="field">
             <span>Bankroll ($)</span>
@@ -290,7 +296,8 @@ function KellyBox({ p }) {
           </dl>
         )}
         {!price && <p className="muted">Enter the odds your sportsbook gives you. APEX compares them with its {pct(p.prob)} and sizes the bet.</p>}
-        {d && full === 0 && <p className="muted">No edge at {odds(n)}: APEX has this at {pct(p.prob)}, the price needs {pct(1 / d)}. Pass, or find a better number.</p>}
+        {d && full === 0 && <p className="muted">No edge at {odds(n)}: that price says {pct(1 / d, 1)}, APEX has it at {pct(p.prob, 1)}. Pass, or find a better number.</p>}
+        {d && full > 0 && <p className="muted">That price says {pct(1 / d, 1)}; APEX has it at {pct(p.prob, 1)}, {((p.prob - 1 / d) * 100).toFixed(1)} points better than the book thinks.</p>}
         <Link className="link" to={`/kelly?p=${p.prob}${n ? `&odds=${n}` : ''}`}>
           Simulate a season of bets like this
         </Link>

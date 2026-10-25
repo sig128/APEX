@@ -24,7 +24,7 @@ const NAV = [
   { to: '/nfl/props', label: 'Props' },
   { to: '/nfl/live', label: 'Live' },
   { to: '/picks', label: 'Picks' },
-  { to: '/kelly', label: 'Kelly' },
+  { to: '/tools', label: 'Tools' },
 ]
 
 export function Shell({ children }) {

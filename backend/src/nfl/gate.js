@@ -13,6 +13,8 @@ export const ROUTE_TIER = {
   dvp: 'free',
   rankings: 'free',
   insight: 'pro',
+  sim: 'pro',
+  check: 'pro',
 }
 
 /** Every live topic is free; kept as a hook in case a topic ever needs a plan. */

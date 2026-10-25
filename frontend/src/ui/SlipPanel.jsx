@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useBilling } from '../context/BillingContext.jsx'
 import { Headshot } from './Img.jsx'
 import { Dialog } from './Dialog.jsx'
+import { ImpliedHint } from './Odds.jsx'
 
 const BANKROLL_KEY = 'apex_bankroll'
 const FRACTIONS = [
@@ -170,7 +171,10 @@ export function SlipPanel({ open, onClose }) {
                         {mode === 'singles' && d && <span className={k > 0 ? 'is-plus' : 'is-minus'}> {k > 0 ? `edge ${pct(l.prob * d - 1, 1)}` : 'no edge at that price'}</span>}
                       </span>
                     </div>
-                    <OddsInput value={l.price} onChange={(n) => setLegPrice(l.id, n)} label={`Your odds for ${l.name} ${l.shortLabel || l.label}`} />
+                    <span className="odds-field">
+                      <OddsInput value={l.price} onChange={(n) => setLegPrice(l.id, n)} label={`Your odds for ${l.name} ${l.shortLabel || l.label}`} />
+                      <ImpliedHint a={l.price} />
+                    </span>
                     <button type="button" className="icon-btn" onClick={() => removeLeg(l.id)} aria-label={`Remove ${l.name}`}>
                       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
                         <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -193,7 +197,10 @@ export function SlipPanel({ open, onClose }) {
                 </div>
                 <div className="slip__row">
                   <label htmlFor="parlay-odds">Your parlay odds</label>
-                  <OddsInput value={slip.parlayPrice ?? (math.priced ? math.book : null)} onChange={(n) => setParlayPrice(n)} label="Your parlay odds" placeholder={math.priced ? odds(math.book) : '+600'} />
+                  <span className="odds-field">
+                    <OddsInput value={slip.parlayPrice ?? (math.priced ? math.book : null)} onChange={(n) => setParlayPrice(n)} label="Your parlay odds" placeholder={math.priced ? odds(math.book) : '+600'} />
+                    <ImpliedHint a={slip.parlayPrice ?? (math.priced ? math.book : null)} />
+                  </span>
                 </div>
                 {math.sameGame && <p className="slip__warn">Legs from the same game tend to win or lose together, so the real chance is different from the multiplied one. Books price same-game parlays for that.</p>}
               </div>
