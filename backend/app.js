@@ -305,7 +305,30 @@ export function createApexApp({
   // ---- multi-sport odds endpoints from the original app ----------------------------------------
   // Paid upstream calls come out of their own daily credit pool (APEX_ODDS_ANALYZER_DAILY_CREDITS),
   // separate from the NFL board's, and each address gets a modest request rate.
-  setOddsBudget(async (cost) => (await takeOddsCredits(engineStore, cost, { pool: 'analyzer', daily: envInt('APEX_ODDS_ANALYZER_DAILY_CREDITS', 500, { min: 0, max: 1_000_000 }) })).ok)
+  // Each caller also gets a share: a few games a day whose odds nobody had opened yet (opened
+  // ones are cached for everyone). Signed-in callers count by account, others by address.
+  const callerKey = async (req) => {
+    if (!req) return null
+    if (req.apexOddsCaller !== undefined) return req.apexOddsCaller
+    const user = req.headers?.authorization ? await auth.identify(req).catch(() => null) : null
+    const ip = crypto.createHash('sha256').update(String(clientIp(req))).digest('base64url').slice(0, 16)
+    req.apexOddsCaller = user?.uid ? `u_${user.uid}` : `ip_${ip}`
+    return req.apexOddsCaller
+  }
+  setOddsBudget(async (cost, { req } = {}) => {
+    const daily = envInt('APEX_ODDS_ANALYZER_DAILY_CREDITS', 500, { min: 0, max: 1_000_000 })
+    const who = await callerKey(req)
+    const share = who?.startsWith('u_') ? envInt('APEX_ODDS_NEW_GAMES_PER_USER', 6, { min: 0, max: 1000 }) : envInt('APEX_ODDS_NEW_GAMES_PER_IP', 2, { min: 0, max: 1000 })
+    const mine = (n) => (who ? takeOddsCredits(engineStore, n, { pool: `analyzer_${who}`, daily: share }) : { ok: true })
+    if (cost < 0) {
+      await mine(-1)
+      return (await takeOddsCredits(engineStore, cost, { pool: 'analyzer', daily })).ok
+    }
+    if (!(await mine(1)).ok) return { ok: false, reason: 'caller' }
+    if ((await takeOddsCredits(engineStore, cost, { pool: 'analyzer', daily })).ok) return { ok: true }
+    await mine(-1)
+    return { ok: false, reason: 'pool' }
+  })
   const oddsLimit = createLimiter({ burst: 40, perSec: 0.5 })
   app.use('/api/odds', (req, res, next) => {
     const t = oddsLimit.take(clientIp(req))

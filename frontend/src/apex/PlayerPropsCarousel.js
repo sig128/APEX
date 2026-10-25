@@ -6,6 +6,7 @@
  */
 
 import { apiUrl } from './apiConfig.js'
+import { authHeaders } from '../lib/api.js'
 import { formatAmericanOddsWithImpliedPercent } from './americanOddsPercent.js'
 import { setupMobileAutoPhysicsTicker, useMobileSwipeCarousel } from './apexCarouselMobileSwipe.js'
 
@@ -155,6 +156,7 @@ async function loadShowcaseRows() {
 
   const res = await fetch(apiUrl('/api/odds/mlb-player-props-showcase'), {
     cache: 'default',
+    headers: await authHeaders().catch(() => ({})),
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {

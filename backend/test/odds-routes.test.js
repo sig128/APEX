@@ -9,11 +9,13 @@ import { oddsCreditsUsed } from '../src/lib/oddsBudget.js'
 import { fixtureHttp } from './helpers.js'
 import { clock, testAuth, USERS, withEnv, serve } from './support.js'
 
-const restoreEnv = withEnv({ APEX_TREASURY_ADDRESS: null, APEX_PAYWALL: 'off', K_SERVICE: null, APEX_LOG_LEVEL: 'error', APEX_ODDS_ANALYZER_DAILY_CREDITS: '80' })
+const restoreEnv = withEnv({ APEX_TREASURY_ADDRESS: null, APEX_PAYWALL: 'off', K_SERVICE: null, APEX_LOG_LEVEL: 'error', APEX_ODDS_ANALYZER_DAILY_CREDITS: '80', APEX_ODDS_NEW_GAMES_PER_IP: '10' })
 const EV1 = 'a'.repeat(32)
 const EV2 = 'b'.repeat(32)
 const EV3 = 'c'.repeat(32) // on the schedule, but the odds call fails upstream
 const EV4 = 'd'.repeat(32)
+const EV5 = 'e'.repeat(32) // next week
+const EV6 = 'f'.repeat(32)
 let store
 const realFetch = globalThis.fetch
 const upstream = []
@@ -32,7 +34,7 @@ before(async () => {
     if (/\/events\/[a-f0-9]{32}\/odds/.test(url)) {
       return json({ id: url.match(/events\/([a-f0-9]{32})/)[1], home_team: 'Home', away_team: 'Away', bookmakers: [{ key: 'draftkings', title: 'DraftKings', markets: [{ key: 'batter_hits', outcomes: [{ name: 'Over', description: 'Shohei Ohtani', price: -150, point: 0.5 }, { name: 'Under', description: 'Shohei Ohtani', price: 120, point: 0.5 }] }] }] })
     }
-    if (/\/sports\/[a-z_]+\/events\?/.test(url)) return json([EV1, EV2, EV3, EV4].map((id) => ({ id, sport_key: 'baseball_mlb', commence_time: new Date(Date.now() + 3600e3).toISOString(), home_team: 'Home', away_team: 'Away' })))
+    if (/\/sports\/[a-z_]+\/events\?/.test(url)) return json([EV1, EV2, EV3, EV4, EV5, EV6].map((id) => ({ id, sport_key: 'baseball_mlb', commence_time: new Date(Date.now() + (id === EV5 ? 5 * 86400e3 : 3600e3)).toISOString(), home_team: 'Home', away_team: 'Away' })))
     return new Response('not found', { status: 404 })
   }
   const { http } = fixtureHttp()
@@ -80,6 +82,23 @@ test('only scheduled games cost credits, failed calls give them back, the pool r
   assert.equal(over.status, 503)
   assert.equal(over.body.code, 'odds_budget')
   assert.equal(paidCalls(), 3, 'EV1, EV3 (refunded) and EV2; nothing for made-up ids or past the budget')
+})
+
+test('games days away cost nothing; each caller gets a share of new games', async () => {
+  const far = await api.get(`/api/odds/mlb-player-props-board?eventId=${EV5}&players=X`)
+  assert.equal(far.status, 404)
+  assert.equal(far.body.code, 'not_soon')
+  const restore = withEnv({ APEX_ODDS_NEW_GAMES_PER_IP: '2', APEX_ODDS_ANALYZER_DAILY_CREDITS: '10000' })
+  try {
+    // this address already opened EV1 and EV2 today (EV3's failed call was given back)
+    const mine = await api.get(`/api/odds/mlb-player-props-board?eventId=${EV6}&players=X`)
+    assert.equal(mine.status, 429)
+    assert.equal(mine.body.code, 'odds_caller')
+    const open = await api.get(`/api/odds/mlb-player-props-board?eventId=${EV1}&players=${encodeURIComponent('Someone Else')}`)
+    assert.equal(open.status, 200, 'games already open still load')
+  } finally {
+    restore()
+  }
 })
 
 test('schedules are cached for a minute (free upstream, still not hammered)', async () => {

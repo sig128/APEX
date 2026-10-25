@@ -28,7 +28,7 @@ backend/     the API (Express). app.js builds it; server.js runs it locally.
   src/billing/    passes: invoices, on-chain checks, grace and lockout, allowances
   src/picks/      user pages, posting, grading, records, feed, leaderboard
   src/security/   sign-in, admin key, rate limits, stream tickets
-  test/           86 tests on recorded ESPN data (Week 7, 2026)
+  test/           87 tests on recorded ESPN data (Week 7, 2026)
 frontend/    the site (React + Vite)
   src/pages/      Today, Props, Game, Prop, Player, Live, Slip, Picks, /u/:handle, Kelly, Plans, Account, Admin
   src/intro/      the opening animation
@@ -58,7 +58,7 @@ replay the intro any time (it otherwise plays at most every 6 hours).
 Tests:
 
 ```bash
-npm test                            # backend: 86 tests, under a minute
+npm test                            # backend: 87 tests, under a minute
 npm test --prefix frontend          # slip, Kelly and wallet math
 ```
 

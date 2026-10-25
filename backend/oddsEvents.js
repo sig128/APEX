@@ -30,10 +30,14 @@ function parseOddsApiErrorMessage(text, httpStatus) {
 /** Odds API event ids are 32 hex characters. */
 const EVENT_ID_RE = /^[a-f0-9]{32}$/
 const EVENT_ODDS_TTL_MS = 10 * 60 * 1000
+const EVENT_ODDS_WINDOW_MS = 48 * 3600 * 1000
 const SCHEDULE_TTL_MS = 60 * 1000
 const eventOddsCache = new Map() // eventId -> { at, promise }
 const scheduleCache = new Map() // sportKey -> { at, promise }
-/** async (credits) => boolean. Set by the app to draw from the shared daily budget. */
+/**
+ * async (credits, { req }) => boolean | { ok, reason: 'caller' | 'pool' }. Set by the app to draw
+ * from the shared daily budget (and each caller's share of it); a negative amount refunds.
+ */
 let oddsBudget = null
 export function setOddsBudget(fn) {
   oddsBudget = typeof fn === 'function' ? fn : null
@@ -652,7 +656,7 @@ function formatAmericanOddsWithImpliedPercent(price) {
  * @param {string} apiKey
  * @param {string} eventId
  */
-async function fetchMlbEventPlayerPropsOdds(apiKey, eventId) {
+async function fetchMlbEventPlayerPropsOdds(apiKey, eventId, req = null) {
   const id = String(eventId || '')
   if (!EVENT_ID_RE.test(id)) throw Object.assign(new Error('That event id is not valid.'), { status: 400 })
   // One upstream call per event per 10 minutes, whatever players, books or markets callers
@@ -661,15 +665,27 @@ async function fetchMlbEventPlayerPropsOdds(apiKey, eventId) {
   if (hit && Date.now() - hit.at < EVENT_ODDS_TTL_MS) return hit.promise
   const markets = mlbEventOddsMarketKeysForFetch()
   const p = (async () => {
-    // only games on the schedule (listing it is free) can cost credits
+    // Only games on the schedule (listing it is free) that start within two days can cost
+    // credits: books post props late anyway, and it keeps the set of payable games small.
     const { events } = await fetchOddsEventsSafe(apiKey, ['baseball_mlb'])
-    if (!events.some((ev) => ev.id === id)) throw Object.assign(new Error('That game isn’t on the MLB schedule right now.'), { status: 404, code: 'no_event' })
+    const ev = events.find((x) => x.id === id)
+    if (!ev) throw Object.assign(new Error('That game isn’t on the MLB schedule right now.'), { status: 404, code: 'no_event' })
+    const starts = Date.parse(ev.commence_time)
+    if (!(starts < Date.now() + EVENT_ODDS_WINDOW_MS && starts > Date.now() - 6 * 3600_000)) {
+      throw Object.assign(new Error('Player prop odds open up two days before a game.'), { status: 404, code: 'not_soon' })
+    }
     const cost = markets.length
-    if (oddsBudget && !(await oddsBudget(cost))) {
+    // the budget hook says why when it refuses: this caller's share, or the whole day's pool
+    const spend = oddsBudget ? await oddsBudget(cost, { req }) : { ok: true }
+    const verdict = typeof spend === 'boolean' ? { ok: spend, reason: spend ? null : 'pool' } : spend
+    if (!verdict.ok && verdict.reason === 'caller') {
+      throw Object.assign(new Error('You’ve opened odds for several new games today. Games that are already open still load; this one opens for you tomorrow.'), { status: 429, code: 'odds_caller' })
+    }
+    if (!verdict.ok) {
       throw Object.assign(new Error('Live odds are paused until tomorrow: today’s Odds API budget is used up.'), { status: 503, code: 'odds_budget' })
     }
     // a call that didn't return odds gives its credits back
-    const refund = () => (oddsBudget ? oddsBudget(-cost).catch(() => {}) : null)
+    const refund = () => (oddsBudget ? Promise.resolve(oddsBudget(-cost, { req })).catch(() => {}) : null)
     let res
     let text
     try {
@@ -1061,7 +1077,7 @@ export async function handleMlbPlayerPropsBoardRequest(req, res, apiKey) {
   }
 
   try {
-    const oddsJson = await fetchMlbEventPlayerPropsOdds(key, eventId)
+    const oddsJson = await fetchMlbEventPlayerPropsOdds(key, eventId, req)
     const byKey = new Map((oddsJson.bookmakers || []).map((b) => [b.key, b]))
     const bm = byKey.get(bookKey) || byKey.get('draftkings')
     if (!bm) {
@@ -1159,7 +1175,7 @@ export async function handleMlbPropLadderRequest(req, res, apiKey) {
   }
 
   try {
-    const oddsJson = await fetchMlbEventPlayerPropsOdds(key, eventId)
+    const oddsJson = await fetchMlbEventPlayerPropsOdds(key, eventId, req)
     const byKey = new Map((oddsJson.bookmakers || []).map((b) => [b.key, b]))
     const bm = byKey.get(bookKey) || byKey.get('draftkings')
     if (!bm) {
@@ -1396,7 +1412,7 @@ export async function handleMlbPlayerPropsShowcaseRequest(req, res, apiKey) {
       const eventId = typeof ev.id === 'string' ? ev.id : ''
       if (!eventId) continue
       try {
-        const oddsJson = await fetchMlbEventPlayerPropsOdds(key, eventId)
+        const oddsJson = await fetchMlbEventPlayerPropsOdds(key, eventId, req)
         let { matchup, bookOptions } = buildMlbShowcaseBookOptionsFromEventOdds(oddsJson, 8)
         if (bookOptions.length > 0) {
           bookOptions = await enrichBookOptionsWithMlbPeopleIds(bookOptions)
@@ -1421,7 +1437,7 @@ export async function handleMlbPlayerPropsShowcaseRequest(req, res, apiKey) {
         }
       } catch (e) {
         lastErr = e
-        if (e?.code === 'odds_budget') break
+        if (e?.code === 'odds_budget' || e?.code === 'odds_caller') break
       }
     }
 

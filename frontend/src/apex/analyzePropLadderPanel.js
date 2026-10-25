@@ -5,6 +5,7 @@
  */
 
 import { apiUrl } from './apiConfig.js'
+import { authHeaders } from '../lib/api.js'
 import './analyzePropLadderPanel.css'
 
 const MLB_HEADSHOT = (id) =>
@@ -337,7 +338,8 @@ async function fetchPlayerPropsBoardPayload(eventId, playerNames, book) {
     players: playerNames.join(','),
     book,
   })
-  const res = await fetch(apiUrl(`/api/odds/mlb-player-props-board?${params.toString()}`))
+  // signed in, new games count against your account's share instead of your address's
+  const res = await fetch(apiUrl(`/api/odds/mlb-player-props-board?${params.toString()}`), { headers: await authHeaders().catch(() => ({})) })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     return {
