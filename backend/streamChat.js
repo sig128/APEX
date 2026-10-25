@@ -7,6 +7,25 @@ import {
 } from './prompts/resolveApexSystemPrompt.js'
 
 /**
+ * Optional live APEX data for NFL game analyses. app.js installs a provider that returns a
+ * short text block (top props with hit rates, injuries, odds) for the game being analyzed.
+ */
+let gameContextProvider = null
+export function setGameContextProvider(fn) {
+  gameContextProvider = typeof fn === 'function' ? fn : null
+}
+const CONTEXT_CAP = 6000
+function applyGameContext(game, sportKey) {
+  if (!gameContextProvider || sportKey !== 'americanfootball_nfl') return ''
+  try {
+    const text = gameContextProvider(game)
+    return typeof text === 'string' && text.trim() ? `\n\n===== APEX LIVE DATA (use it, cite hit rates) =====\n${text.slice(0, CONTEXT_CAP)}` : ''
+  } catch {
+    return ''
+  }
+}
+
+/**
  * @param {object} body - game fields
  * @param {'full' | 'compact' | 'mid'} effectivePromptMode
  * @param {'full_board' | 'player_props'} mlbBettingScope
@@ -63,7 +82,7 @@ function buildGameUserMessage(body, effectivePromptMode, mlbBettingScope, resolv
       : 'IMPORTANT: Analyze BOTH teams fully for this sport. Use the variables and sections defined in the system prompt. ' +
         'Evaluate available props across both sides, rank by edge, apply SLCM, and produce complete output Sections A through H (including bet cards).'
 
-  return `===== GAME TO ANALYZE =====\n${g}\n\n${important}`
+  return `===== GAME TO ANALYZE =====\n${g}${applyGameContext(body, sk)}\n\n${important}`
 }
 
 /** @returns {Array<{role:'user'|'assistant',content:string}>|null} */
@@ -166,7 +185,7 @@ export function parseChatBody(req) {
     }
   }
 
-  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'
+  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5'
   const maxTokens = Math.min(
     Math.max(parseInt(process.env.ANTHROPIC_MAX_TOKENS || '16384', 10) || 16384, 1024),
     200000,
@@ -190,21 +209,26 @@ export function parseChatBody(req) {
  */
 export async function handleChatStream(req, res, apiKey) {
   if (!apiKey) {
-    return res.status(503).json({
+    res.status(503).json({
       error: 'ANTHROPIC_API_KEY is not set in backend/.env (the file the server loads).',
     })
+    return { ok: false, produced: false }
   }
 
   const parsed = parseChatBody(req)
   if (!parsed.ok) {
-    return res.status(parsed.status).json({ error: parsed.error })
+    res.status(parsed.status).json({ error: parsed.error })
+    return { ok: false, produced: false }
   }
 
   const { getDisabledSportKeys } = await import('./sportsConfig.js')
   const disabled = await getDisabledSportKeys()
   if (parsed.resolvedSportKey && disabled.includes(parsed.resolvedSportKey)) {
-    return res.status(403).json({ error: 'This sport is temporarily unavailable.' })
+    res.status(403).json({ error: 'This sport is temporarily unavailable.' })
+    return { ok: false, produced: false }
   }
+  let produced = false
+  let failed = false
 
   const { messagesForApi, model, maxTokens, system } = parsed
 
@@ -262,6 +286,7 @@ export async function handleChatStream(req, res, apiKey) {
     })
 
     stream.on('text', (textDelta) => {
+      if (textDelta) produced = true
       write({ type: 'text_delta', text: textDelta })
     })
 
@@ -302,6 +327,7 @@ export async function handleChatStream(req, res, apiKey) {
     const errMsg = e?.message || String(e)
     const status = e?.status >= 400 && e?.status < 600 ? e.status : 502
     console.error('[api/chat/stream] Anthropic error:', errMsg, { afterMs: Date.now() - started })
+    failed = true
     try {
       write({ type: 'error', error: errMsg, status })
     } catch {
@@ -310,4 +336,5 @@ export async function handleChatStream(req, res, apiKey) {
   } finally {
     res.end()
   }
+  return { ok: !failed, produced }
 }

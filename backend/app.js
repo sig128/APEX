@@ -1,0 +1,243 @@
+// The APEX API as one Express app, shared by backend/server.js (always-on daemon) and
+// functions/index.js (Cloud Functions, lazy engine).
+import express from 'express'
+import cors from 'cors'
+import Anthropic from '@anthropic-ai/sdk'
+import { createHttp } from './src/lib/http.js'
+import { createStore } from './src/lib/store.js'
+import { createHub } from './src/lib/hub.js'
+import { log, errText } from './src/lib/log.js'
+import { ApiError } from './src/lib/router.js'
+import { createEngine } from './src/nfl/engine.js'
+import { createNflRouter } from './src/nfl/routes.js'
+import { createBilling, atLeast } from './src/billing/service.js'
+import { billingConfig } from './src/billing/config.js'
+import { billingRoutes } from './src/billing/routes.js'
+import { createPicks } from './src/picks/service.js'
+import { picksRoutes } from './src/picks/routes.js'
+import { createAccess } from './src/security/access.js'
+import { defaultAuthInstance, authMode } from './src/security/auth.js'
+import { createLimiter } from './src/security/rateLimit.js'
+import { parseChatBody, handleChatStream, extractTextFromMessage, setGameContextProvider } from './streamChat.js'
+import { getAnthropicWebSearchTools } from './anthropicWebTools.js'
+import { registerAdminSportsRoutes } from './adminSportsRoutes.js'
+import { getDisabledSportKeys } from './sportsConfig.js'
+import {
+  handleMlbPlayerPropsShowcaseRequest,
+  handleMlbPlayerPropsBoardRequest,
+  handleMlbPropLadderRequest,
+  handleOddsEventsRequest,
+  handleOddsUpcomingRequest,
+} from './oddsEvents.js'
+import { nameKey, envInt } from './src/lib/util.js'
+
+async function lookupUidByEmail(email) {
+  try {
+    const { getAuth } = await import('firebase-admin/auth')
+    const { getApps, initializeApp } = await import('firebase-admin/app')
+    if (!getApps().length) initializeApp()
+    const u = await getAuth().getUserByEmail(email)
+    return u?.uid || null
+  } catch {
+    return null
+  }
+}
+
+function corsOptions() {
+  const extra = String(process.env.APEX_ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean)
+  const dev = [/^https?:\/\/localhost(:\d+)?$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/]
+  return {
+    origin(origin, cb) {
+      if (!origin) return cb(null, true) // same-origin (Hosting rewrites) and server-to-server
+      if (dev.some((re) => re.test(origin)) || extra.includes(origin) || /\.web\.app$|\.firebaseapp\.com$/.test(new URL(origin).hostname)) return cb(null, true)
+      cb(null, false)
+    },
+    exposedHeaders: ['ETag', 'Retry-After', 'X-Apex-Usage'],
+    maxAge: 600,
+  }
+}
+
+/** Plain-text APEX data for the AI game analyzer (NFL only). */
+function gameContextFrom(engine) {
+  return (game) => {
+    const wh = engine.wh
+    const want = [nameKey(game.homeTeam), nameKey(game.awayTeam)]
+    const g = [...wh.games.values()].find((x) => want.includes(nameKey(x.home?.name)) && want.includes(nameKey(x.away?.name)))
+    if (!g) return ''
+    const view = engine.views.game(g.id)
+    if (!view) return ''
+    const lines = []
+    if (view.odds) lines.push(`Market: ${view.odds.details || ''} | total ${view.odds.total ?? '?'} | ML ${view.odds.homeMl ?? '?'} / ${view.odds.awayMl ?? '?'}`)
+    for (const side of [view.away, view.home]) {
+      lines.push(`${side.team.abbr} ${side.form?.record || ''} (${side.form?.ppg ?? '?'} pts for, ${side.form?.papg ?? '?'} against per game). Last 5: ${(side.form?.last5 || []).map((x) => x.result).join('')}`)
+      const inj = side.injuries.filter((i) => i.severity === 'out' || i.severity === 'doubtful').slice(0, 8)
+      if (inj.length) lines.push(`  Out/doubtful: ${inj.map((i) => `${i.name} (${i.pos}, ${i.status})`).join(', ')}`)
+      for (const t of side.trends.slice(0, 3)) lines.push(`  Trend: ${t.text}`)
+    }
+    lines.push('Top APEX props (probability, fair odds, recent hit rates):')
+    for (const p of view.props.slice(0, 18)) lines.push(`  ${p.name} (${p.pos} ${p.teamAbbr}) ${p.label}: ${(p.prob * 100).toFixed(0)}%, fair ${p.fair}, L5 ${p.l5 ? `${p.l5.hits}/${p.l5.n}` : '-'}, L10 ${p.l10 ? `${p.l10.hits}/${p.l10.n}` : '-'}, score ${p.score}`)
+    return lines.join('\n')
+  }
+}
+
+export function createApexApp({
+  engineMode = 'daemon',
+  getFirestore,
+  store: storeIn,
+  auth = defaultAuthInstance,
+  billing: billingIn,
+  http: httpIn,
+  anthropicKey = () => process.env.ANTHROPIC_API_KEY,
+  adminKey = () => process.env.ADMIN_SPORTS_KEY,
+  oddsKey = () => process.env.THE_ODDS_API_KEY,
+  now,
+} = {}) {
+  const app = express()
+  app.disable('x-powered-by')
+  app.use(cors(corsOptions()))
+  app.use(express.json({ limit: '2mb' }))
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+    next()
+  })
+
+  const http = httpIn || createHttp({})
+  const engineStore = storeIn || createStore({ getFirestore })
+  const hub = createHub()
+  let oddsApiKey = null
+  try {
+    oddsApiKey = oddsKey() || null
+  } catch {
+    oddsApiKey = null
+  }
+  const engine = createEngine({ mode: engineMode, http, store: engineStore, hub, oddsApiKey, ...(now ? { now } : {}) })
+  const billing = billingIn || createBilling({ getFirestore, store: engineStore, lookupUid: lookupUidByEmail, ...(now ? { now } : {}) })
+  const access = createAccess({ auth, billing })
+  const picks = createPicks({ docs: billing.docs, engine, billing, ...(now ? { now } : {}) })
+  billing.onChange((uid) => {
+    picks.syncPlan(uid).catch((e) => log.warn('plan sync failed', { uid, err: errText(e) }))
+  })
+  setGameContextProvider(gameContextFrom(engine))
+
+  const nfl = createNflRouter(engine, { anthropicKey, auth, access, billing })
+  app.use('/api/nfl', (req, res, next) => {
+    nfl.handle(req, res, next).catch(next)
+  })
+  app.use('/api/billing', billingRoutes({ billing, access }))
+  app.use('/api/picks', picksRoutes({ picks, access }))
+
+  // ---- the AI analyzer (chat) ---------------------------------------------------------------
+  const chatHourly = createLimiter({ burst: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }), perSec: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) / 3600 })
+  const adminHourly = createLimiter({ burst: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) * 10, perSec: (envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) * 10) / 3600 })
+
+  async function chatGate(req, res, next) {
+    try {
+      let user = null
+      if (billingConfig().paywall) {
+        const a = await access.resolve(req)
+        if (!a.user) throw new ApiError(401, 'signin', 'Sign in to use the AI analyzer.', { need: 'pro' })
+        if (!atLeast(a.tier, 'pro')) throw new ApiError(402, 'upgrade', 'The AI analyzer is part of Pro and Elite.', { need: 'pro', plan: a.tier, status: a.ent.status })
+        user = a.user
+        const kind = req.body?.game ? 'analyses' : 'followups'
+        const u = await billing.useQuota(user, a.ent, kind)
+        if (u.limit != null) res.setHeader('X-Apex-Usage', `${u.used}/${u.limit}`)
+        req.apexQuota = { kind, user }
+      } else if (authMode() !== 'optional') {
+        user = await auth.authenticate(req)
+        if (!(await auth.inviteVerified(user))) throw new ApiError(403, 'invite', 'Redeem an invite code to use the AI analyzer.')
+      }
+      if (user) {
+        const lim = (user.admin ? adminHourly : chatHourly).take(user.uid)
+        if (!lim.ok) {
+          if (req.apexQuota) await billing.refundQuota(req.apexQuota.user, req.apexQuota.kind).catch(() => {})
+          throw new ApiError(429, 'slow_down', 'That is a lot of analyses this hour. Take a breather and try again soon.', { retryAfter: lim.retryAfter })
+        }
+      }
+      next()
+    } catch (e) {
+      const status = e instanceof ApiError ? e.status : 500
+      if (e instanceof ApiError && e.extra?.retryAfter) res.setHeader('Retry-After', String(e.extra.retryAfter))
+      res.status(status).set('Cache-Control', 'no-store').json({ error: e.message || 'Error', code: e.code || 'internal', ...(e.extra || {}) })
+    }
+  }
+
+  async function refundIfEmpty(req, out) {
+    if (req.apexQuota && !out?.produced) await billing.refundQuota(req.apexQuota.user, req.apexQuota.kind).catch(() => {})
+  }
+
+  app.post('/api/chat/stream', chatGate, async (req, res) => {
+    const out = await handleChatStream(req, res, anthropicKey())
+    await refundIfEmpty(req, out)
+  })
+
+  async function chatOnce(req, res) {
+    const apiKey = anthropicKey()
+    if (!apiKey) {
+      await refundIfEmpty(req, null)
+      return res.status(503).json({ error: 'ANTHROPIC_API_KEY is not set on the server.' })
+    }
+    const parsed = parseChatBody(req)
+    if (!parsed.ok) {
+      await refundIfEmpty(req, null)
+      return res.status(parsed.status).json({ error: parsed.error })
+    }
+    const disabled = await getDisabledSportKeys()
+    if (parsed.resolvedSportKey && disabled.includes(parsed.resolvedSportKey)) {
+      await refundIfEmpty(req, null)
+      return res.status(403).json({ error: 'This sport is temporarily unavailable.' })
+    }
+    const { messagesForApi, model, maxTokens, system } = parsed
+    try {
+      const anthropic = new Anthropic({ apiKey })
+      const tools = getAnthropicWebSearchTools()
+      const msg = await anthropic.messages.create({ model, max_tokens: maxTokens, system, messages: messagesForApi, ...(tools ? { tools } : {}) })
+      const text = extractTextFromMessage(msg)
+      await refundIfEmpty(req, { produced: text.trim().length > 0 })
+      return res.json({ text, messages: [...messagesForApi, { role: 'assistant', content: text }], model, id: msg.id, usage: msg.usage })
+    } catch (e) {
+      await refundIfEmpty(req, null)
+      const status = e?.status >= 400 && e?.status < 600 ? e.status : 502
+      return res.status(status).json({ error: e?.message || String(e) })
+    }
+  }
+  app.post('/api/chat', chatGate, chatOnce)
+  // Older Cloud Functions builds were mounted at the function root.
+  app.post('/', chatGate, chatOnce)
+
+  // ---- multi-sport odds endpoints from the original app ----------------------------------------
+  const odds = () => oddsKey()
+  app.get('/api/odds/events', (req, res) => void handleOddsEventsRequest(req, res, odds()))
+  app.get('/api/odds/upcoming', (req, res) => void handleOddsUpcomingRequest(req, res, odds()))
+  app.get('/api/odds/mlb-player-props-showcase', (req, res) => void handleMlbPlayerPropsShowcaseRequest(req, res, odds()))
+  app.get('/api/odds/mlb-prop-ladder', (req, res) => void handleMlbPropLadderRequest(req, res, odds()))
+  app.get('/api/odds/mlb-player-props-board', (req, res) => void handleMlbPlayerPropsBoardRequest(req, res, odds()))
+
+  registerAdminSportsRoutes(app, { getAdminKey: adminKey, getFirestore })
+
+  app.get('/api/health', (req, res) => {
+    const s = engine.status()
+    const cfg = billingConfig()
+    res.set('Cache-Control', 'no-store').json({
+      ok: true,
+      engine: { mode: s.mode, week: s.week, games: s.games, live: s.live, props: s.props, logs: s.logs, at: s.at },
+      billing: { paywall: cfg.paywall, network: cfg.network, treasury: Boolean(cfg.treasury), docs: billing.docsKind },
+      auth: authMode(),
+    })
+  })
+
+  app.use('/api', (req, res) => res.status(404).set('Cache-Control', 'no-store').json({ error: 'Not found', code: 'not_found' }))
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, req, res, _next) => {
+    if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Bad JSON body.', code: 'bad_json' })
+    if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'Request too large.', code: 'too_large' })
+    log.error('unhandled', { path: req.path, err: errText(err) })
+    if (!res.headersSent) res.status(500).json({ error: 'Something went wrong on our side.', code: 'internal' })
+  })
+
+  if (engineMode === 'daemon') {
+    const t = setInterval(() => picks.maybeGrade(), 3 * 60_000)
+    t.unref?.()
+  }
+  return { app, engine, billing, picks, hub, access }
+}

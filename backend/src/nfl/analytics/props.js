@@ -295,10 +295,10 @@ export function cheatsheets(rows) {
   const recent = perfect('L10', 6)
     .concat(perfect('L5', 5).filter((r) => !windowOf(r, 'L10') || windowOf(r, 'L10').n < 6))
   const sheets = [
-    { key: 'form', title: '100% Recent Form', sub: 'Hit in every recent game', rows: diverse(recent, { limit: 12, perPlayer: 1, perGame: 3, key: (r) => r.streak * 10 + r.score }) },
-    { key: 'h2h', title: '100% Versus Opponent', sub: 'Hit every time against this team', rows: diverse(perfect('h2h', 2), { limit: 12, perPlayer: 1, perGame: 3, key: (r) => (windowOf(r, 'h2h')?.n || 0) * 10 + r.score }) },
-    { key: 'venue', title: '100% Home/Away', sub: 'Hit every game at this venue split', rows: diverse(perfect('venue', 4), { limit: 12, perPlayer: 1, perGame: 3 }) },
-    { key: 'season', title: '100% This Season', sub: 'Hit in every game this season', rows: diverse(perfect('season', 4), { limit: 12, perPlayer: 1, perGame: 3 }) },
+    { key: 'form', title: '100% Recent Form', sub: 'Hit in every recent game', rows: diverse(recent, { limit: 8, perPlayer: 1, perGame: 3, key: (r) => r.streak * 10 + r.score }) },
+    { key: 'h2h', title: '100% Versus Opponent', sub: 'Hit every time against this team', rows: diverse(perfect('h2h', 2), { limit: 8, perPlayer: 1, perGame: 3, key: (r) => (windowOf(r, 'h2h')?.n || 0) * 10 + r.score }) },
+    { key: 'venue', title: '100% Home/Away', sub: 'Hit every game at this venue split', rows: diverse(perfect('venue', 4), { limit: 8, perPlayer: 1, perGame: 3 }) },
+    { key: 'season', title: '100% This Season', sub: 'Hit in every game this season', rows: diverse(perfect('season', 4), { limit: 8, perPlayer: 1, perGame: 3 }) },
   ]
   return sheets.filter((s) => s.rows.length)
 }

@@ -1,165 +1,64 @@
+// Local / always-on server: the daemon engine refreshes live data on its own schedule.
+//   npm run dev   (from the repo root, with the frontend)   or   npm start --prefix backend
 import dotenv from 'dotenv'
-import express from 'express'
-import cors from 'cors'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import admin from 'firebase-admin'
-import Anthropic from '@anthropic-ai/sdk'
-import { getAnthropicWebSearchTools } from './anthropicWebTools.js'
-import { parseChatBody, extractTextFromMessage, handleChatStream } from './streamChat.js'
-import {
-  handleMlbPlayerPropsShowcaseRequest,
-  handleMlbPlayerPropsBoardRequest,
-  handleMlbPropLadderRequest,
-  handleOddsEventsRequest,
-  handleOddsUpcomingRequest,
-} from './oddsEvents.js'
-import { getDisabledSportKeys } from './sportsConfig.js'
-import { registerAdminSportsRoutes } from './adminSportsRoutes.js'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-/** Always load backend/.env next to this file (not CWD-dependent). */
+// Load backend/.env next to this file (not CWD-dependent) before anything reads process.env.
 dotenv.config({ path: path.join(__dirname, '.env') })
 
-const app = express()
-app.use(cors({ origin: [/localhost:\d+$/, /127\.0\.0\.1:\d+$/] }))
-app.use(express.json({ limit: '2mb' }))
+const { createApexApp } = await import('./app.js')
+const { log, errText } = await import('./src/lib/log.js')
 
-let firestoreDb = null
-try {
-  if (!admin.apps.length) {
-    admin.initializeApp()
-  }
-  firestoreDb = admin.firestore()
-} catch {
-  firestoreDb = null
-}
-
-registerAdminSportsRoutes(app, {
-  getAdminKey: () => process.env.ADMIN_SPORTS_KEY,
-  getFirestore: () => firestoreDb,
-})
-
-/**
- * POST /api/chat/stream — NDJSON live activity + text deltas (see streamChat.js).
- */
-app.post('/api/chat/stream', (req, res) => {
-  void handleChatStream(req, res, process.env.ANTHROPIC_API_KEY)
-})
-
-/**
- * GET /api/odds/events?q=…&sport=all|nfl|nba|mlb|nhl
- * Proxies The Odds API events (quota-free); API key stays on the server.
- */
-app.get('/api/odds/events', (req, res) => {
-  void handleOddsEventsRequest(req, res, process.env.THE_ODDS_API_KEY)
-})
-
-/** GET /api/odds/upcoming — all upcoming big-4 games (merged), for homepage carousel */
-app.get('/api/odds/upcoming', (req, res) => {
-  void handleOddsUpcomingRequest(req, res, process.env.THE_ODDS_API_KEY)
-})
-
-/** MLB player props ticker — The Odds API event odds + server-side cache */
-app.get('/api/odds/mlb-player-props-showcase', (req, res) => {
-  void handleMlbPlayerPropsShowcaseRequest(req, res, process.env.THE_ODDS_API_KEY)
-})
-
-/** MLB single-player O/U ladder (analyze results panel) */
-app.get('/api/odds/mlb-prop-ladder', (req, res) => {
-  void handleMlbPropLadderRequest(req, res, process.env.THE_ODDS_API_KEY)
-})
-
-/** MLB full player prop board — all O/U + Yes/No markets (main + alt merged) for suggested players */
-app.get('/api/odds/mlb-player-props-board', (req, res) => {
-  void handleMlbPlayerPropsBoardRequest(req, res, process.env.THE_ODDS_API_KEY)
-})
-
-/**
- * POST /api/chat
- * - New analysis: { game: { homeTeam, awayTeam, date, ... } }
- * - Follow-up: { messages: [ {role,user},{role,assistant},...,{role,user} ] }
- */
-app.post('/api/chat', async (req, res) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    return res.status(503).json({
-      error:
-        'ANTHROPIC_API_KEY is not set in backend/.env (the file the server loads).',
-    })
-  }
-
-  const parsed = parseChatBody(req)
-  if (!parsed.ok) {
-    return res.status(parsed.status).json({ error: parsed.error })
-  }
-
-  const disabled = await getDisabledSportKeys()
-  if (parsed.resolvedSportKey && disabled.includes(parsed.resolvedSportKey)) {
-    return res.status(403).json({ error: 'This sport is temporarily unavailable.' })
-  }
-
-  const { messagesForApi, model, maxTokens, system } = parsed
-
-  const started = Date.now()
-  console.log('[api/chat] Anthropic request start', {
-    model,
-    maxTokens,
-    webSearch: Boolean(getAnthropicWebSearchTools()),
-  })
-
+let db = null
+async function initFirestore() {
+  // Only when credentials exist; otherwise everything runs on the local disk store.
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.FIRESTORE_EMULATOR_HOST) return
   try {
-    const anthropic = new Anthropic({ apiKey })
-    const tools = getAnthropicWebSearchTools()
-    const msg = await anthropic.messages.create({
-      model,
-      max_tokens: maxTokens,
-      system,
-      messages: messagesForApi,
-      ...(tools ? { tools } : {}),
-    })
-
-    const ms = Date.now() - started
-    console.log('[api/chat] Anthropic response', {
-      ms,
-      sec: (ms / 1000).toFixed(1),
-      stop_reason: msg?.stop_reason,
-      id: msg?.id,
-    })
-
-    const assistantText = extractTextFromMessage(msg)
-    const fullThread = [
-      ...messagesForApi,
-      { role: 'assistant', content: assistantText },
-    ]
-
-    return res.json({
-      text: assistantText,
-      messages: fullThread,
-      model,
-      id: msg.id,
-      usage: msg.usage,
-    })
+    const { getApps, initializeApp } = await import('firebase-admin/app')
+    const { getFirestore } = await import('firebase-admin/firestore')
+    if (!getApps().length) initializeApp()
+    db = getFirestore()
   } catch (e) {
-    const errMsg = e?.message || String(e)
-    const status = e?.status >= 400 && e?.status < 600 ? e.status : 502
-    console.error('Anthropic API error:', errMsg, { afterMs: Date.now() - started })
-    return res.status(status).json({ error: errMsg })
+    log.warn('firestore unavailable', { err: errText(e) })
   }
-})
+}
+await initFirestore()
 
-const PORT = parseInt(process.env.PORT || '8787', 10)
+const { app, engine } = createApexApp({ engineMode: 'daemon', getFirestore: () => db })
+engine.ensureStarted().catch((e) => log.error('engine failed to start', { err: errText(e) }))
+
+const PORT = Number.parseInt(process.env.PORT || '8787', 10)
 const server = app.listen(PORT, () => {
-  console.log(`APEX API listening on http://localhost:${PORT}`)
+  log.info(`APEX API listening on http://localhost:${PORT}`)
 })
+// Live streams stay open for up to 30 minutes; don't let Node cut them.
+server.requestTimeout = 0
+server.headersTimeout = 65_000
+server.keepAliveTimeout = 65_000
+
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(
-      `\nPort ${PORT} is already in use (another APEX API still running?).\n` +
-        `  Fix:  lsof -ti :${PORT} | xargs kill -9\n` +
-        `  Or:   set PORT=8788 in backend/.env and the same port in frontend/vite.config.js proxy target.\n`,
-    )
+    console.error(`\nPort ${PORT} is already in use (another APEX API still running?).\n  Fix:  lsof -ti :${PORT} | xargs kill -9\n  Or:   set PORT=8788 in backend/.env and the same port in frontend/vite.config.js proxy target.\n`)
     process.exit(1)
   }
   throw err
 })
+
+let stopping = false
+async function shutdown(signal) {
+  if (stopping) return
+  stopping = true
+  log.info('shutting down', { signal })
+  engine.stop()
+  try {
+    await Promise.race([engine.persist(true), new Promise((r) => setTimeout(r, 4000))])
+  } catch {
+    /* best effort */
+  }
+  server.close(() => process.exit(0))
+  setTimeout(() => process.exit(0), 5000).unref()
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))

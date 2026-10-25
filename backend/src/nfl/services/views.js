@@ -145,11 +145,11 @@ export function createViews(engine) {
       const players = upcoming.filter((r) => r.kind === 'player')
       const roles = players.filter((r) => r.role >= 0.6)
       const tabs = {
-        apex: diverse(roles, { limit: 25, perPlayer: 1, perGame: 4 }).map(card),
-        streaks: diverse(roles.filter((r) => r.streak >= 5 && r.fit >= 0.85), { limit: 25, perPlayer: 1, perGame: 5, key: (r) => r.streak * 100 + r.rank }).map(card),
-        matchups: diverse(roles.filter((r) => r.matchup && r.fit >= 0.85 && ((r.side === 'o' && r.matchup.rank <= 6) || (r.side === 'u' && r.matchup.rank > r.matchup.of - 6))), { limit: 25, perPlayer: 1, perGame: 4 }).map(card),
-        moves: diverse(roles.filter((r) => r.move && r.line >= 2 && Math.abs(r.move.delta) >= Math.max(1, r.line * 0.04)), { limit: 25, perPlayer: 1, perGame: 5, key: (r) => (Math.abs(r.move.delta) / Math.max(1, r.line)) * 1000 + r.rank }).map(card),
-        tds: diverse(players.filter((r) => r.market === 'anyTd'), { limit: 25, perPlayer: 1, perGame: 6, key: (r) => r.prob * 1000 }).map(card),
+        apex: diverse(roles, { limit: 20, perPlayer: 1, perGame: 4 }).map(card),
+        streaks: diverse(roles.filter((r) => r.streak >= 5 && r.fit >= 0.85), { limit: 15, perPlayer: 1, perGame: 5, key: (r) => r.streak * 100 + r.rank }).map(card),
+        matchups: diverse(roles.filter((r) => r.matchup && r.fit >= 0.85 && ((r.side === 'o' && r.matchup.rank <= 6) || (r.side === 'u' && r.matchup.rank > r.matchup.of - 6))), { limit: 15, perPlayer: 1, perGame: 4 }).map(card),
+        moves: diverse(roles.filter((r) => r.move && r.line >= 2 && Math.abs(r.move.delta) >= Math.max(1, r.line * 0.04)), { limit: 15, perPlayer: 1, perGame: 5, key: (r) => (Math.abs(r.move.delta) / Math.max(1, r.line)) * 1000 + r.rank }).map(card),
+        tds: diverse(players.filter((r) => r.market === 'anyTd'), { limit: 15, perPlayer: 1, perGame: 6, key: (r) => r.prob * 1000 }).map(card),
       }
       const sheets = cheatsheets(upcoming).map((s) => ({ ...s, rows: s.rows.map(card) }))
       const live = [...wh.games.values()].filter((g) => g.status.state === 'in').length
