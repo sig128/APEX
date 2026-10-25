@@ -103,13 +103,17 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     return sub
   }
 
-  async function entitlement(user) {
+  /** What the user can use right now. With the paywall off that's everything ('open'). */
+  async function entitlement(user, { ignorePaywall = false } = {}) {
     const cfg = billingConfig()
-    if (!cfg.paywall) return { plan: 'elite', status: 'open', paidPlan: null, paidUntil: null, graceUntil: null, source: null, lifetime: false, daysLeft: null }
+    if (!cfg.paywall && !ignorePaywall) return { plan: 'elite', status: 'open', paidPlan: null, paidUntil: null, graceUntil: null, source: null, lifetime: false, daysLeft: null }
     if (user?.admin) return { plan: 'elite', status: 'admin', paidPlan: null, paidUntil: null, graceUntil: null, source: 'admin', lifetime: true, daysLeft: null }
     if (!user?.uid) return { plan: 'free', status: 'anonymous', paidPlan: null, paidUntil: null, graceUntil: null, source: null, lifetime: false, daysLeft: 0 }
     return entitlementOf(await subscription(user.uid), now(), cfg)
   }
+
+  /** The plan the user actually holds, paywall or not (what gets stored on their page). */
+  const heldPlan = (user) => entitlement(user, { ignorePaywall: true })
 
   function invoiceView(inv, cfg = billingConfig()) {
     if (!inv) return null
@@ -428,6 +432,7 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
       return () => listeners.delete(fn)
     },
     entitlement,
+    heldPlan,
     subscription,
     createInvoice,
     getInvoice,

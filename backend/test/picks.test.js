@@ -308,6 +308,27 @@ test('grading: box score, game log fallback, voids, records and the leaderboard'
   wh.setSummary(GAME, pre, now())
 })
 
+test('pages made while payments were off lose the showcase once payments are on', async () => {
+  const early = { uid: 'u_early', email: 'early@example.com', name: 'Early Bird' }
+  const granted = { uid: 'u_granted', email: 'granted@example.com', name: 'Granted' }
+  const restore = withEnv({ APEX_PAYWALL: 'off' })
+  try {
+    const saved = await picks.saveProfile(early, { handle: 'early_bird', x: 'earlybird' })
+    assert.equal(saved.profile.elite, true, 'everyone gets the showcase with no paywall')
+    assert.equal((await picks.page('early_bird')).profile.x, 'earlybird')
+    await picks.saveProfile(granted, { handle: 'granted_one', x: 'grantedone' })
+    await billing.grant(admin, { uid: granted.uid, plan: 'elite', days: 30 })
+  } finally {
+    restore()
+  }
+  const pub = await picks.page('early_bird')
+  assert.equal(pub.profile.elite, false, 'no Elite plan, no showcase')
+  assert.equal(pub.profile.x, null)
+  const g = await picks.page('granted_one')
+  assert.equal(g.profile.elite, true, 'a pass granted while payments were off still counts')
+  assert.equal(g.profile.x, 'grantedone')
+})
+
 test('losing Elite hides the socials and drops the page from the feed', async () => {
   await billing.revoke(admin, { uid: elite.uid })
   const me = await picks.me(elite)

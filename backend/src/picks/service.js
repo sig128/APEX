@@ -181,15 +181,31 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
   const bust = () => memo.clear()
 
   /** Until when this user gets Elite showcase features. */
+  /** How long the plan the user actually holds keeps the showcase (stored on the page). */
   function eliteUntilFor(user, ent) {
-    if (user?.admin || ent.status === 'open' || ent.status === 'admin') return LIFETIME
+    if (user?.admin || ent.status === 'admin') return LIFETIME
     if (ent.plan === 'elite' && (ent.status === 'active' || ent.status === 'grace')) return ent.lifetime ? LIFETIME : ent.graceUntil || 0
     return 0
   }
 
+  // With the paywall off every page gets the showcase. That's decided when a page is read and
+  // never stored, so switching payments on later doesn't leave free Elite pages behind.
+  const showcaseForAll = () => !billingConfig().paywall
+  const isElite = (p, t = now()) => Boolean(p) && (showcaseForAll() || (p.eliteUntil || 0) > t)
+
+  /** Bring the stored showcase date in line with the plan the user holds. */
+  async function refreshElite(user, p) {
+    if (!p) return p
+    const eliteUntil = eliteUntilFor(user, await billing.heldPlan(user))
+    if (eliteUntil === (p.eliteUntil || 0)) return p
+    await d.merge('profiles', user.uid, { eliteUntil, updatedAt: now() })
+    bust()
+    return { ...p, eliteUntil }
+  }
+
   function publicProfile(p, t = now()) {
     if (!p) return null
-    const elite = (p.eliteUntil || 0) > t
+    const elite = isElite(p, t)
     return {
       handle: p.handle,
       name: p.name || p.handle,
@@ -226,29 +242,14 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
   }
 
   async function syncPlan(uid) {
-    const p = await profileOf(uid)
-    if (!p) return null
-    const ent = await billing.entitlement({ uid })
-    const eliteUntil = eliteUntilFor({ uid }, ent)
-    if (eliteUntil !== (p.eliteUntil || 0)) {
-      await d.merge('profiles', uid, { eliteUntil, updatedAt: now() })
-      bust()
-    }
-    return eliteUntil
+    const p = await refreshElite({ uid }, await profileOf(uid))
+    return p ? p.eliteUntil || 0 : null
   }
 
   async function me(user) {
     if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in with Google to make your page.')
     const ent = await billing.entitlement(user)
-    let p = await profileOf(user.uid)
-    if (p) {
-      const eliteUntil = eliteUntilFor(user, ent)
-      if (eliteUntil !== (p.eliteUntil || 0)) {
-        await d.merge('profiles', user.uid, { eliteUntil })
-        p = { ...p, eliteUntil }
-        bust()
-      }
-    }
+    const p = await refreshElite(user, await profileOf(user.uid))
     return { profile: p ? { ...publicProfile(p), x: p.x || null, ig: p.ig || null, handleChangedAt: p.handleChangedAt || null } : null, entitlement: ent, suggested: p ? null : suggestHandle(user) }
   }
 
@@ -272,7 +273,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     const x = socialHandle(body.x, 'x')
     const ig = socialHandle(body.ig, 'ig')
     const avatar = body.avatar === null ? null : avatarOk(body.avatar) ? body.avatar : avatarOk(user.picture) ? user.picture : null
-    const ent = await billing.entitlement(user)
+    const held = await billing.heldPlan(user)
     const t = now()
     const out = await d.tx(async (tx) => {
       const cur = await tx.get('profiles', user.uid)
@@ -291,7 +292,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
         createdAt: cur?.createdAt || t,
         updatedAt: t,
         handleChangedAt: changing ? t : cur?.handleChangedAt || null,
-        eliteUntil: eliteUntilFor(user, ent),
+        eliteUntil: eliteUntilFor(user, held),
         hidden: Boolean(cur?.hidden),
         stats: cur?.stats || null,
         recordAt: cur?.recordAt ?? null,
@@ -354,7 +355,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
 
   async function post(user, body = {}) {
     if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in to post picks.')
-    const prof = await profileOf(user.uid)
+    const prof = await refreshElite(user, await profileOf(user.uid))
     if (!prof) throw new ApiError(409, 'no_profile', 'Make your page first.')
     const ids = Array.isArray(body.legs) ? body.legs.map(String) : []
     if (!ids.length || ids.length > MAX_LEGS) throw new ApiError(400, 'bad_legs', `Pick 1 to ${MAX_LEGS} props.`)
@@ -405,7 +406,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
           price: decimalToAmerican(dec),
           note,
           legs: g,
-          elite: (prof.eliteUntil || 0) > t,
+          elite: isElite(prof, t),
           hidden: Boolean(prof.hidden),
         }
         tx.set('picks', pick.id, pick)
@@ -457,7 +458,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
       for (const p of rows) {
         if (!profiles.has(p.uid)) profiles.set(p.uid, await profileOf(p.uid))
         const prof = profiles.get(p.uid)
-        if (!prof || prof.hidden || !((prof.eliteUntil || 0) > t)) continue
+        if (!prof || prof.hidden || !isElite(prof, t)) continue
         out.push({ ...publicPick(p), profile: publicProfile(prof, t) })
         if (out.length >= 30) break
       }
@@ -472,7 +473,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
       // everyone with a recently graded pick (recordAt is stamped when a pick is graded)
       const profs = await d.recent('profiles', { field: 'recordAt', limit: 200, ...(key === 'd30' ? { where: [['recordAt', '>=', t - 30 * DAY_MS]] } : {}) })
       const rows = profs
-        .filter((p) => !p.hidden && (p.eliteUntil || 0) > t)
+        .filter((p) => !p.hidden && isElite(p, t))
         .map((p) => ({ p, rec: recordFromStats(p.stats, t, billingConfig().usageTz)?.[key] }))
         .filter((x) => x.rec && x.rec.graded >= MIN_GRADED_FOR_BOARD)
         .map((x) => ({ profile: publicProfile(x.p, t), record: x.rec }))
