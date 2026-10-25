@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSlip } from '../lib/useSlip.js'
 import { removeLeg, setLegPrice, setParlayPrice, setMode, clearSlip, parlayMath, shareUrl, slipText } from '../lib/slip.js'
-import { pct, odds, parseOdds, decimalOf } from '../lib/format.js'
+import { pct, odds, parseOdds, decimalOf, bookName } from '../lib/format.js'
 import { kellyFraction } from '../lib/kelly.js'
+import { RULES } from '../lib/rules.js'
+import { SendToBook } from './Books.jsx'
 import { useCopy } from '../lib/hooks.js'
 import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -63,6 +65,7 @@ export function SlipPanel({ open, onClose }) {
   const [bankroll, setBankroll] = useState(() => readNum(BANKROLL_KEY, 1000))
   const [frac, setFrac] = useState(0.25)
   const [posting, setPosting] = useState(false)
+  const [sending, setSending] = useState(false)
   const [live, setLive] = useState({})
   const math = useMemo(() => parlayMath(legs, slip.parlayPrice), [legs, slip.parlayPrice])
   const canKelly = !paywall || has('pro')
@@ -163,6 +166,7 @@ export function SlipPanel({ open, onClose }) {
                       <span className="slip-leg__label">{l.label}</span>
                       <span className="slip-leg__read">
                         APEX <b className="num">{pct(l.prob)}</b> fair {odds(l.fair)}
+                        {l.book && Number.isFinite(l.price) && <span className="slip-leg__book">, best at {bookName(l.book)}</span>}
                         {lv && (
                           <span className="slip-leg__live">
                             {lv.cur} now{lv.final ? `, ${lv.status === 'hit' ? 'hit' : lv.status === 'push' ? 'push' : 'missed'}` : ''}
@@ -227,11 +231,11 @@ export function SlipPanel({ open, onClose }) {
                       <input inputMode="decimal" value={bankroll} onChange={(e) => setBankroll(Math.max(1, Number(e.target.value.replace(/[^0-9.]/g, '')) || 0))} aria-label="Bankroll in dollars" />
                     </label>
                     {mode === 'parlay' && legs.length > 1 ? (
-                      <StakeLine p={math.prob} d={math.bookDecimal} bankroll={bankroll} frac={frac} />
+                      <StakeLine p={math.prob} d={math.bookDecimal} bankroll={bankroll} frac={frac} cap={RULES.stake.lock} />
                     ) : (
-                      legs.filter((l) => Number.isFinite(l.price)).map((l) => <StakeLine key={l.id} p={l.prob} d={decimalOf(l.price)} bankroll={bankroll} frac={frac} label={l.short || l.name} />)
+                      legs.filter((l) => Number.isFinite(l.price)).map((l) => <StakeLine key={l.id} p={l.prob} d={decimalOf(l.price)} bankroll={bankroll} frac={frac} cap={RULES.stake.single} label={l.short || l.name} />)
                     )}
-                    <p className="muted small">Kelly sizes each bet by your edge at your price. Quarter Kelly gives up a little growth for much smaller swings.</p>
+                    <p className="muted small">Kelly sizes each bet by your edge at your price. APEX caps a parlay at {RULES.stake.lock * 100}% of bankroll, a single at {RULES.stake.single * 100}%, and a whole day at {RULES.stake.daily * 100}%.</p>
                   </>
                 ) : (
                   <p className="slip__locked">
@@ -240,6 +244,11 @@ export function SlipPanel({ open, onClose }) {
                 )}
               </div>
             )}
+
+            <button type="button" className="btn btn--gold btn--block slip__send" onClick={() => setSending(true)}>
+              Send to sportsbook
+              <span className="slip__send-sub">{legs.length > 1 ? 'Compare the parlay price at every book' : 'Compare the price at every book'}</span>
+            </button>
 
             <div className="slip__actions">
               <button type="button" className="btn btn--quiet" onClick={() => copy(slipText(legs, slip.parlayPrice))}>
@@ -250,7 +259,7 @@ export function SlipPanel({ open, onClose }) {
               </button>
               <button
                 type="button"
-                className="btn btn--gold"
+                className="btn btn--quiet"
                 onClick={() => {
                   if (!user) {
                     onClose()
@@ -277,14 +286,15 @@ export function SlipPanel({ open, onClose }) {
         )}
       </aside>
       <PostPick open={posting} onClose={() => setPosting(false)} legs={legs} mode={mode} />
+      <SendToBook open={sending} onClose={() => setSending(false)} legs={mode === 'parlay' ? legs : legs.slice(0, 1)} p={mode === 'parlay' ? math?.prob : legs[0]?.prob} title={mode === 'parlay' && legs.length > 1 ? 'Send the parlay to a sportsbook' : 'Send to sportsbook'} />
     </>
   )
 }
 
-function StakeLine({ p, d, bankroll, frac, label }) {
+function StakeLine({ p, d, bankroll, frac, label, cap = RULES.stake.single }) {
   if (!d) return null
   const f = kellyFraction(p, d) * frac
-  const stake = bankroll * Math.min(0.25, f)
+  const stake = bankroll * Math.min(cap, f)
   const ev = p * d - 1
   return (
     <div className="slip__row slip__stake">

@@ -8,6 +8,7 @@ import { APEX_SYSTEM_PROMPT_NBA } from './apexSystemPromptNba.js'
 import { APEX_SYSTEM_PROMPT_NBA_COMPACT } from './apexSystemPromptNbaCompact.js'
 import { APEX_SYSTEM_PROMPT_NFL } from './apexSystemPromptNfl.js'
 import { APEX_SYSTEM_PROMPT_NFL_COMPACT } from './apexSystemPromptNflCompact.js'
+import { RULES_PROMPT } from '../src/nfl/rules.js'
 
 /** Odds API sport_key values for big-4 (must match frontend / The Odds API). */
 export const APEX_SPORT_KEYS = {
@@ -70,6 +71,11 @@ export function computeEffectivePromptMode(resolvedSportKey, clientRaw) {
  * @returns {string}
  */
 export function getApexSystemPrompt(sportKey, promptMode, mlbBettingScope) {
+  // every sport and every prompt size answers to the same APEX rules
+  return `${basePrompt(sportKey, promptMode, mlbBettingScope)}\n\n${RULES_PROMPT}`
+}
+
+function basePrompt(sportKey, promptMode, mlbBettingScope) {
   const sk = typeof sportKey === 'string' ? sportKey.trim() : ''
   const mode = promptMode !== undefined && promptMode !== null ? promptMode : getApexSystemPromptMode()
   const scope = mlbBettingScope === 'player_props' ? 'player_props' : 'full_board'

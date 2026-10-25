@@ -3,6 +3,8 @@ import { createRouter, ApiError, RAW, clientIp } from '../lib/router.js'
 import { ROUTE_TIER, TOPIC_RE, topicAllowed } from './gate.js'
 import { streamPropInsight } from './ai.js'
 import { createIntel } from './intel.js'
+import { createLedger } from './ledger.js'
+import { shop } from './shop.js'
 import { extractLegs, matchLegs, streamParlayCheck, cleanImage, MAX_TEXT } from './parlay.js'
 import { atLeast } from '../billing/service.js'
 import { billingConfig } from '../billing/config.js'
@@ -228,6 +230,50 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     } catch {
       await gate.refund()
       throw new ApiError(502, 'intel_failed', 'The intel scan failed. Your allowance was not used; try again in a minute.')
+    }
+  })
+
+  /** Line shopping for a slip: every book's price per leg and for the parlay, with links. Free. */
+  r.post('/shop', { tier: t('shop') }, (ctx) => {
+    ctx.cache = null
+    const body = ctx.req.body || {}
+    const ids = Array.isArray(body.legs) ? [...new Set(body.legs.map(String))] : []
+    if (!ids.length || ids.length > 12) throw new ApiError(400, 'bad_legs', 'Shop 1 to 12 legs.')
+    const rows = []
+    for (const id of ids) {
+      const row = parsePropId(id) ? views.findProp(id) : null
+      if (!row) throw new ApiError(404, 'no_prop', 'One of those legs isn’t on this week’s board anymore.', { legs: [id] })
+      rows.push(row)
+    }
+    return { ...shop(rows), oddsFeed: Boolean(engine.status().odds?.enabled), at: engine.wh.at.odds || null }
+  })
+
+  // ---- the 3-Leg Lock ---------------------------------------------------------------------------
+  const ledger = createLedger({ engine, store: engine.store, now: engine.now })
+  const tickLedger = () => ledger.maybeTick().catch(() => {})
+
+  /** This week's lock under the APEX rules (or a Pass, with the reason). Pro. */
+  r.get('/lock', { tier: t('lock'), cache: C(30, 30, 120) }, async () => {
+    const out = views.lock()
+    await ledger.record(out).catch(() => {})
+    tickLedger()
+    return out
+  })
+
+  /**
+   * The season ledger. Free: the record is public. This week's lock stays hidden from free
+   * plans until its first leg kicks off.
+   */
+  r.get('/lock/ledger', { tier: 'free', cache: C(30, 30, 120) }, async (ctx) => {
+    await tickLedger()
+    const out = await ledger.season()
+    const a = await accessFor(ctx.req).catch(() => ({ tier: 'free' }))
+    const full = atLeast(a.tier, 'pro')
+    if (paywallOn()) ctx.cache = { ...C(30, 30, 120), priv: true }
+    return {
+      ...out,
+      weeks: out.weeks.map((w) => (full || w.frozen || !w.lock ? w : { ...w, lock: { hidden: true, legs: w.lock.legs.length } })),
+      full,
     }
   })
 

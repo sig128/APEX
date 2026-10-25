@@ -49,7 +49,9 @@ export function addLeg(card) {
   const key = (l) => `${l.playerId || l.teamId}:${l.market}`
   const legs = state.legs.filter((l) => key(l) !== key(card))
   const replaced = legs.length < state.legs.length
-  state = { ...state, legs: [...legs, { ...snapshot(card), price: card.price?.[card.side === 'u' ? 'under' : card.oneSided ? 'yes' : 'over'] ?? null }] }
+  // line shopping: the best price across books, else the headline book's
+  const price = card.shop?.price ?? card.price?.best?.[card.side === 'u' ? 'under' : card.oneSided ? 'yes' : 'over']?.price ?? card.price?.[card.side === 'u' ? 'under' : card.oneSided ? 'yes' : 'over'] ?? null
+  state = { ...state, legs: [...legs, { ...snapshot(card), price, book: card.shop?.book || null }] }
   save()
   return { ok: true, replaced }
 }

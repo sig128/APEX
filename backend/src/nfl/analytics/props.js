@@ -215,7 +215,7 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
     // 'main' and 'alt' are lines a sportsbook posted; null is a line typed in for research
     posted: main == null ? null : line === main ? 'main' : (meta.alts || []).includes(line) ? 'alt' : null,
     book: meta.book || null,
-    price: price ? { over: price.over ?? null, under: price.under ?? null, yes: price.yes ?? null, book: price.book || null, books: price.books || null } : null,
+    price: price ? { over: price.over ?? null, under: price.under ?? null, yes: price.yes ?? null, book: price.book || null, books: price.books || null, best: price.best || null } : null,
     implied: implied != null ? round(implied, 4) : null,
     edge: implied != null ? round(edge, 4) : null,
     updated: meta.updated || null,

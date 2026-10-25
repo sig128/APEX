@@ -5,6 +5,8 @@ import { useLive } from '../lib/live.js'
 import { useTitle } from '../lib/hooks.js'
 import { pct, odds, kickoff, num, clock, decimalOf, parseOdds, bookName } from '../lib/format.js'
 import { kellyFraction } from '../lib/kelly.js'
+import { RULES } from '../lib/rules.js'
+import { LineShop } from '../ui/Books.jsx'
 import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
 import { Headshot, TeamLogo, logoFor } from '../ui/Img.jsx'
@@ -219,6 +221,8 @@ export function PropPage() {
         </div>
       </div>
 
+      <LineShop row={p} />
+
       {live && !live.untracked && (
         <div className={`live-now is-${live.status}`}>
           <span className="num">{live.cur}</span> so far, {live.final ? 'final' : `${Math.round(live.elapsed * 100)}% of the game played, pace ${live.projected}`}
@@ -286,8 +290,8 @@ function KellyBox({ p }) {
               <dd className={`num ${ev > 0 ? 'is-plus' : 'is-minus'}`}>{pct(ev, 1)}</dd>
             </div>
             <div>
-              <dt>Quarter Kelly</dt>
-              <dd className="num">${((bank * full) / 4).toFixed(2)}</dd>
+              <dt>APEX stake</dt>
+              <dd className="num">${(bank * Math.min(full / 4, RULES.stake.single)).toFixed(2)}</dd>
             </div>
             <div>
               <dt>Full Kelly</dt>
@@ -298,6 +302,7 @@ function KellyBox({ p }) {
         {!price && <p className="muted">Enter the odds your sportsbook gives you. APEX compares them with its {pct(p.prob)} and sizes the bet.</p>}
         {d && full === 0 && <p className="muted">No edge at {odds(n)}: that price says {pct(1 / d, 1)}, APEX has it at {pct(p.prob, 1)}. Pass, or find a better number.</p>}
         {d && full > 0 && <p className="muted">That price says {pct(1 / d, 1)}; APEX has it at {pct(p.prob, 1)}, {((p.prob - 1 / d) * 100).toFixed(1)} points better than the book thinks.</p>}
+        {d && full > 0 && <p className="muted small">APEX stake is quarter Kelly, capped at {RULES.stake.single * 100}% of bankroll for a single (and {RULES.stake.daily * 100}% for the whole day){full / 4 > RULES.stake.single ? '. The cap applies here.' : '.'}</p>}
         <Link className="link" to={`/kelly?p=${p.prob}${n ? `&odds=${n}` : ''}`}>
           Simulate a season of bets like this
         </Link>

@@ -1,6 +1,8 @@
 // "AI picks": a short APEX read of one prop, streamed as NDJSON (same framing as /api/chat/stream).
 import Anthropic from '@anthropic-ai/sdk'
 import { log, errText } from '../lib/log.js'
+import { RULES, RULES_PROMPT } from './rules.js'
+import { certifyLeg } from './analytics/lock.js'
 
 export const PROP_SYSTEM = `You are APEX NFL Betting Intelligence (SLCM v1.0), reading ONE player or team prop.
 
@@ -16,9 +18,11 @@ Answer in this exact shape, plain text, no markdown headings, under 170 words:
 VERDICT: PRIME | STANDARD | MONITOR | NO PLAY — <side and line>
 WHY: 3 short bullets starting with "• "
 RISKS: 2 short bullets starting with "• "
-SIZING: one line. If a book price is given, use Kelly on the APEX probability (quarter Kelly, cap 5% of bankroll); otherwise say "no price, use fair odds <fair> as your floor".
+SIZING: one line. If a book price is given: no edge over the vig means "Pass at this price"; otherwise quarter Kelly on the APEX probability, capped at ${RULES.stake.single * 100}% of bankroll for a single. With no price, say "no price: playable at <fair minus 2 points> or better".
 
-Never promise a win. This is analysis, not advice.`
+Never promise a win. This is analysis, not advice.
+
+${RULES_PROMPT}`
 
 function brief(ctx) {
   const r = ctx.prop
@@ -34,6 +38,8 @@ function brief(ctx) {
   if (r.move) lines.push(`LINE MOVE: opened ${r.move.open}, now ${r.line} (${r.move.delta > 0 ? '+' : ''}${r.move.delta})`)
   if (ctx.injury) lines.push(`PLAYER STATUS: ${ctx.injury.status}`)
   if (ctx.logs?.length) lines.push(`LAST GAMES (newest last): ${ctx.logs.map((l) => `${l.date} ${l.home ? 'vs' : '@'}${l.opp}: ${l.v}`).join(' | ')}`)
+  const cert = certifyLeg(r, { now: Date.now(), injury: ctx.injury })
+  lines.push(`APEX RULE CHECKS: ${cert.checks.map((c) => `${c.label} ${c.state.toUpperCase()} (${c.detail})`).join('; ')}`)
   return lines.join('\n')
 }
 

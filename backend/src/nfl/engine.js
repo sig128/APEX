@@ -320,6 +320,7 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
     mode,
     wh,
     espn,
+    store,
     hub,
     now,
     season,

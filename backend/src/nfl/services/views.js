@@ -7,6 +7,7 @@ import { MARKETS, CORE_MARKETS, marketOf, POS_GROUP } from '../markets.js'
 import { injurySeverity } from '../../providers/espn/normalize.js'
 import { progressFor, boxLeaders, winCurve } from './live.js'
 import { nameKey, round } from '../../lib/util.js'
+import { findLock } from '../analytics/lock.js'
 
 export function createViews(engine) {
   const wh = engine.wh
@@ -138,6 +139,8 @@ export function createViews(engine) {
       boost: r.boost ? { short: r.boost.short, lift: r.boost.lift } : null,
       matchupRank: r.matchup?.rank ?? null,
       price: r.price ? { over: r.price.over, under: r.price.under, yes: r.price.yes, book: r.price.book } : null,
+      // line shopping: the best price on this side, and where
+      shop: r.price?.best?.[r.oneSided ? 'yes' : r.side === 'u' ? 'under' : 'over'] || null,
       edge: r.edge ?? null,
       posted: r.posted ?? null,
     }
@@ -482,5 +485,36 @@ export function createViews(engine) {
     return { ...data, logs: logs.map((x) => ({ date: x.date?.slice(0, 10), opp: x.oppAbbr, home: x.home, v: x.v })), gameInfo: g }
   }
 
-  return { ctx, allRows, strip, home, props, game, liveGame, live, trackerDiff, track, findProp, prop, player, search, dvp, rankings, teamProps, propContext, card }
+  // ---- the 3-Leg Lock ----------------------------------------------------------------------------
+  /**
+   * Every prop on games that haven't kicked off, plus the posted alternate lines on the same
+   * side that are easier to clear (a lower over, a higher under).
+   */
+  function lockRows() {
+    const t = engine.now()
+    const open = new Set([...wh.games.values()].filter((g) => g.status?.state === 'pre' && Date.parse(g.date) - t > 5 * 60_000).map((g) => g.id))
+    const rows = allRows().rows.filter((r) => open.has(r.gameId))
+    const out = [...rows]
+    for (const r of rows) {
+      if (r.oneSided || !(r.prob >= 0.5) || !r.alts?.length) continue
+      const subject = r.kind === 'team' ? `t${r.teamId}` : r.playerId
+      const easier = r.alts.filter((x) => (r.side === 'u' ? x > r.line : x < r.line)).slice(0, 4)
+      for (const line of easier) {
+        const alt = findProp(`${subject}.${r.market}.${r.side}.${line}`)
+        if (alt) out.push(alt)
+      }
+    }
+    return out
+  }
+
+  /** The week's lock, recomputed when the data moves (and at least every 15 minutes for recency). */
+  function lock() {
+    const t = engine.now()
+    return cached('lock', `${wh.aVersion}:${Math.floor(t / (15 * 60_000))}`, () => {
+      const out = findLock(lockRows(), { now: t, injuryOf: (id) => wh.injuryOf(id) })
+      return { ...out, season: wh.season, week: wh.week, at: t }
+    })
+  }
+
+  return { ctx, allRows, strip, home, props, game, liveGame, live, trackerDiff, track, findProp, prop, player, search, dvp, rankings, teamProps, propContext, card, lockRows, lock }
 }

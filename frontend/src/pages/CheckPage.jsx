@@ -16,7 +16,10 @@ const MODES = [
   { key: 'text', label: 'Type it out' },
   { key: 'slip', label: 'My APEX slip' },
 ]
-const VERDICT = { KEEP: 'Keep', CUT: 'Cut', SWAP: 'Swap' }
+const VERDICT = { KEEP: 'Keep', CUT: 'Cut', SWAP: 'Swap', RISKY: 'Risky' }
+
+/** The AI's call, held to the rules: a leg that fails an APEX rule check can't be a Keep. */
+const finalCall = (leg, call) => (call?.v === 'KEEP' && leg.lean !== 'keep' ? { ...call, v: 'RISKY', overridden: true } : call)
 const LEAN = { keep: 'Looks solid', risky: 'Risky', cut: 'Weak link' }
 
 /** "LEG 2: CUT | reason", "OVERALL: ...", "BEST: ..." -> { legs: {2: {v, why}}, overall, best } */
@@ -147,7 +150,7 @@ export function CheckPage() {
   }
 
   const verdict = parseCheck(run.text)
-  const keepers = (run.legs || []).filter((l) => (verdict.legs[l.n]?.v || '') === 'KEEP')
+  const keepers = (run.legs || []).filter((l) => finalCall(l, verdict.legs[l.n])?.v === 'KEEP')
 
   return (
     <div className="container page">
@@ -259,7 +262,7 @@ export function CheckPage() {
                 {run.sim && <SimLine sim={run.sim} n={run.legs.length} />}
                 <ol className="calls">
                   {run.legs.map((l) => (
-                    <Call key={l.id} leg={l} call={verdict.legs[l.n]} sim={run.sim?.legs?.find((x) => x.id === l.id)} streaming={run.state === 'streaming'} />
+                    <Call key={l.id} leg={l} call={finalCall(l, verdict.legs[l.n])} sim={run.sim?.legs?.find((x) => x.id === l.id)} streaming={run.state === 'streaming'} />
                   ))}
                 </ol>
                 {(verdict.overall || verdict.best) && (
@@ -358,6 +361,7 @@ function Call({ leg, call, sim, streaming }) {
         <span className="call__stamp">{v ? VERDICT[v] : streaming ? '…' : LEAN[leg.lean]}</span>
       </div>
       <p className="call__why">{call?.why || (streaming ? <span className="ask__cursor" aria-hidden="true" /> : null)}</p>
+      {call?.overridden && <p className="call__override">The AI liked it, but it fails an APEX rule check below, so it isn’t a Keep.</p>}
       <dl className="call__facts">
         <div>
           <dt>APEX chance</dt>
@@ -384,12 +388,24 @@ function Call({ leg, call, sim, streaming }) {
           </div>
         )}
       </dl>
-      {leg.flags?.length > 0 && (
-        <ul className="call__flags">
-          {leg.flags.map((f) => (
-            <li key={f}>{f}</li>
-          ))}
+      {leg.checks?.some((c) => c.state !== 'pass') && (
+        <ul className="call__rules">
+          {leg.checks
+            .filter((c) => c.state !== 'pass')
+            .map((c) => (
+              <li key={c.key} className={`case case--${c.state}`}>
+                <span className="case__mark" aria-hidden="true" />
+                <span>
+                  <b>{c.label}.</b> {c.detail}
+                </span>
+              </li>
+            ))}
         </ul>
+      )}
+      {leg.checks && (
+        <p className="call__passed">
+          {leg.checks.filter((c) => c.state === 'pass').length} of {leg.checks.length} APEX rule checks passed
+        </p>
       )}
       <Link className="call__link" to={`/nfl/prop/${encodeURIComponent(leg.id)}`}>
         See the prop

@@ -90,7 +90,7 @@ export function parseOdds(s) {
 
 export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
-const BOOKS = { draftkings: 'DraftKings', fanduel: 'FanDuel', betmgm: 'BetMGM', williamhill_us: 'Caesars', espnbet: 'ESPN BET' }
+const BOOKS = { draftkings: 'DraftKings', fanduel: 'FanDuel', betmgm: 'BetMGM', williamhill_us: 'Caesars', espnbet: 'theScore Bet', fanatics: 'Fanatics', betrivers: 'BetRivers', bet365: 'bet365' }
 /** "draftkings" -> "DraftKings"; names that are already readable pass through. */
 export const bookName = (k) => (k ? BOOKS[k] || BOOKS[String(k).toLowerCase()] || k : '')
 

@@ -21,6 +21,7 @@ export function Wordmark({ height = 20 }) {
 
 const NAV = [
   { to: '/', label: 'Today', end: true },
+  { to: '/lock', label: 'Lock' },
   { to: '/nfl/props', label: 'Props' },
   { to: '/nfl/live', label: 'Live' },
   { to: '/picks', label: 'Picks' },

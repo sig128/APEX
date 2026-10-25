@@ -16,10 +16,10 @@ function oddsFixtures({ game, home, away, outcomes }) {
   const ev = { id: 'ev-gbdet', sport_key: 'americanfootball_nfl', commence_time: game.date.replace('Z', ':00Z'), home_team: home, away_team: away }
   return {
     [fixtureKey(`${BASE}/events?apiKey=${KEY}`)]: [ev, { id: 'ev-other', commence_time: '2026-10-25T17:00:00Z', home_team: 'Nowhere FC', away_team: 'Elsewhere' }],
-    [fixtureKey(`${BASE}/events/ev-gbdet/odds?apiKey=${KEY}&regions=us&oddsFormat=american&markets=player_pass_yds,player_pass_attempts,player_pass_completions,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_attempts,player_receptions,player_reception_yds,player_rush_reception_yds,player_anytime_td&bookmakers=draftkings,fanduel,betmgm,williamhill_us,espnbet`)]: {
+    [fixtureKey(`${BASE}/events/ev-gbdet/odds?apiKey=${KEY}&oddsFormat=american&markets=player_pass_yds,player_pass_attempts,player_pass_completions,player_pass_tds,player_pass_interceptions,player_rush_yds,player_rush_attempts,player_receptions,player_reception_yds,player_rush_reception_yds,player_anytime_td&bookmakers=draftkings,fanduel,betmgm,williamhill_us,fanatics,betrivers,espnbet&includeLinks=true`)]: {
       id: 'ev-gbdet',
       bookmakers: [
-        { key: 'fanduel', markets: [{ key: 'player_pass_yds', outcomes: outcomes.fanduel }] },
+        { key: 'fanduel', link: 'https://sportsbook.fanduel.com/', markets: [{ key: 'player_pass_yds', outcomes: outcomes.fanduel }] },
         { key: 'draftkings', markets: [{ key: 'player_pass_yds', outcomes: outcomes.draftkings }, { key: 'player_anytime_td', outcomes: outcomes.td }] },
       ],
     },
@@ -42,8 +42,8 @@ test('prices: event and player matching, DraftKings as the headline, the budget 
       { name: 'Over', description: 'Somebody Else', price: -110, point: 199.5 },
     ],
     fanduel: [
-      { name: 'Over', description: 'Jared Goff', price: -118, point: goffLine },
-      { name: 'Under', description: 'Jared Goff', price: -102, point: goffLine },
+      { name: 'Over', description: 'Jared Goff', price: -118, point: goffLine, link: 'https://sportsbook.fanduel.com/addToBetslip?marketId=42.448600011&selectionId=29165' },
+      { name: 'Under', description: 'Jared Goff', price: -102, point: goffLine, link: 'javascript:alert(1)' },
     ],
     td: [{ name: 'Yes', description: 'Jahmyr Gibbs', price: -190 }],
   }
@@ -56,6 +56,12 @@ test('prices: event and player matching, DraftKings as the headline, the budget 
   assert.equal(p.over, -125)
   assert.equal(p.under, 105)
   assert.equal(p.books.fanduel.over, -118, 'other books ride along')
+  // line shopping: the best price on each side, across books
+  assert.deepEqual(p.best.over, { price: -118, book: 'fanduel' })
+  assert.deepEqual(p.best.under, { price: 105, book: 'draftkings' })
+  assert.equal(p.books.fanduel.links.over, 'https://sportsbook.fanduel.com/addToBetslip?marketId=42.448600011&selectionId=29165', 'the bet slip link')
+  assert.equal(p.books.fanduel.deep.over, true)
+  assert.equal(p.books.fanduel.links.under, 'https://sportsbook.fanduel.com/', 'a bad link falls back to the book')
   assert.equal(prices.get(`${gibbs.id}:anyTd:0.5`).yes, -190)
   assert.equal(odds.status().spentToday, 11)
 

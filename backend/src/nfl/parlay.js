@@ -7,6 +7,8 @@ import { parsePropId } from './analytics/core.js'
 import { simulateSlip } from './analytics/sim.js'
 import { _brief } from './ai.js'
 import { nameKey } from '../lib/util.js'
+import { certifyLeg } from './analytics/lock.js'
+import { RULES, RULES_PROMPT } from './rules.js'
 import { log, errText } from '../lib/log.js'
 
 const MODEL = () => process.env.ANTHROPIC_PARLAY_MODEL || process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5'
@@ -32,10 +34,10 @@ Rules:
 
 export const CHECK_SYSTEM = `You are APEX NFL Betting Intelligence (SLCM v1.0) reviewing a parlay before it's placed, leg by leg.
 
-For every leg decide:
-- KEEP: the numbers back it (APEX probability, hit rates, role, matchup, price).
-- CUT: it drags the parlay down (low probability for its price, thin sample, bad matchup, injury risk, role in doubt, or it fights another leg).
-- SWAP: the player is fine but this exact bet isn't; name the better bet from the alternatives given (other side, other line, or another prop on him).
+For every leg decide, holding it to the APEX rules and the rule checks you are given:
+- KEEP: it passes the rules (65%+ to win, an edge over the price or a price to beat, a real sample, recent form that agrees, a projection that backs it, a steady role, the market not against it).
+- CUT: it fails a rule that matters (under 65%, no edge at this price, thin sample, cold recent form, a streak the projection doesn't back, role or injury doubt, the line moving against it, or it pulls against another leg).
+- SWAP: the player is fine but this exact bet isn't; name the better bet from the alternatives given (an easier line, the other side, or another prop on him).
 Use only the data given plus general football knowledge. Cite the numbers. One reason per leg, under 30 words, plain words a casual bettor understands (say "hits 6 of his last 10", not jargon).
 
 Then:
@@ -49,7 +51,10 @@ LEG 2: CUT | <reason>
 OVERALL: <text>
 BEST: <text>
 
-This is analysis, not advice. Never promise a win.`
+Sizing in BEST: a 3-leg parlay at most ${RULES.stake.lock * 100}% of bankroll, a single at most ${RULES.stake.single * 100}%.
+This is analysis, not advice. Never promise a win.
+
+${RULES_PROMPT}`
 
 const anthropicClient = (apiKey) => new Anthropic({ apiKey })
 
@@ -120,23 +125,13 @@ export function matchLegs(extracted, engine) {
   return { matched: out, unmatched }
 }
 
-/** A quick read before the AI weighs in: lean, flags, and the numbers behind them. */
-export function scoreLeg(row, odds, sim) {
-  const flags = []
-  const implied = Number.isFinite(odds) ? (odds < 0 ? -odds / (-odds + 100) : 100 / (odds + 100)) : (row.implied ?? null)
-  const edge = implied != null ? row.prob - implied : null
-  if ((row.sample ?? 0) < 6) flags.push('thin sample')
-  // matchup rank 1 = allows the most; an over wants a low rank, an under a high one
-  if (row.matchup) {
-    const bad = row.side === 'u' ? row.matchup.rank <= 6 : row.matchup.rank > row.matchup.of - 6
-    if (bad) flags.push('tough matchup')
-  }
-  // a line that went up on an over (down on an under) is a harder number than the opener
-  if (row.move && row.move.delta !== 0 && Math.sign(row.move.delta) === (row.side === 'u' ? -1 : 1)) flags.push('line moved against this number')
-  if ((row.role ?? 1) < 0.6) flags.push('limited role')
-  if (edge != null && edge < -0.03) flags.push('priced worse than its chance')
-  const lean = row.prob >= 0.6 && (edge == null || edge >= 0) && flags.length <= 1 ? 'keep' : row.prob < 0.5 || (edge != null && edge < -0.05) || flags.length >= 3 ? 'cut' : 'risky'
-  return { lean, flags, implied, edge, killsAlone: sim?.onlyMiss ?? null }
+/** The APEX rule checks for one leg at the slip's price, plus a quick lean before the AI weighs in. */
+export function scoreLeg(row, odds, sim, { now = Date.now(), injury = null } = {}) {
+  const priced = Number.isFinite(odds) ? { ...row, price: row.oneSided ? { yes: odds } : row.side === 'u' ? { under: odds } : { over: odds } } : row
+  const c = certifyLeg(priced, { now, injury })
+  const failed = c.checks.filter((x) => x.state === 'fail')
+  const lean = c.ok ? 'keep' : row.prob < 0.5 || failed.some((f) => f.key === 'edge') || failed.length >= 3 ? 'cut' : 'risky'
+  return { lean, flags: failed.map((f) => f.label), checks: c.checks, implied: c.implied, edge: c.edge, ev: c.ev, playable: c.playable, killsAlone: sim?.onlyMiss ?? null }
 }
 
 function legBrief(i, ctx, odds, s, sim) {
@@ -148,7 +143,7 @@ function legBrief(i, ctx, odds, s, sim) {
     _brief(ctx),
     odds != null && s.implied != null ? `SLIP PRICE: ${odds > 0 ? `+${odds}` : odds} (implies ${(s.implied * 100).toFixed(1)}%, APEX edge ${(s.edge * 100).toFixed(1)} pts)` : 'SLIP PRICE: none shown',
     `SIMULATED: hits ${(sim.hitRate * 100).toFixed(1)}% of runs; the only miss that sinks the parlay in ${(sim.onlyMiss * 100).toFixed(1)}%`,
-    s.flags.length ? `FLAGS: ${s.flags.join(', ')}` : 'FLAGS: none',
+    `APEX RULE CHECKS: ${s.checks.map((c) => `${c.label} ${c.state.toUpperCase()} (${c.detail})`).join('; ')}`,
     alts.length || altLines.length ? `ALTERNATIVES: ${[...altLines, ...alts].join('; ')}` : '',
   ]
     .filter(Boolean)
@@ -177,7 +172,7 @@ export async function streamParlayCheck({ engine, matched, unmatched = [], parla
   let text = ''
   try {
     const sim = rows.length ? simulateSlip(rows, { iterations: 20_000, price: parlayOdds, bets: 100, seed: 17 }) : null
-    const scores = rows.map((r, i) => scoreLeg(r, matched[i].odds, sim?.legs[i]))
+    const scores = rows.map((r, i) => scoreLeg(r, matched[i].odds, sim?.legs[i], { injury: r.playerId ? engine.wh.injuryOf?.(r.playerId) : null }))
     write({
       type: 'legs',
       legs: rows.map((r, i) => ({ n: i + 1, id: r.id, name: r.name, short: r.short, headshot: r.headshot || null, teamAbbr: r.teamAbbr, oppAbbr: r.oppAbbr, label: r.label, prob: r.prob, fair: r.fair, odds: matched[i].odds, l10: r.windows?.find((w) => w.key === 'L10') || null, ...scores[i] })),
@@ -195,7 +190,7 @@ export async function streamParlayCheck({ engine, matched, unmatched = [], parla
     }
     const brief = [
       `PARLAY: ${rows.length} legs${parlayOdds != null ? ` at ${parlayOdds > 0 ? `+${parlayOdds}` : parlayOdds} (implies ${(sim.price.implied * 100).toFixed(1)}%)` : ''}.`,
-      `SIMULATED ${sim.iterations} times: cashes ${(sim.parlay.hitRate * 100).toFixed(1)}% (legs multiplied: ${(sim.parlay.independent * 100).toFixed(1)}%).`,
+      `SIMULATED ${sim.iterations} times: cashes ${(sim.parlay.hitRate * 100).toFixed(1)}% (legs multiplied: ${(sim.parlay.independent * 100).toFixed(1)}%; the lock rule wants every leg at 65%+ and three legs over 45% multiplied).`,
       sim.parlay.correlated.length ? `LEGS THAT MOVE TOGETHER: ${sim.parlay.correlated.map((c) => `leg ${rows.findIndex((r) => r.id === c.a) + 1} & leg ${rows.findIndex((r) => r.id === c.b) + 1} ${c.together > 0 ? 'win together' : 'pull against each other'}`).join('; ')}` : '',
       unmatched.length ? `NOT ON THE BOARD (mention briefly, no verdict): ${unmatched.map((u) => `${u.player} ${u.market} ${u.side} ${u.line}`).join('; ')}` : '',
       '',

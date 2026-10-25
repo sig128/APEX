@@ -66,6 +66,7 @@ export function HomePage() {
           )}
         </header>
 
+        <LockBanner />
         {loading && <Skeleton kind="hero" rows={1} />}
         {top && <Hero card={top} />}
 
@@ -121,6 +122,28 @@ export function HomePage() {
 }
 
 /** The No. 1 prop on the board, big: who, the line, the last ten against it, and the read. */
+/** This week's 3-Leg Lock and the season record, from the public ledger. */
+function LockBanner() {
+  const { data } = useApi('/api/nfl/lock/ledger', { maxAgeMs: 60_000 })
+  const wk = data?.weeks?.[0]
+  const r = data?.record
+  if (!data) return null
+  const state = !wk ? 'Checking the board' : wk.status === 'pass' ? 'Pass so far: nothing meets the rules' : wk.status === 'graded' ? (wk.result === 'win' ? 'Cashed' : wk.result === 'loss' ? 'Missed' : 'Pushed') : wk.status === 'live' ? 'Live now' : 'The lock is in'
+  return (
+    <Link to="/lock" className={`lockbar lockbar--${wk?.status || 'none'}`}>
+      <span className="lockbar__k">3-Leg Lock{wk ? `, week ${wk.week}` : ''}</span>
+      <span className="lockbar__state">{state}</span>
+      {r && (r.wins || r.losses || r.passes) ? (
+        <span className="lockbar__rec num">
+          {r.wins}-{r.losses}
+          {r.risked > 0 ? `, ${r.units >= 0 ? '+' : ''}${r.units.toFixed(1)}u` : ''}
+        </span>
+      ) : null}
+      <span className="lockbar__go">See the lock</span>
+    </Link>
+  )
+}
+
 function Hero({ card }) {
   const detail = useApi(`/api/nfl/props/${encodeURIComponent(card.id)}`, { maxAgeMs: 60_000 }).data
   const slip = useSlip()

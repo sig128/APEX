@@ -16,6 +16,8 @@ export const ROUTE_TIER = {
   sim: 'pro',
   check: 'pro',
   intel: 'pro',
+  lock: 'pro',
+  shop: 'free',
 }
 
 /** Every live topic is free; kept as a hook in case a topic ever needs a plan. */
