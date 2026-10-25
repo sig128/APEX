@@ -28,7 +28,7 @@ backend/     the API (Express). app.js builds it; server.js runs it locally.
   src/billing/    passes: invoices, on-chain checks, grace and lockout, allowances
   src/picks/      user pages, posting, grading, records, feed, leaderboard
   src/security/   sign-in, admin key, rate limits, stream tickets
-  test/           77 tests on recorded ESPN data (Week 7, 2026)
+  test/           86 tests on recorded ESPN data (Week 7, 2026)
 frontend/    the site (React + Vite)
   src/pages/      Today, Props, Game, Prop, Player, Live, Slip, Picks, /u/:handle, Kelly, Plans, Account, Admin
   src/intro/      the opening animation
@@ -58,7 +58,7 @@ replay the intro any time (it otherwise plays at most every 6 hours).
 Tests:
 
 ```bash
-npm test                            # backend: 77 tests, about 15 seconds
+npm test                            # backend: 86 tests, under a minute
 npm test --prefix frontend          # slip, Kelly and wallet math
 ```
 
@@ -88,6 +88,11 @@ npm test --prefix frontend          # slip, Kelly and wallet math
 
 New indexes take a few minutes to build after the first deploy; until then the picks feed and
 user pages can answer with an error.
+
+Check one thing once it's up: open `https://<project>.web.app/api/health` and
+`https://us-central1-<project>.cloudfunctions.net/chat/api/health`. Both should show your own
+public IP as `you` (that's what rate limits count). If either shows a Google or Fastly address
+instead, add that range to `APEX_TRUSTED_PROXIES` in functions/.env and deploy again.
 
 ## Turn on payments
 
@@ -143,7 +148,7 @@ A transaction can only ever pay one request.
 - Rate limits key on the caller's address, which only Firebase Hosting's CDN and Google's own
   proxies can vouch for (`APEX_TRUSTED_PROXIES`); a header a client writes itself is ignored.
   AI follow-ups have to continue an analysis the same account ran. Plan codes from
-  `npm run seed-invites` carry 80 random bits and each account gets 8 wrong tries an hour;
+  `npm run seed-invites` carry about 80 random bits and each account gets 8 wrong tries an hour;
   if you type codes by hand in the console, make them just as long.
 
 ## Before you rely on it

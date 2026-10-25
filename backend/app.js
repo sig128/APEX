@@ -337,6 +337,9 @@ export function createApexApp({
     const cfg = billingConfig()
     res.set('Cache-Control', 'no-store').json({
       ok: true,
+      // the address rate limits see for you: after deploying it should be your own public IP,
+      // through the site and through the function URL alike (see APEX_TRUSTED_PROXIES)
+      you: clientIp(req),
       engine: { mode: s.mode, week: s.week, games: s.games, live: s.live, props: s.props, logs: s.logs, at: s.at },
       billing: { paywall: cfg.paywall, network: cfg.network, treasury: Boolean(cfg.treasury), docs: billing.docsKind },
       auth: authMode(),

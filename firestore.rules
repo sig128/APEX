@@ -28,40 +28,40 @@ service cloud.firestore {
 
     // Saved ANALYZE sessions (per user). Client writes only its own docs, in the shape the
     // analyzer writes, at most 60 a day (each save bumps pastGamesQuota in the same batch).
-    function str(v, n) {
+    function textOk(v, n) {
       return v is string && v.size() <= n;
     }
-    function optStr(m, k, n) {
-      return !(k in m) || str(m[k], n);
+    function optText(m, k, n) {
+      return !(k in m) || textOk(m[k], n);
     }
-    function strList(l, most, n) {
+    function textList(l, most, n) {
       return l is list && l.size() <= most
-        && (l.size() < 1 || str(l[0], n))
-        && (l.size() < 2 || str(l[1], n))
-        && (l.size() < 3 || str(l[2], n));
+        && (l.size() < 1 || textOk(l[0], n))
+        && (l.size() < 2 || textOk(l[1], n))
+        && (l.size() < 3 || textOk(l[2], n));
     }
     function gameOk(g) {
       return g is map
         && g.keys().hasOnly(['homeTeam', 'awayTeam', 'date', 'gameTime', 'stadium', 'homeStarter', 'awayStarter', 'bankroll', 'mlOdds', 'totalOu', 'context', 'sportKey', 'oddsEventId', 'commenceTimeIso'])
-        && optStr(g, 'homeTeam', 80) && optStr(g, 'awayTeam', 80) && optStr(g, 'date', 40) && optStr(g, 'gameTime', 40)
-        && optStr(g, 'stadium', 120) && optStr(g, 'homeStarter', 80) && optStr(g, 'awayStarter', 80) && optStr(g, 'bankroll', 40)
-        && optStr(g, 'mlOdds', 80) && optStr(g, 'totalOu', 80) && optStr(g, 'context', 4000) && optStr(g, 'sportKey', 60)
-        && optStr(g, 'oddsEventId', 64) && optStr(g, 'commenceTimeIso', 40);
+        && optText(g, 'homeTeam', 80) && optText(g, 'awayTeam', 80) && optText(g, 'date', 40) && optText(g, 'gameTime', 40)
+        && optText(g, 'stadium', 120) && optText(g, 'homeStarter', 80) && optText(g, 'awayStarter', 80) && optText(g, 'bankroll', 40)
+        && optText(g, 'mlOdds', 80) && optText(g, 'totalOu', 80) && optText(g, 'context', 4000) && optText(g, 'sportKey', 60)
+        && optText(g, 'oddsEventId', 64) && optText(g, 'commenceTimeIso', 40);
     }
     function cardsOk(b) {
       return b == null || (b is map
         && b.keys().hasOnly(['singleLegLock', 'twoLegParlay', 'threeLegParlay', 'quickReasoning', 'lineSource'])
-        && optStr(b, 'singleLegLock', 600) && optStr(b, 'lineSource', 200)
-        && (!('twoLegParlay' in b) || strList(b.twoLegParlay, 2, 600))
-        && (!('threeLegParlay' in b) || strList(b.threeLegParlay, 3, 600))
+        && optText(b, 'singleLegLock', 600) && optText(b, 'lineSource', 200)
+        && (!('twoLegParlay' in b) || textList(b.twoLegParlay, 2, 600))
+        && (!('threeLegParlay' in b) || textList(b.threeLegParlay, 3, 600))
         && (!('quickReasoning' in b) || (b.quickReasoning is map
           && b.quickReasoning.keys().hasOnly(['singleLegLock', 'twoLegParlay', 'threeLegParlay'])
-          && optStr(b.quickReasoning, 'singleLegLock', 2000) && optStr(b.quickReasoning, 'twoLegParlay', 2000) && optStr(b.quickReasoning, 'threeLegParlay', 2000))));
+          && optText(b.quickReasoning, 'singleLegLock', 2000) && optText(b.quickReasoning, 'twoLegParlay', 2000) && optText(b.quickReasoning, 'threeLegParlay', 2000))));
     }
     function pastGameOk(d) {
       return d.keys().hasOnly(['userId', 'homeTeam', 'awayTeam', 'gameDate', 'gameTime', 'game', 'betCards', 'analyzedAt', 'updatedAt'])
         && d.userId == request.auth.uid
-        && str(d.homeTeam, 80) && str(d.awayTeam, 80) && str(d.gameDate, 40) && str(d.gameTime, 40)
+        && textOk(d.homeTeam, 80) && textOk(d.awayTeam, 80) && textOk(d.gameDate, 40) && textOk(d.gameTime, 40)
         && gameOk(d.game) && cardsOk(d.betCards)
         && d.updatedAt == request.time;
     }
