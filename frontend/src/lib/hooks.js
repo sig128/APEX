@@ -1,19 +1,23 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-/** Width of an element, kept current as it resizes. */
+/**
+ * Width of an element, kept current as it resizes. Returns a callback ref, so it follows the
+ * element even when it mounts later (a chart that first rendered an empty state).
+ */
 export function useWidth(initial = 600) {
-  const ref = useRef(null)
   const [w, setW] = useState(initial)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return undefined
+  const ro = useRef(null)
+  const ref = useCallback((el) => {
+    ro.current?.disconnect()
+    ro.current = null
+    if (!el) return
     const set = () => setW(Math.max(120, Math.round(el.getBoundingClientRect().width)))
     set()
-    if (typeof ResizeObserver === 'undefined') return undefined
-    const ro = new ResizeObserver(set)
-    ro.observe(el)
-    return () => ro.disconnect()
+    if (typeof ResizeObserver === 'undefined') return
+    ro.current = new ResizeObserver(set)
+    ro.current.observe(el)
   }, [])
+  useEffect(() => () => ro.current?.disconnect(), [])
   return [ref, w]
 }
 

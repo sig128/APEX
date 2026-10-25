@@ -4,8 +4,12 @@ import { createPortal } from 'react-dom'
 /** A modal sheet: traps focus, closes on Escape or a click outside, returns focus after. */
 export function Dialog({ open, onClose, title, children, wide = false, labelledBy }) {
   const ref = useRef(null)
+  // the latest onClose, without re-running the focus setup every time the parent renders
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
   useEffect(() => {
     if (!open) return undefined
+    const onClose = () => closeRef.current?.()
     const prev = document.activeElement
     const el = ref.current
     const focusables = () => [...el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter((x) => !x.disabled && x.offsetParent !== null)
@@ -32,7 +36,7 @@ export function Dialog({ open, onClose, title, children, wide = false, labelledB
       document.body.style.overflow = overflow
       prev?.focus?.()
     }
-  }, [open, onClose])
+  }, [open])
   if (!open) return null
   return createPortal(
     <div className="dialog" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
