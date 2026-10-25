@@ -1,0 +1,1011 @@
+<div class="notif" id="notif">✓ COPIED TO CLIPBOARD</div>
+
+<div class="apex-layout">
+  <aside class="tabs apex-sidebar" id="apex-sidebar" aria-label="Main navigation">
+    <div class="apex-sidebar-nav">
+      <div class="apex-sidebar-toggle-host">
+        <button
+          type="button"
+          class="apex-sidebar-toggle"
+          id="apex-sidebar-toggle"
+          aria-expanded="true"
+          aria-controls="apex-sidebar"
+          title="Collapse navigation"
+        >
+          <span class="apex-sidebar-toggle-arrow" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="tab on" data-t="t1"><span class="tab-ico" aria-hidden="true">⚡</span><span class="tab-text">ANALYZER</span></div>
+      <div class="tab" data-t="t11"><span class="tab-ico" aria-hidden="true">🔍</span><span class="tab-text">ROSTER SCAN</span></div>
+      <div class="tab" data-t="t12"><span class="tab-ico" aria-hidden="true">📋</span><span class="tab-text">SAMPLE OUTPUT</span></div>
+      <div class="tab" data-t="t2"><span class="tab-ico" aria-hidden="true">🔒</span><span class="tab-text">3-LEG LOCK</span></div>
+      <div class="tab" data-t="t3"><span class="tab-ico" aria-hidden="true">📐</span><span class="tab-text">PRINCIPLES</span></div>
+      <div class="tab" data-t="t4"><span class="tab-ico" aria-hidden="true">🔬</span><span class="tab-text">PHASES</span></div>
+      <div class="tab" data-t="t5"><span class="tab-ico" aria-hidden="true">🔗</span><span class="tab-text">CORRELATIONS</span></div>
+      <div class="tab" data-t="t6"><span class="tab-ico" aria-hidden="true">🛡️</span><span class="tab-text">BANKROLL</span></div>
+      <div class="tab" data-t="t8"><span class="tab-ico" aria-hidden="true">🎯</span><span class="tab-text">LINEMAKER</span></div>
+      <div class="tab" data-t="t9"><span class="tab-ico" aria-hidden="true">📡</span><span class="tab-text">LINE MOVE</span></div>
+      <div class="tab" data-t="t10"><span class="tab-ico" aria-hidden="true">⏱️</span><span class="tab-text">EXECUTION</span></div>
+      <div class="tab" data-t="t7"><span class="tab-ico" aria-hidden="true">📊</span><span class="tab-text">LEDGER</span></div>
+    </div>
+  </aside>
+  <div class="apex-sidebar-scrim" id="apex-sidebar-scrim" aria-hidden="true"></div>
+  <div class="apex-main">
+    <div class="hdr">
+      <div class="logo">APEX <span class="logo-ver">(BETA)</span></div>
+      <nav class="apex-top-nav" aria-label="Primary">
+        <a class="apex-top-nav-link" data-page="analyze" href="/apex">
+          <span class="apex-top-nav-link-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 12h3l2-5 4 10 2-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="apex-top-nav-link-label">Analyze</span>
+        </a>
+        <a class="apex-top-nav-link" data-page="mygames" href="/mygames">
+          <span class="apex-top-nav-link-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M8 9h8M8 13h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="apex-top-nav-link-label">My Games</span>
+        </a>
+        <a class="apex-top-nav-link" data-page="today" href="/today">
+          <span class="apex-top-nav-link-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="apex-top-nav-link-label">Today</span>
+        </a>
+      </nav>
+      <div class="hdr-actions" id="apex-hdr-actions" aria-label="Account and appearance"></div>
+    </div>
+<div class="wrap">
+
+<!-- TAB 1: ANALYZER -->
+<div class="tc on" id="t1">
+  <div class="apex-game-input-heading">
+    <div class="apex-team-search-ph">
+      <label class="apex-odds-sport-label" for="apex-odds-sport">League</label>
+      <div class="apex-team-search-row" role="search">
+        <div class="apex-team-search" role="search">
+          <span class="apex-team-search-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
+              <path d="M20 20l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <input
+            type="search"
+            id="apex-team-search"
+            class="apex-team-search-input"
+            placeholder="Search teams"
+            autocomplete="off"
+            enterkeyhint="search"
+            aria-label="Search teams by name"
+            aria-autocomplete="list"
+            aria-controls="apex-team-search-results"
+            aria-expanded="false"
+          />
+        </div>
+        <select id="apex-odds-sport" class="apex-odds-sport-select" aria-label="League filter for schedule search">
+          <option value="all">All Teams</option>
+          <option value="nfl">NFL</option>
+          <option value="nba">NBA</option>
+          <option value="mlb">MLB</option>
+          <option value="nhl">NHL</option>
+        </select>
+        <span id="apex-odds-sport-measure" class="apex-odds-sport-measure" aria-hidden="true"></span>
+      </div>
+      <div
+        id="apex-team-search-results"
+        class="apex-team-search-results"
+        hidden
+        role="listbox"
+        aria-label="Matching games"
+      ></div>
+    </div>
+  </div>
+  <section class="apex-quick-games-section" id="apex-schedule-games-section" aria-labelledby="apex-qg-section-title">
+    <div class="apex-qg-head">
+      <h2 class="apex-qg-title" id="apex-qg-section-title">Upcoming games</h2>
+    </div>
+    <p id="apex-qg-offseason" class="apex-qg-offseason" hidden role="status"></p>
+    <div class="apex-qg-carousel" id="apex-qg-carousel">
+      <div class="apex-qg-carousel-viewport">
+        <div class="apex-qg-carousel-track" id="apex-qg-carousel-track" aria-live="off"></div>
+      </div>
+    </div>
+  </section>
+  <div class="inp-panel">
+    <input type="hidden" id="apex-odds-event-id" value="" autocomplete="off" aria-hidden="true" />
+    <input type="hidden" id="apex-odds-commence-iso" value="" autocomplete="off" aria-hidden="true" />
+    <div class="igrid apex-game-main-igrid">
+      <div class="icell"><div class="ilbl"><span class="rq">★</span>HOME TEAM</div><input id="f1" placeholder="e.g. Toronto Blue Jays"/></div>
+      <div class="icell"><div class="ilbl"><span class="rq">★</span>AWAY TEAM</div><input id="f2" placeholder="e.g. New York Yankees"/></div>
+      <div class="icell"><div class="ilbl"><span class="rq">★</span>DATE</div><input id="f3" placeholder="e.g. April 10, 2026"/></div>
+      <div class="icell">
+        <div class="ilbl"><span class="rq">★</span>SPORT</div>
+        <select id="apex-analyze-sport" class="apex-analyze-sport-select" aria-label="Sport for AI analysis">
+          <option value="baseball_mlb">MLB</option>
+          <option value="icehockey_nhl">NHL</option>
+          <option value="basketball_nba">NBA</option>
+          <option value="americanfootball_nfl">NFL</option>
+        </select>
+      </div>
+    </div>
+    <div id="apex-game-input-advanced" class="apex-game-input-advanced" hidden>
+      <div class="igrid apex-game-context-grid">
+        <div class="icell"><div class="ilbl"><span class="op">OPT</span>CONTEXT</div><textarea id="f9" placeholder="Lineup confirmed, rivalry, bullpen state, etc."></textarea></div>
+      </div>
+      <div class="igrid">
+        <div class="icell"><div class="ilbl"><span class="op">OPT</span>GAME TIME</div><input id="f4" placeholder="e.g. 7:07 PM ET"/></div>
+      </div>
+      <div class="igrid">
+        <div class="icell"><div class="ilbl"><span class="op">OPT</span>STADIUM</div><input id="f5" placeholder="Auto-searched if blank"/></div>
+        <div class="icell"><div class="ilbl"><span class="op">OPT</span>HOME STARTER</div><input id="f6" placeholder="Auto-searched if blank"/></div>
+        <div class="icell"><div class="ilbl"><span class="op">OPT</span>AWAY STARTER</div><input id="f7" placeholder="Auto-searched if blank"/></div>
+        <div class="icell"><div class="ilbl"><span class="op">OPT</span>BANKROLL ($)</div><input id="f8" placeholder="For Kelly sizing"/></div>
+      </div>
+      <div class="igrid apex-game-advanced-odds-grid">
+        <div class="icell"><div class="ilbl"><span class="op">OPT</span>ML ODDS</div><input id="f10" placeholder="Home -160 / Away +140"/></div>
+        <div class="icell"><div class="ilbl"><span class="op">OPT</span>TOTAL (O/U)</div><input id="f11" placeholder="e.g. 8.5"/></div>
+      </div>
+    </div>
+    <div class="apex-game-actions-row">
+      <button type="button" class="apex-analyze-clear" id="apex-analyze-clear-btn" aria-label="Clear all game fields">
+        Clear
+      </button>
+      <button type="button" class="apex-advanced-toggle" id="apex-game-input-advanced-toggle" aria-expanded="false" aria-controls="apex-game-input-advanced">
+        Advanced options
+      </button>
+      <div class="apex-line-reasoning" id="apex-line-reasoning">
+        <button
+          type="button"
+          class="apex-line-reasoning-btn"
+          id="apex-line-reasoning-btn"
+          aria-expanded="false"
+          aria-haspopup="dialog"
+          aria-controls="apex-line-reasoning-popover"
+        >
+          Line reasoning
+        </button>
+        <div
+          class="apex-line-reasoning-popover"
+          id="apex-line-reasoning-popover"
+          role="dialog"
+          aria-label="Line reasoning depth"
+          hidden
+        >
+          <div class="apex-line-reasoning-popover-inner">
+            <div class="apex-line-reasoning-option">
+              <label class="apex-line-reasoning-label">
+                <input type="radio" name="apex-line-reasoning" value="compact" />
+                <span class="apex-line-reasoning-option-title">Compact</span>
+                <span class="apex-line-reasoning-option-desc">Fast with compressed reasoning — light on tokens.</span>
+              </label>
+            </div>
+            <div class="apex-line-reasoning-option">
+              <label class="apex-line-reasoning-label">
+                <input type="radio" name="apex-line-reasoning" value="mid" />
+                <span class="apex-line-reasoning-option-title">Balanced</span>
+                <span class="apex-line-reasoning-option-desc">Balanced depth, speed, and token use.</span>
+              </label>
+            </div>
+            <div class="apex-line-reasoning-option">
+              <label class="apex-line-reasoning-label">
+                <input type="radio" name="apex-line-reasoning" value="full" />
+                <span class="apex-line-reasoning-option-title">Full</span>
+                <span class="apex-line-reasoning-option-desc">Slowest run — maximum reasoning and highest token use.</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="apex-line-reasoning" id="apex-mlb-scope">
+        <button
+          type="button"
+          class="apex-line-reasoning-btn"
+          id="apex-mlb-scope-btn"
+          aria-expanded="false"
+          aria-haspopup="dialog"
+          aria-controls="apex-mlb-scope-popover"
+        >
+          Line type
+        </button>
+        <div
+          class="apex-line-reasoning-popover"
+          id="apex-mlb-scope-popover"
+          role="dialog"
+          aria-label="Line type"
+          hidden
+        >
+          <div class="apex-line-reasoning-popover-inner">
+            <div class="apex-line-reasoning-option">
+              <label class="apex-line-reasoning-label">
+                <input type="radio" name="apex-mlb-betting-scope" value="full_board" />
+                <span class="apex-line-reasoning-option-title">Full board</span>
+                <span class="apex-line-reasoning-option-desc">Moneyline, spreads, totals, and player props — full APEX output.</span>
+              </label>
+            </div>
+            <div class="apex-line-reasoning-option">
+              <label class="apex-line-reasoning-label">
+                <input type="radio" name="apex-mlb-betting-scope" value="player_props" checked />
+                <span class="apex-line-reasoning-option-title">Player props</span>
+                <span class="apex-line-reasoning-option-desc">Individual player props only — exclusivity mandate (no ML / sides / totals).</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="apex-game-actions-analyze-wrap" id="apex-game-actions-analyze-wrap">
+        <div
+          class="apex-picked-game"
+          id="apex-picked-game"
+          hidden
+          aria-live="polite"
+          aria-label="Selected matchup from schedule"
+        >
+          <div class="apex-picked-game-logos">
+            <span class="apex-picked-game-logo-wrap" id="apex-picked-game-away-logo-wrap"></span>
+            <span class="apex-picked-game-vs" aria-hidden="true">@</span>
+            <span class="apex-picked-game-logo-wrap" id="apex-picked-game-home-logo-wrap"></span>
+          </div>
+          <div class="apex-picked-game-text">
+            <span class="apex-picked-game-label">Picked game</span>
+            <span class="apex-picked-game-matchup" id="apex-picked-game-matchup"></span>
+          </div>
+        </div>
+        <div class="apex-analyze-btn-and-timer">
+          <button class="abtn" id="abtn" type="button">Analyze</button>
+          <span
+            class="apex-analyze-countdown"
+            id="apex-analyze-countdown"
+            hidden
+            aria-live="polite"
+          ></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <section
+    class="apex-player-props-carousel-section apex-quick-games-section"
+    id="apex-player-props-carousel-section"
+    aria-label="Player prop lines and sportsbook"
+  >
+    <div class="apex-ppc-head">
+      <div class="apex-ppc-hint-row">
+        <span class="apex-ppc-hint" id="apex-ppc-hint">Sample data — live odds coming soon</span>
+        <select
+          id="apex-ppc-book"
+          class="apex-ppc-book-select"
+          hidden
+          aria-label="Sportsbook for featured prop odds"
+        ></select>
+      </div>
+    </div>
+    <div class="apex-qg-carousel" id="apex-player-props-carousel">
+      <div
+        class="apex-qg-carousel-viewport apex-qg-carousel-viewport--ticker apex-ppc-carousel-viewport"
+        id="apex-ppc-viewport"
+      >
+        <div class="apex-qg-carousel-track apex-ppc-track" id="apex-ppc-track"></div>
+      </div>
+    </div>
+  </section>
+  <section id="apex-bet-cards" class="apex-bet-cards" hidden aria-label="Recommended plays for this game"></section>
+  <div class="prm" id="prm">
+    <div class="prm-h">
+      <div class="prm-subtabs">
+        <button type="button" class="prm-subtab" id="prm-sub-past">Past Games</button>
+      </div>
+    </div>
+    <div class="prm-pane prm-pane--chat on" id="prm-pane-chat">
+      <div class="chat-wrap">
+        <div class="chat-log" id="chat-log"><div class="chat-placeholder" id="chat-placeholder">Run ⚡ ANALYZE to generate the full APEX breakdown. Then ask questions about that game here.</div></div>
+        <div class="chat-compose">
+          <textarea id="chat-input" placeholder="Follow-up question about this game…" rows="2" disabled></textarea>
+          <button type="button" class="sendbtn" id="sendbtn" disabled>SEND</button>
+        </div>
+      </div>
+    </div>
+    <div class="prm-pane prm-pane--past" id="prm-pane-past">
+      <p class="past-games-hint" id="past-games-hint"></p>
+      <div class="past-games-list" id="past-games-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Fullscreen Analyze page (shown after clicking Analyze) -->
+<section class="apex-analyze-page" id="apex-analyze-page" hidden aria-label="Analysis results">
+  <div class="apex-analyze-page-top">
+    <button type="button" class="apex-analyze-page-back" id="apex-analyze-page-back" aria-label="Back to analyzer">‹</button>
+    <div class="apex-analyze-page-head">
+      <div class="apex-analyze-page-ticker">
+        <div class="apex-analyze-page-team">
+          <div class="apex-analyze-page-logo">
+            <img class="apex-analyze-page-logo-img" id="apex-analyze-page-away-logo" alt="" hidden />
+            <span class="apex-analyze-page-logo-fallback" id="apex-analyze-page-away-logo-fallback">A</span>
+          </div>
+          <div class="apex-analyze-page-team-name" id="apex-analyze-page-away-name">Away</div>
+        </div>
+        <div class="apex-analyze-page-mid">
+          <div class="apex-analyze-page-day" id="apex-analyze-page-when">—</div>
+          <div class="apex-analyze-page-time" id="apex-analyze-page-time">—</div>
+        </div>
+        <div class="apex-analyze-page-team">
+          <div class="apex-analyze-page-logo">
+            <img class="apex-analyze-page-logo-img" id="apex-analyze-page-home-logo" alt="" hidden />
+            <span class="apex-analyze-page-logo-fallback" id="apex-analyze-page-home-logo-fallback">H</span>
+          </div>
+          <div class="apex-analyze-page-team-name" id="apex-analyze-page-home-name">Home</div>
+        </div>
+      </div>
+      <div class="apex-analyze-page-analyzed-at" id="apex-analyze-page-analyzed-at">Analyzed at —</div>
+    </div>
+  </div>
+  <div class="apex-analyze-page-body">
+    <div class="apex-analyze-page-live" id="apex-analyze-page-live">
+      <header class="apex-analyze-stream-head" id="apex-analyze-stream-head" hidden>
+        <span class="apex-analyze-stream-head-kicker" id="apex-analyze-stream-head-kicker">Line reasoning</span>
+        <span class="apex-analyze-mode-badge" id="apex-analyze-mode-badge"></span>
+      </header>
+      <div class="apex-analyze-stream-body">
+        <pre class="apex-stream-live" id="apex-analyze-page-pre" aria-live="polite"></pre>
+        <div class="apex-analyze-loading" id="apex-analyze-loading" aria-live="polite" aria-atomic="true">
+          <div class="apex-analyze-loading-sheen" aria-hidden="true"></div>
+          <div class="apex-analyze-loading-inner">
+            <div class="apex-analyze-loading-viz" aria-hidden="true">
+              <div class="apex-analyze-loading-rings">
+                <div class="apex-analyze-loading-ring"></div>
+                <div class="apex-analyze-loading-ring apex-analyze-loading-ring--reverse"></div>
+              </div>
+              <div class="apex-analyze-loading-core"></div>
+              <div class="apex-analyze-loading-orbit">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+            <div class="apex-analyze-loading-mode-block">
+              <span class="apex-analyze-loading-mode-label" id="apex-analyze-loading-mode-label">Line reasoning</span>
+              <span class="apex-analyze-loading-mode" id="apex-analyze-loading-mode">Compact</span>
+              <span class="apex-analyze-loading-mode-hint" id="apex-analyze-loading-mode-hint"></span>
+            </div>
+            <div class="apex-analyze-loading-copy">
+              <span class="apex-analyze-loading-text" id="apex-analyze-loading-text">Thinking</span>
+              <span class="apex-analyze-loading-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <section class="apex-bet-cards" id="apex-analyze-page-bets" hidden aria-label="Recommended plays"></section>
+    <section class="apex-analyze-prop-ladder" id="apex-analyze-page-prop-ladder" hidden aria-label="Live MLB player prop lines for certified picks">
+      <div class="apex-analyze-prop-ladder-title">Live props · main + alt lines</div>
+      <div id="apex-analyze-page-prop-ladder-body" class="apex-analyze-prop-ladder-body"></div>
+    </section>
+    <section class="apex-analyze-page-reason" id="apex-analyze-page-reason" hidden aria-label="Quick reasoning">
+      <div class="apex-analyze-page-reason-title">Quick reasoning</div>
+      <div class="apex-analyze-page-reason-body" id="apex-analyze-page-reason-body"></div>
+    </section>
+  </div>
+</section>
+
+<!-- Today page -->
+<div class="tc" id="apex-today-page">
+  <div class="pnl">
+    <div class="apex-today-toolbar">
+      <span class="apex-today-toolbar-label">View</span>
+      <div class="apex-today-toggle" role="group" aria-label="Today layout">
+        <button type="button" class="apex-today-toggle-btn on" id="apex-today-toggle-carousel" data-today-layout="carousel">Carousel</button>
+        <button type="button" class="apex-today-toggle-btn" id="apex-today-toggle-grid" data-today-layout="grid">Grid</button>
+      </div>
+    </div>
+    <div class="apex-today-stack">
+      <section class="apex-today-league" data-sport="baseball_mlb">
+        <button
+          type="button"
+          class="apex-today-league-head"
+          id="apex-today-league-head-baseball_mlb"
+          aria-expanded="true"
+          aria-controls="apex-today-league-body-baseball_mlb"
+        >
+          <span class="apex-today-league-title">MLB</span>
+          <span class="apex-today-league-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div
+          class="apex-today-league-body"
+          id="apex-today-league-body-baseball_mlb"
+          role="region"
+          aria-labelledby="apex-today-league-head-baseball_mlb"
+        >
+          <p class="apex-today-offseason" hidden role="status"></p>
+          <div class="apex-today-carousel-wrap">
+            <div class="apex-today-row apex-qg-carousel">
+              <div class="apex-qg-carousel-viewport">
+                <div class="apex-qg-carousel-track" data-role="row-track" aria-live="off"></div>
+              </div>
+            </div>
+          </div>
+          <div class="apex-today-grid" data-role="grid" hidden></div>
+        </div>
+      </section>
+      <section class="apex-today-league" data-sport="icehockey_nhl">
+        <button
+          type="button"
+          class="apex-today-league-head"
+          id="apex-today-league-head-icehockey_nhl"
+          aria-expanded="true"
+          aria-controls="apex-today-league-body-icehockey_nhl"
+        >
+          <span class="apex-today-league-title">NHL</span>
+          <span class="apex-today-league-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div
+          class="apex-today-league-body"
+          id="apex-today-league-body-icehockey_nhl"
+          role="region"
+          aria-labelledby="apex-today-league-head-icehockey_nhl"
+        >
+          <p class="apex-today-offseason" hidden role="status"></p>
+          <div class="apex-today-carousel-wrap">
+            <div class="apex-today-row apex-qg-carousel">
+              <div class="apex-qg-carousel-viewport">
+                <div class="apex-qg-carousel-track" data-role="row-track" aria-live="off"></div>
+              </div>
+            </div>
+          </div>
+          <div class="apex-today-grid" data-role="grid" hidden></div>
+        </div>
+      </section>
+      <section class="apex-today-league" data-sport="americanfootball_nfl">
+        <button
+          type="button"
+          class="apex-today-league-head"
+          id="apex-today-league-head-americanfootball_nfl"
+          aria-expanded="true"
+          aria-controls="apex-today-league-body-americanfootball_nfl"
+        >
+          <span class="apex-today-league-title">NFL</span>
+          <span class="apex-today-league-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div
+          class="apex-today-league-body"
+          id="apex-today-league-body-americanfootball_nfl"
+          role="region"
+          aria-labelledby="apex-today-league-head-americanfootball_nfl"
+        >
+          <p class="apex-today-offseason" hidden role="status"></p>
+          <div class="apex-today-carousel-wrap">
+            <div class="apex-today-row apex-qg-carousel">
+              <div class="apex-qg-carousel-viewport">
+                <div class="apex-qg-carousel-track" data-role="row-track" aria-live="off"></div>
+              </div>
+            </div>
+          </div>
+          <div class="apex-today-grid" data-role="grid" hidden></div>
+        </div>
+      </section>
+      <section class="apex-today-league" data-sport="basketball_nba">
+        <button
+          type="button"
+          class="apex-today-league-head"
+          id="apex-today-league-head-basketball_nba"
+          aria-expanded="true"
+          aria-controls="apex-today-league-body-basketball_nba"
+        >
+          <span class="apex-today-league-title">NBA</span>
+          <span class="apex-today-league-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div
+          class="apex-today-league-body"
+          id="apex-today-league-body-basketball_nba"
+          role="region"
+          aria-labelledby="apex-today-league-head-basketball_nba"
+        >
+          <p class="apex-today-offseason" hidden role="status"></p>
+          <div class="apex-today-carousel-wrap">
+            <div class="apex-today-row apex-qg-carousel">
+              <div class="apex-qg-carousel-viewport">
+                <div class="apex-qg-carousel-track" data-role="row-track" aria-live="off"></div>
+              </div>
+            </div>
+          </div>
+          <div class="apex-today-grid" data-role="grid" hidden></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 11: FULL ROSTER SCAN -->
+<div class="tc" id="t11">
+  <div class="pnl cy"><div class="ph"><span class="ph-t c">DUAL-TEAM FULL ROSTER PROP SCAN</span><span class="ph-s">EVERY PLAYER · EVERY PROP · BOTH TEAMS</span></div>
+    <div style="padding:12px 14px">
+      <div class="pi"><div class="pn c">R.01</div><div><div class="pt c">Exhaustive Coverage</div><div class="pd">Scan ALL available player props for BOTH teams — not just stars. Edges hide in 6-7-8 hitters and mid-rotation arms where books are laziest and public attention is lowest.</div></div></div>
+      <div class="pi"><div class="pn c">R.02</div><div><div class="pt c">Prop Categories Scanned</div><div class="pd">Hits O/U · Total Bases O/U · HRs O/U · RBIs O/U · Runs Scored O/U · Stolen Bases O/U · Walks O/U · Pitcher Ks O/U · Pitcher Outs O/U · Hits Allowed O/U · Earned Runs O/U · First Inning Props · Inning Props · Combo/SGP Props</div></div></div>
+      <div class="pi"><div class="pn c">R.03</div><div><div class="pt c">Both Starting Pitchers</div><div class="pd">Full K-prop deconstruction, hits allowed, earned runs, outs recorded, quality start probability, first-inning analysis for BOTH starters — not just the one you're fading.</div></div></div>
+      <div class="pi"><div class="pn c">R.04</div><div><div class="pt c">Cross-Team Prop Mixing</div><div class="pd">Best parlay legs can come from EITHER team. A Jays hitter + Yankees pitcher K prop + game total is legal and often has better correlation than same-team-only builds.</div></div></div>
+    </div>
+  </div>
+
+  <div class="pnl cy"><div class="ph"><span class="ph-t c">PLAYER PROFILING VARIABLES — PRO ODDSMAKER DEPTH</span><span class="ph-s">EVERY BATTER SCANNED</span></div>
+    <div style="padding:12px 14px">
+      <div class="pi"><div class="pn c">V.01</div><div><div class="pt c">Hot/Cold Streak Detection</div><div class="pd">L7D / L15D / L30D slash lines. wRC+ rolling window. Is the streak xStat-supported or BABIP luck? Sustainable streaks = edge. Lucky streaks = fade OVER.</div></div></div>
+      <div class="pi"><div class="pn c">V.02</div><div><div class="pt c">RISP Performance</div><div class="pd">BA/OBP/SLG with runners in scoring position — season + career + L30D. High RISP + projected high-scoring game = RBI prop OVER signal. Cross-ref with clutch index.</div></div></div>
+      <div class="pi"><div class="pn c">V.03</div><div><div class="pt c">OBP / Walk Rate / Discipline</div><div class="pd">BB% + O-Swing% + Chase Rate. Disciplined hitters extend ABs and reach base more. Key for Hits O0.5, Runs Scored, and bases-reached props.</div></div></div>
+      <div class="pi"><div class="pn c">V.04</div><div><div class="pt c">Platoon Splits (Granular)</div><div class="pd">Career + current season vs LHP and RHP separately. ISO splits, K% splits, BABIP splits. Some hitters have 100+ point OPS gaps by handedness.</div></div></div>
+      <div class="pi"><div class="pn c">V.05</div><div><div class="pt c">Batted Ball Profile</div><div class="pd">GB% / FB% / LD% + Pull% / Center% / Oppo%. Barrel% and HardHit%. EV90 (top 10% exit velo). xSLG. Launch angle tendencies. Match to park factors.</div></div></div>
+      <div class="pi"><div class="pn c">V.06</div><div><div class="pt c">Lineup Position & PA Volume</div><div class="pd">Today's lineup slot vs usual slot. PA/game expectation. Moving from 2nd to 6th = ~1 fewer PA = massive prop impact books may lag on.</div></div></div>
+      <div class="pi"><div class="pn c">V.07</div><div><div class="pt c">Batter vs Pitcher History</div><div class="pd">H2H stats BUT filtered by sample size. &lt;20 PA = noise, ignore. 40+ PA = meaningful. Check recency — recent H2H (last 2 seasons) matters more than career.</div></div></div>
+      <div class="pi"><div class="pn c">V.08</div><div><div class="pt c">Pitch Type Vulnerability</div><div class="pd">How does batter perform vs the starter's primary pitch mix? If starter throws 60% slider and batter whiffs 40% vs sliders = K prop OVER signal.</div></div></div>
+      <div class="pi"><div class="pn c">V.09</div><div><div class="pt c">Home/Away Splits</div><div class="pd">Some hitters have massive home/away splits. Park familiarity, comfort, travel fatigue, altitude adjustment all factor.</div></div></div>
+      <div class="pi"><div class="pn c">V.10</div><div><div class="pt c">Day/Night + Day-of-Week</div><div class="pd">Day game after night game = fatigue. Some hitters historically hit differently day vs night. Thursday getaway games = lineup rest risk.</div></div></div>
+      <div class="pi"><div class="pn c">V.11</div><div><div class="pt c">Speed & Stolen Base Profile</div><div class="pd">Sprint speed, SB attempts, success rate, catcher pop time, pitcher slide step. For SB props and runs scored probability.</div></div></div>
+      <div class="pi"><div class="pn c">V.12</div><div><div class="pt c">Injury / Workload Flags</div><div class="pd">Recent IL stints, pitch count limits, nagging injuries, pinch-hit risk. If a hitter might get pulled in the 6th, UNDER props gain edge.</div></div></div>
+    </div>
+  </div>
+
+  <div class="pnl cy"><div class="ph"><span class="ph-t c">PITCHER PROFILING — BOTH STARTERS + BULLPEN ARMS</span></div>
+    <div style="padding:12px 14px">
+      <div class="pi"><div class="pn c">P.01</div><div><div class="pt c">Pitch Mix & Movement</div><div class="pd">Primary/secondary/tertiary pitch usage %, velocity trends, spin rates, movement profiles. Declining velo = regression flag for K props.</div></div></div>
+      <div class="pi"><div class="pn c">P.02</div><div><div class="pt c">First Inning Tendencies</div><div class="pd">1st inning ERA, WHIP, K rate — some pitchers are vulnerable early before settling in. First inning props are a separate market.</div></div></div>
+      <div class="pi"><div class="pn c">P.03</div><div><div class="pt c">Pitch Count & Deep Game Prob</div><div class="pd">Avg pitches/start, pitches per inning efficiency. Affects total K ceiling and when bullpen takes over.</div></div></div>
+      <div class="pi"><div class="pn c">P.04</div><div><div class="pt c">Times Through Order Penalty</div><div class="pd">Most pitchers degrade 3rd time through lineup. If starter is projected for only 5 IP, K ceiling is capped regardless of K/9.</div></div></div>
+      <div class="pi"><div class="pn c">P.05</div><div><div class="pt c">Bullpen Cascade Effect</div><div class="pd">If starter exits early, which relievers enter? Their K rates, hit rates, and run prevention affect late-game player props for BOTH teams.</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: 3-LEG LOCK -->
+<div class="tc" id="t2">
+  <div class="lock">
+    <div class="lock-h"><span style="font-size:26px">🔒</span><div><div class="lock-tt">3-Leg Lock Parlay</div><div class="lock-st">LEGS CAN COME FROM EITHER TEAM</div></div></div>
+    <div class="lock-body">
+      <div class="ls"><div class="ls-l">3-LEG @ 70%/LEG</div><div class="ls-v">+104%</div><div class="ls-s">ROI · Combined: 34%</div></div>
+      <div class="ls"><div class="ls-l">5-LEG @ 70%/LEG</div><div class="ls-v">+42%</div><div class="ls-s">ROI · Combined: 17%</div></div>
+      <div class="ls"><div class="ls-l">ADVANTAGE</div><div class="ls-v">2.4×</div><div class="ls-s">More ROI vs 5-leg</div></div>
+    </div>
+  </div>
+  <div class="pnl prp"><div class="ph"><span class="ph-t p">SLCM CERTIFICATION TIERS</span></div>
+    <div class="mrow" style="background:rgba(176,122,255,0.04)"><span class="ml">⭐ APEX PRIME — All 6 + RLM + ≥12%</span><span class="mv prp">Max Kelly</span></div>
+    <div class="mrow"><span class="ml">✅ APEX STANDARD — All 6 + ≥8%</span><span class="mv prp">Standard Kelly</span></div>
+    <div class="mrow"><span class="ml">👁️ APEX MONITOR — 4-5 of 6, 5-8%</span><span class="mv org">Track only</span></div>
+    <div class="mrow" style="background:rgba(232,60,60,0.04)"><span class="ml">❌ NO PLAY — &lt;4 criteria or violation</span><span class="mv rd">PASS</span></div>
+  </div>
+  <div class="pnl"><div class="ph"><span class="ph-t t">EDGE MINIMUMS</span></div>
+    <div class="mrow"><span class="ml">Moneyline</span><span class="mv grn">≥ 5%</span></div>
+    <div class="mrow"><span class="ml">Run total / F5</span><span class="mv grn">≥ 0.8 runs</span></div>
+    <div class="mrow"><span class="ml">K prop</span><span class="mv grn">≥ 0.8 K gap</span></div>
+    <div class="mrow"><span class="ml">Hit prop</span><span class="mv grn">≥ 8% implied prob</span></div>
+    <div class="mrow"><span class="ml">TB prop (O1.5) xTB</span><span class="mv grn">≥ 1.72</span></div>
+    <div class="mrow"><span class="ml">Hit prop (O0.5)</span><span class="mv grn">≥ 72%</span></div>
+    <div class="mrow"><span class="ml">Leg floor</span><span class="mv gld">≥ 65%</span></div>
+  </div>
+</div>
+
+<!-- TAB 3: PRINCIPLES (compact) -->
+<div class="tc" id="t3">
+  <div class="cols">
+    <div class="pnl"><div class="ph"><span class="ph-t t">CORE PRINCIPLES</span><span class="ph-s">10 LAWS</span></div><div style="padding:10px 12px">
+      <div class="pi"><div class="pn">01</div><div><div class="pt">Edge or Pass</div><div class="pd">No bet without edge exceeding vig.</div></div></div>
+      <div class="pi"><div class="pn">02</div><div><div class="pt">Sample Integrity</div><div class="pd">Reliable samples only.</div></div></div>
+      <div class="pi"><div class="pn">03</div><div><div class="pt">Sharp Over Public</div><div class="pd">Sharp = signal. Public = noise.</div></div></div>
+      <div class="pi"><div class="pn">04</div><div><div class="pt">Correlation Intel</div><div class="pd">Exploit +, eliminate −.</div></div></div>
+      <div class="pi"><div class="pn">05</div><div><div class="pt">Bankroll Preservation</div><div class="pd">Lock 2% · Single 3% · Daily 5%</div></div></div>
+      <div class="pi"><div class="pn">06</div><div><div class="pt">Regression</div><div class="pd">Exploit regression to mean.</div></div></div>
+      <div class="pi"><div class="pn">07</div><div><div class="pt">Recency</div><div class="pd">Last 15 days > early season.</div></div></div>
+      <div class="pi"><div class="pn">08</div><div><div class="pt">3-Leg Above All</div><div class="pd">All ≥65% or PASS.</div></div></div>
+      <div class="pi"><div class="pn">09</div><div><div class="pt">Ledger</div><div class="pd">Recalibrate every 50 bets.</div></div></div>
+      <div class="pi"><div class="pn">10</div><div><div class="pt">+EV Only</div><div class="pd">Every leg independently +EV.</div></div></div>
+    </div></div>
+    <div class="pnl"><div class="ph"><span class="ph-t g">TEMPORAL ENGINE</span><span class="ph-s">6 TIERS</span></div>
+      <div class="mrow"><span class="ml" style="color:#ff6b6b;font-weight:700">ALPHA 1-15</span><span class="mv">Spring 35% · Career 40% · Prior 25%</span></div>
+      <div class="mrow"><span class="ml" style="color:#ffa94d;font-weight:700">BETA 16-40</span><span class="mv">Current 45% · Prior 35% · L15D 20%</span></div>
+      <div class="mrow"><span class="ml" style="color:var(--gold2);font-weight:700">GAMMA 41-80</span><span class="mv">Current 55% · L30D 30% · Prior 15%</span></div>
+      <div class="mrow"><span class="ml" style="color:var(--teal);font-weight:700">DELTA 81-120</span><span class="mv">L30D 45% · Current 40% · Prior 15%</span></div>
+      <div class="mrow"><span class="ml" style="color:var(--blue);font-weight:700">EPSILON 121-162</span><span class="mv">L15D 55% · L30D 30% · Current 15%</span></div>
+      <div class="mrow"><span class="ml" style="color:#cc7dff;font-weight:700">OMEGA Post</span><span class="mv">L15D 65% · Oct 25% · Season 10%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 4: PHASES -->
+<div class="tc" id="t4">
+  <div class="pnl"><div class="ph"><span class="ph-t g">10-PHASE ENGINE + SLCM + DUAL-TEAM OVERLAY</span><span class="ph-s"><span style="color:var(--purple)">PURPLE=SLCM</span> · <span style="color:var(--cyan)">CYAN=DUAL-TEAM</span></span></div>
+    <div class="pgrid">
+      <div class="pcell"><div class="pcn">00</div><div class="pct">Game ID</div><div class="pci">Both lineups</div><div class="pci">Both starters</div><div class="pci">All odds</div><div class="pci slcm">Line timing</div><div class="pci dual">Full roster scan</div></div>
+      <div class="pcell"><div class="pcn">02</div><div class="pct">Pitchers</div><div class="pci">Both SPs graded</div><div class="pci">K/BB projections</div><div class="pci slcm">K-prop deconstruct</div><div class="pci dual">Pitch mix vs lineup</div><div class="pci dual">TTO penalty</div></div>
+      <div class="pcell"><div class="pcn">03</div><div class="pct">All Hitters</div><div class="pci dual">Both lineups 1-9</div><div class="pci dual">Hot/cold + RISP</div><div class="pci dual">Platoon + batted ball</div><div class="pci slcm">xStat vs actual</div><div class="pci dual">PA volume adj</div></div>
+      <div class="pcell"><div class="pcn">04</div><div class="pct">Bullpens</div><div class="pci">Both pens graded</div><div class="pci slcm">Fatigue multiplier</div><div class="pci dual">Cascade effect</div><div class="pci slcm">Game script</div></div>
+      <div class="pcell"><div class="pcn">05</div><div class="pct">Park+Wx+Ump</div><div class="pci slcm">Granular PF</div><div class="pci slcm">Game-specific PF</div><div class="pci slcm">UAF formulas</div><div class="pci slcm">#1 soft spot</div></div>
+      <div class="pcell"><div class="pcn">06</div><div class="pct">Vegas</div><div class="pci">True line + vig</div><div class="pci slcm">RLM detection</div><div class="pci slcm">Cross-book shop</div><div class="pci slcm">Open vs current</div></div>
+      <div class="pcell"><div class="pcn">07</div><div class="pct">Simulation</div><div class="pci">10K sims</div><div class="pci">EV per $1</div><div class="pci slcm">6-criteria cert</div><div class="pci slcm">Confidence tier</div></div>
+      <div class="pcell"><div class="pcn">08</div><div class="pct">Correlation</div><div class="pci">All pairs scored</div><div class="pci slcm">Enhanced matrix</div><div class="pci dual">Cross-team combos</div><div class="pci">Auto-DQ negatives</div></div>
+      <div class="pcell"><div class="pcn">09</div><div class="pct">Prop Rank</div><div class="pci dual">ALL props ranked</div><div class="pci dual">Both teams merged</div><div class="pci dual">Top 20 edge table</div><div class="pci">Best parlay build</div></div>
+      <div class="pcell"><div class="pcn">10</div><div class="pct">Output</div><div class="pci">Master edge table</div><div class="pci">3-Leg Lock</div><div class="pci">2-Leg + 5-Leg</div><div class="pci">Kelly sizing</div><div class="pci slcm">Timing windows</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 5: CORRELATIONS -->
+<div class="tc" id="t5">
+  <div class="pnl"><div class="ph"><span class="ph-t b">CORRELATIONS — CROSS-TEAM ENABLED</span></div>
+    <div style="padding:10px 14px;border-bottom:1px solid var(--border2)">
+      <div style="font-size:9px;color:var(--teal);letter-spacing:1px;margin-bottom:6px">✓ IDEAL COMBINATIONS (SAME OR CROSS-TEAM)</div>
+      <div class="mrow"><span class="ml">Win ML + star hitter over hits (same team)</span><span class="mv grn">+8%</span></div>
+      <div class="mrow"><span class="ml">Pitcher K over + team ML (same team)</span><span class="mv grn">+6%</span></div>
+      <div class="mrow"><span class="ml">Under total + elite SP wins</span><span class="mv grn">+10%</span></div>
+      <div class="mrow"><span class="ml">Hot hitter hits + TB over (same player)</span><span class="mv grn">+12%</span></div>
+      <div class="mrow"><span class="ml">Pitcher K OVER + game UNDER</span><span class="mv prp">+2% per pair</span></div>
+      <div class="mrow"><span class="ml">Team total OVER + 1-4 hitters OVER</span><span class="mv prp">Stack exploit</span></div>
+      <div class="mrow"><span class="ml">Opp pitcher K UNDER + team hits OVER</span><span class="mv prp">Contact thesis</span></div>
+    </div>
+    <div style="padding:10px 14px">
+      <div style="font-size:9px;color:var(--red);letter-spacing:1px;margin-bottom:6px">✗ FORBIDDEN — AUTO DISQUALIFY</div>
+      <div class="mrow"><span class="ml">K Over + high-scoring over</span><span class="mv rd">NEVER</span></div>
+      <div class="mrow"><span class="ml">Under + star hitter 1.5+ hits</span><span class="mv rd">AVOID</span></div>
+      <div class="mrow"><span class="ml">Two opposing player props OVER</span><span class="mv rd">NEVER</span></div>
+      <div class="mrow"><span class="ml">Game UNDER + any hitting OVER</span><span class="mv rd">Contradictory</span></div>
+      <div class="mrow"><span class="ml">Pitcher K OVER + same team hitting OVER</span><span class="mv rd">Suppression</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 6: BANKROLL -->
+<div class="tc" id="t6">
+  <div class="pnl"><div class="ph"><span class="ph-t r">BANKROLL PROTECTION</span></div>
+    <div class="mrow"><span class="ml">3-Leg Lock max</span><span class="mv rd">2%</span></div>
+    <div class="mrow"><span class="ml">Single bet max</span><span class="mv rd">3%</span></div>
+    <div class="mrow"><span class="ml">Daily max</span><span class="mv rd">5%</span></div>
+    <div class="mrow"><span class="ml">Weekly max</span><span class="mv rd">15%</span></div>
+    <div class="mrow"><span class="ml">Max games/day</span><span class="mv ok">3</span></div>
+    <div class="mrow"><span class="ml">Recalibration</span><span class="mv ok">Every 50 bets</span></div>
+    <div class="mrow"><span class="ml">Chase losses</span><span class="mv rd">NEVER</span></div>
+    <div class="mrow"><span class="ml">Leg min probability</span><span class="mv rd">65%</span></div>
+  </div>
+</div>
+
+<!-- TAB 8: LINEMAKER -->
+<div class="tc" id="t8">
+  <div class="cols">
+    <div class="pnl prp"><div class="ph"><span class="ph-t p">K-PROP BOOK WEIGHTS</span></div>
+      <table class="bwt"><tr><th>FACTOR</th><th>WT</th><th>APEX COUNTER</th></tr>
+      <tr><td>Rolling K/9</td><td>25%</td><td>xK% cross-ref. >15% diverge = stale</td></tr>
+      <tr><td>Opp lineup K%</td><td>20%</td><td>Platoon decompose. 3+ swaps = stale</td></tr>
+      <tr><td>SwStr%</td><td>15%</td><td>Most stable. Anchor here.</td></tr>
+      <tr><td>Pitch count</td><td>15%</td><td>Taxed pen = deeper start = more Ks</td></tr>
+      <tr><td>Umpire CSR</td><td>10%</td><td>#1 SOFT SPOT. Specific CSR.</td></tr>
+      <tr><td>Park K-factor</td><td>5%</td><td>Coors ↓ Petco ↑</td></tr>
+      <tr><td>Weather</td><td>5%</td><td>Cold = more Ks</td></tr>
+      <tr><td>Rest</td><td>5%</td><td>Extra rest = velo boost</td></tr></table>
+    </div>
+    <div class="pnl prp"><div class="ph"><span class="ph-t p">HIT PROP BOOK WEIGHTS</span></div>
+      <table class="bwt"><tr><th>FACTOR</th><th>WT</th><th>APEX COUNTER</th></tr>
+      <tr><td>H2H</td><td>15%</td><td>&lt;20 PA = NOISE. Fade.</td></tr>
+      <tr><td>Rolling slash</td><td>25%</td><td>xBA/xSLG compare. BABIP inflates.</td></tr>
+      <tr><td>Platoon</td><td>15%</td><td>Career 70/30 early. 50/50 late.</td></tr>
+      <tr><td>Order (PA vol)</td><td>15%</td><td>Slot changes = STALE.</td></tr>
+      <tr><td>Park</td><td>10%</td><td>By batted ball type.</td></tr>
+      <tr><td>Weather</td><td>10%</td><td>>80°F = HR boost.</td></tr>
+      <tr><td>Pitcher HardHit%</td><td>10%</td><td>>40% = uplift all.</td></tr></table>
+    </div>
+  </div>
+  <div class="pnl prp"><div class="ph"><span class="ph-t p">UAF FORMULAS + 6-CRITERIA CERT</span></div>
+    <div class="mrow"><span class="ml">K props: Raw × (1 + (CSR−.32) × 2.5)</span><span class="mv prp">Ump #1 soft spot</span></div>
+    <div class="mrow"><span class="ml">Hit props: Raw × (1 − (CSR−.32) × 1.2)</span><span class="mv prp">Zone expansion</span></div>
+    <div class="mrow"><span class="ml">Run/RBI: Raw × (1 − (CSR−.32) × 0.8)</span><span class="mv prp">Scoring suppression</span></div>
+    <div class="mrow" style="border-top:1px solid var(--border);margin-top:4px;padding-top:10px"><span class="ml">6 Criteria: Divergence + Public fade + UAF + Timing + No neg corr + Game script</span><span class="mv prp">ALL REQUIRED</span></div>
+  </div>
+</div>
+
+<!-- TAB 9: LINE MOVEMENT -->
+<div class="tc" id="t9">
+  <div class="pnl prp"><div class="ph"><span class="ph-t p">LINE MOVEMENT INTELLIGENCE</span></div>
+    <div class="mrow"><span class="ml">Reverse Line Movement (against public %)</span><span class="mv prp">Sharp signal → +1 tier</span></div>
+    <div class="mrow"><span class="ml">Open vs Current ≥1.0 unit move</span><span class="mv prp">Investigate direction</span></div>
+    <div class="mrow"><span class="ml">Cross-book outlier ≥0.5 units</span><span class="mv prp">Best number hunt</span></div>
+    <div class="mrow"><span class="ml">EARLY MARKET (pre-lineup)</span><span class="mv org">HIGH edge potential</span></div>
+    <div class="mrow"><span class="ml">POST-LINEUP</span><span class="mv prp">Under-adjustments = edge</span></div>
+    <div class="mrow"><span class="ml">LATE (&lt;60min)</span><span class="mv rd">Elevated evidence only</span></div>
+  </div>
+</div>
+
+<!-- TAB 10: EXECUTION -->
+<div class="tc" id="t10">
+  <div class="pnl prp"><div class="ph"><span class="ph-t p">TIMING + CHECKLIST</span></div>
+    <div class="mrow"><span class="ml">Window 1: Post-lineup, pre-umpire</span><span class="mv prp">Hitting props</span></div>
+    <div class="mrow"><span class="ml">Window 2: Post-umpire</span><span class="mv prp">K + game totals</span></div>
+    <div class="mrow"><span class="ml">Window 3: 30-60min pre-game</span><span class="mv prp">HR, TB (outdoor)</span></div>
+    <div class="mrow" style="border-top:1px solid var(--border)"><span class="ml">☐ Lineups · ☐ Umpire · ☐ Weather · ☐ No scratches · ☐ Price intact</span><span class="mv ok">VERIFY ALL</span></div>
+  </div>
+</div>
+
+<!-- TAB 12: SAMPLE OUTPUT (TOR vs COL Apr 1 2026) -->
+<div class="tc" id="t12">
+  <div class="rep-hd">
+    <div>
+      <div class="rep-t">APEX MLB Intelligence v4.0 + SLCM</div>
+      <div class="rep-sub">COL Rockies @ TOR Blue Jays · April 1, 2026 · 1:07 PM ET · Rogers Centre</div>
+    </div>
+    <div><span class="rep-badge">ALPHA Tier · Game 5 of 162</span></div>
+  </div>
+
+  <div class="rep-lbl">Phase 1 · Temporal Calibration</div>
+  <div class="rep-g3">
+    <div class="rep-cell"><div class="rl">Season position</div><div class="rv">Game 5</div><div class="rs">ALPHA Tier</div></div>
+    <div class="rep-cell"><div class="rl">Current season wt.</div><div class="rv">35%</div><div class="rs">Spring Training proxy</div></div>
+    <div class="rep-cell"><div class="rl">Career/prior wt.</div><div class="rv">65%</div><div class="rs">2025 + career base</div></div>
+  </div>
+
+  <div class="rep-lbl">Phase 2 · Pitcher Intelligence</div>
+  <div class="rep-g2">
+    <div class="rep-pitch">
+      <div class="rep-pname">Kevin Gausman — TOR SP</div>
+      <span class="rep-tag g">Elite Stuff A+</span><span class="rep-tag g">Command A</span>
+      <div class="rep-stat"><span class="sl">2026 ERA (1 start)</span><span>1.50</span></div>
+      <div class="rep-stat"><span class="sl">K/9 this season</span><span>16.5</span></div>
+      <div class="rep-stat"><span class="sl">BAA this season</span><span>.053</span></div>
+      <div class="rep-stat"><span class="sl">Opening Day Ks</span><span>11 (in 6 IP, 0 BB)</span></div>
+      <div class="rep-stat"><span class="sl">Splitter whiff rate</span><span>~52% (2026 Savant)</span></div>
+      <div class="rep-stat"><span class="sl">xwOBA vs (2026)</span><span>.211</span></div>
+      <div class="rep-stat"><span class="sl">Avg Exit Vel</span><span>88.1 mph</span></div>
+      <div class="rep-stat"><span class="sl">Projected K/9 today</span><span>13.5–16.5 range</span></div>
+      <div class="rep-stat"><span class="sl">Stuff Grade</span><span>95/100</span></div>
+      <div class="rep-stat"><span class="sl">Command Grade</span><span>92/100</span></div>
+    </div>
+    <div class="rep-pitch">
+      <div class="rep-pname">Kyle Freeland — COL SP</div>
+      <span class="rep-tag a">Fringe #3 stuff</span><span class="rep-tag r">Road ERA risk</span>
+      <div class="rep-stat"><span class="sl">2026 ERA (1 start)</span><span>4.15</span></div>
+      <div class="rep-stat"><span class="sl">K/9 this season</span><span>4.2</span></div>
+      <div class="rep-stat"><span class="sl">2025 full ERA</span><span>4.98</span></div>
+      <div class="rep-stat"><span class="sl">2025 WHIP</span><span>1.42</span></div>
+      <div class="rep-stat"><span class="sl">vs TOR career ERA</span><span>9.31</span></div>
+      <div class="rep-stat"><span class="sl">HRs allowed (3yr avg)</span><span>22+ / season</span></div>
+      <div class="rep-stat"><span class="sl">Ground ball % (2025)</span><span>~51% (gb-heavy)</span></div>
+      <div class="rep-stat"><span class="sl">Stuff Grade</span><span>52/100</span></div>
+      <div class="rep-stat"><span class="sl">Command Grade</span><span>63/100</span></div>
+    </div>
+  </div>
+  <div class="rep-intel">Gausman is in a historically elite early-season stretch. The Rockies' lineup is 16th in MLB in OPS despite Monday's fluky 14-run game (vs. Cody Ponce, now injured). Colorado's .219 BAA in Game 2 vs. Scherzer reinforces a lineup that is easily suppressed by premium spin/splitter arms. Freeland's 9.31 career ERA vs. Toronto is a significant quality marker — road Freeland is a negative-value start against a power lineup like TOR's.</div>
+
+  <div class="rep-lbl">Phase 3 · Hitter Intelligence</div>
+  <div class="rep-g2">
+    <div class="rep-pitch">
+      <div class="rep-pname">TOR Key Hitters vs. Freeland</div>
+      <div class="rep-stat"><span class="sl">Vlad Jr. — 2025 SLG</span><span>.467 / 57 XBH</span></div>
+      <div class="rep-stat"><span class="sl">Vlad Jr. last 5G avg TB</span><span>2.6 / game</span></div>
+      <div class="rep-stat"><span class="sl">Vlad Jr. HR rate (last 5)</span><span>HR in 60% of games</span></div>
+      <div class="rep-stat"><span class="sl">Springer — 2026 HRs</span><span>2 (in 5 games)</span></div>
+      <div class="rep-stat"><span class="sl">Springer vs. Freeland</span><span>3-for-6 career</span></div>
+      <div class="rep-stat"><span class="sl">Gimenez — 2026 avg</span><span>.444 (8-for-18)</span></div>
+      <div class="rep-stat"><span class="sl">Varsho vs. COL staff</span><span>1.049 OPS career</span></div>
+      <div class="rep-stat"><span class="sl">Varsho vs. Freeland</span><span>3-for-7 (.429)</span></div>
+      <div class="rep-stat"><span class="sl">TOR runs/game 2026</span><span>5.2 avg</span></div>
+      <div class="rep-stat"><span class="sl">TOR over 4.5 runs</span><span>4-of-5 games (80%)</span></div>
+    </div>
+    <div class="rep-pitch">
+      <div class="rep-pname">COL Hitters vs. Gausman</div>
+      <div class="rep-stat"><span class="sl">COL OPS (16th in MLB)</span><span>excl. MON anomaly</span></div>
+      <div class="rep-stat"><span class="sl">Game 2 vs Scherzer BAA</span><span>.219 (7 H / 32 AB)</span></div>
+      <div class="rep-stat"><span class="sl">Tovar — hits streak</span><span>5 games with 1+ hit</span></div>
+      <div class="rep-stat"><span class="sl">Rumfield — last 2G</span><span>6 hits (hot streak)</span></div>
+      <div class="rep-stat"><span class="sl">Team K rate vs elite SPs</span><span>High (50 Ks vs TOR staff)</span></div>
+      <div class="rep-stat"><span class="sl">vs. splitter specialists</span><span>Poor historical</span></div>
+      <div class="rep-stat"><span class="sl">Proj. Ks vs Gausman</span><span>9–13 expected</span></div>
+    </div>
+  </div>
+
+  <div class="rep-lbl">Phase 4 · Bullpen Intelligence</div>
+  <div class="rep-g2">
+    <div class="rep-cell" style="border:1px solid var(--border)">
+      <div class="rl">TOR Bullpen (BQI)</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin:6px 0">Moderate usage — Game 2</div>
+      <div class="rs">Fisher (1.1 IP, 23p) + Hoffman (1 IP, 15p) used Tue. Fluharty (0.2 IP) also used Mon. Jeff Hoffman is TOR's closer — available today. Key relievers have moderate workload. With Gausman projected 6+ IP, bullpen exposure is limited. BQI: 74/100</div>
+    </div>
+    <div class="rep-cell" style="border:1px solid var(--border)">
+      <div class="rl">COL Bullpen (BQI)</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin:6px 0">Shaky — 5.14 ERA early</div>
+      <div class="rs">Agnos (2 IP, 45p, 3 ER) and Mejia (1.1 IP, 38p, 2 ER) both heavily used Tue. Hill and Bernardino less taxed. 4 HRs allowed by COL pen in 5 games. BQI: 38/100. Vulnerability window: innings 5–7 if Freeland exits early.</div>
+    </div>
+  </div>
+
+  <div class="rep-lbl">Phase 5–6 · Park Factor + Environment</div>
+  <div class="rep-g3">
+    <div class="rep-cell"><div class="rl">Rogers Centre</div><div class="rv sm">Neutral</div><div class="rs">Retractable roof — indoor conditions expected (39°F outside, April). Park HR factor: ~0.97. Turf surface, no wind variable. Environmental edge: nil.</div></div>
+    <div class="rep-cell"><div class="rl">Temperature</div><div class="rv">39°F</div><div class="rs">Outside — roof likely closed. Indoor ~68°F. No precipitation risk. Neutral for offense.</div></div>
+    <div class="rep-cell"><div class="rl">Run environment</div><div class="rv sm">Neutral</div><div class="rs">Closed dome: no suppression from cold. Total of 7.5 reflects this correctly. Park factor ≈1.0 indoor.</div></div>
+  </div>
+
+  <div class="rep-lbl">Phase 7 · Umpire Intelligence</div>
+  <div class="pnl" style="margin-bottom:16px"><div style="padding:14px 16px;font-size:11px;color:var(--text2);line-height:1.6">Umpire assignment not publicly confirmed pre-game. Using league average adjustments. K-friendly crews tend to expand the low zone — neutral assumption applied. No significant umpire-driven edge identified. Maintain base model probabilities.</div></div>
+
+  <div class="rep-lbl">Phase 8 · Vegas Market Intelligence</div>
+  <div class="rep-g4">
+    <div class="rep-cell"><div class="rl">ML TOR</div><div class="rv">-300</div><div class="rs">Implied: 75.0%</div></div>
+    <div class="rep-cell"><div class="rl">ML COL</div><div class="rv">+248</div><div class="rs">Implied: 28.7%</div></div>
+    <div class="rep-cell"><div class="rl">Total</div><div class="rv">7.5</div><div class="rs">O/U roughly even</div></div>
+    <div class="rep-cell"><div class="rl">Run line TOR</div><div class="rv sm">-1.5 (-136)</div><div class="rs">Implied: 57.6%</div></div>
+  </div>
+  <div class="pnl" style="margin-top:12px">
+    <div class="ph"><span class="ph-t b">True line after vig removal (~4.8% vig)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:14px 16px;font-size:11px">
+      <div><div style="color:var(--text3)">TOR true win prob</div><div style="font-weight:700;margin-top:4px">≈ 73.1%</div></div>
+      <div><div style="color:var(--text3)">COL true win prob</div><div style="font-weight:700;margin-top:4px">≈ 26.9%</div></div>
+      <div><div style="color:var(--text3)">Total vig</div><div style="font-weight:700;margin-top:4px">≈ 4.8%</div></div>
+    </div>
+  </div>
+
+  <div class="rep-lbl">Phase 9 · Monte Carlo (10,000 simulations)</div>
+  <div class="rep-g3">
+    <div class="rep-cell"><div class="rl">TOR win probability</div><div class="rv" style="color:var(--teal)">76.4%</div><div class="rs">Model vs Vegas 73.1%: +3.3% edge</div></div>
+    <div class="rep-cell"><div class="rl">Gausman 6.5+ Ks</div><div class="rv" style="color:var(--teal)">74.8%</div><div class="rs">Vs Rockies lineup; 11 in last start</div></div>
+    <div class="rep-cell"><div class="rl">TOR run line -1.5</div><div class="rv" style="color:var(--teal)">62.3%</div><div class="rs">Gausman + weak COL pen</div></div>
+  </div>
+  <div class="rep-g3" style="margin-top:10px">
+    <div class="rep-cell"><div class="rl">Vlad Jr. TB over 1.5</div><div class="rv" style="color:var(--teal)">72.4%</div><div class="rs">xTB 2.1 vs Freeland type</div></div>
+    <div class="rep-cell"><div class="rl">TOR team total O4.5</div><div class="rv" style="color:var(--teal)">78.2%</div><div class="rs">80% hit rate this season</div></div>
+    <div class="rep-cell"><div class="rl">Varsho O0.5 hits</div><div class="rv" style="color:var(--teal)">73.1%</div><div class="rs">.429 vs Freeland career</div></div>
+  </div>
+
+  <div class="rep-lbl">Master Edge Table — All Tracked Props</div>
+  <div class="rep-scroll">
+    <table class="edge-wide">
+      <thead>
+        <tr>
+          <th>Bet</th><th>My Win Prob</th><th>Vegas Implied</th><th>Edge</th><th>Min Req.</th><th>EV / $100</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Gausman K over 6.5</td>
+          <td>74.8%</td><td>~58% (-140)</td>
+          <td class="ep">+16.8%</td><td>K prop 0.8K gap ✓</td><td class="ep">+$18.60</td>
+          <td><span class="rep-tag g">LOCK LEG</span></td>
+        </tr>
+        <tr>
+          <td>TOR run line -1.5</td>
+          <td>62.3%</td><td>57.6% (-136)</td>
+          <td class="ep">+4.7%</td><td>ML: 5% min ≈pass</td><td class="ep">+$5.20</td>
+          <td><span class="rep-tag a">BORDERLINE</span></td>
+        </tr>
+        <tr>
+          <td>TOR team total O4.5</td>
+          <td>78.2%</td><td>~63% (-170)</td>
+          <td class="ep">+15.2%</td><td>Run total 0.8 gap ✓</td><td class="ep">+$16.80</td>
+          <td><span class="rep-tag g">LOCK LEG</span></td>
+        </tr>
+        <tr>
+          <td>Vlad Jr. TB O1.5</td>
+          <td>72.4%</td><td>~58% (-138)</td>
+          <td class="ep">+14.4%</td><td>xTB 2.1 &gt; 1.72 ✓</td><td class="ep">+$15.80</td>
+          <td><span class="rep-tag g">LOCK LEG</span></td>
+        </tr>
+        <tr>
+          <td>TOR moneyline -300</td>
+          <td>76.4%</td><td>75.0%</td>
+          <td class="ep">+1.4%</td><td>ML 5% min ✗</td><td class="ez">+$1.40</td>
+          <td><span class="rep-tag r">BELOW EDGE MIN</span></td>
+        </tr>
+        <tr>
+          <td>Varsho O0.5 hits</td>
+          <td>73.1%</td><td>~65% (-186)</td>
+          <td class="ep">+8.1%</td><td>Hit prop 72%+ ✓</td><td class="ep">+$8.20</td>
+          <td><span class="rep-tag g">QUALIFIED</span></td>
+        </tr>
+        <tr>
+          <td>Game total O7.5</td>
+          <td>52.4%</td><td>~50%</td>
+          <td class="ez">+2.4%</td><td>0.8 run gap ✗</td><td class="ez">+$2.40</td>
+          <td><span class="rep-tag r">BELOW EDGE MIN</span></td>
+        </tr>
+        <tr>
+          <td>Game total U7.5</td>
+          <td>47.6%</td><td>~50%</td>
+          <td class="en">-2.4%</td><td>—</td><td class="en">-$2.40</td>
+          <td><span class="rep-tag r">FADE</span></td>
+        </tr>
+        <tr>
+          <td>Springer HR (+380)</td>
+          <td>21.0%</td><td>~20.8%</td>
+          <td class="ez">+0.2%</td><td>—</td><td class="ez">+$0.80</td>
+          <td><span class="rep-tag a">PASS</span></td>
+        </tr>
+        <tr>
+          <td>Vlad Jr. HR</td>
+          <td>25.0%</td><td>~22%</td>
+          <td class="ep">+3.0%</td><td>—</td><td class="ep">+$3.00</td>
+          <td><span class="rep-tag a">MONITORING</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rep-lbl">Phase 10 — 3-Leg Lock Parlay Construction</div>
+  <div class="rep-lock">
+    <div class="rep-lock-t">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="8" rx="2" fill="#3d8bff"/><path d="M5 7V5a3 3 0 016 0v2" stroke="#3d8bff" stroke-width="1.5" fill="none"/></svg>
+      3-Leg Lock Parlay — Highest Combination Score
+    </div>
+    <div class="rep-leg">
+      <div class="rep-ln">1</div>
+      <div>
+        <div class="rep-lt">Gausman Over 6.5 strikeouts</div>
+        <div class="rep-ld">Win prob: 74.8% · Edge: +16.8% · Correlation: Pitcher K over + TOR team win (+6%) bonus applies</div>
+      </div>
+    </div>
+    <div class="rep-leg">
+      <div class="rep-ln">2</div>
+      <div>
+        <div class="rep-lt">TOR team total Over 4.5 runs</div>
+        <div class="rep-ld">Win prob: 78.2% · Edge: +15.2% · Freeland career 9.31 ERA vs TOR; shaky COL pen; TOR 80% rate hitting O4.5 this season</div>
+      </div>
+    </div>
+    <div class="rep-leg">
+      <div class="rep-ln">3</div>
+      <div>
+        <div class="rep-lt">Vladimir Guerrero Jr. Total Bases Over 1.5</div>
+        <div class="rep-ld">Win prob: 72.4% · Edge: +14.4% · xTB 2.1 vs Freeland-type LHP; 2.6 avg TB last 5G; TOR win correlation = +8% bonus (star hitter hits over + win ML)</div>
+      </div>
+    </div>
+    <div class="rep-math">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">Parlay probability math</div>
+      <div class="rw"><span>Leg 1 (Gausman K O6.5)</span><span>74.8%</span></div>
+      <div class="rw"><span>Leg 2 (TOR team total O4.5)</span><span>78.2%</span></div>
+      <div class="rw"><span>Leg 3 (Vlad Jr. TB O1.5)</span><span>72.4%</span></div>
+      <div class="rw"><span>Raw combined probability</span><span>0.748 × 0.782 × 0.724 = 42.4%</span></div>
+      <div class="rw"><span>Correlation bonus (+6% K/win, +8% star hit/win)</span><span>+4.2% adjusted</span></div>
+      <div class="rw tot"><span>Adjusted combined probability</span><span class="ep">46.6% ✓ (exceeds 45% min)</span></div>
+      <div class="rw"><span>Approx. parlay odds (3-leg)</span><span>~+450 to +510</span></div>
+      <div class="rw tot"><span>EV per $100 at +475</span><span class="ep">+$121.85</span></div>
+    </div>
+    <div class="rep-warn">Forbidden combination check: Gausman K Over + Game total over = FORBIDDEN (-8%). This parlay uses TOR team total (not game total), which is not a forbidden combination. All 3 legs are on the same team — positive correlation stack confirmed. No negative correlation detected.</div>
+  </div>
+
+  <div class="rep-lbl">Safe 2-Leg Parlay</div>
+  <div class="pnl"><div style="padding:14px 16px">
+    <div style="font-weight:700;margin-bottom:8px;color:var(--gold)">Gausman K O6.5 + TOR Team Total O4.5</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.5">Combined raw: 0.748 × 0.782 = 58.5% · With K/win correlation +6% = ~61.5% · Approx. odds: +185 to +210 · EV/100 at +195: +$19.90 · Lower variance, strong positive correlation.</div>
+  </div></div>
+
+  <div class="rep-lbl">Full Edge 5-Leg Parlay (High Variance)</div>
+  <div class="pnl"><div style="padding:14px 16px">
+    <div style="font-weight:700;margin-bottom:8px;color:var(--gold);font-size:11px;line-height:1.4">Gausman K O6.5 + TOR Team Total O4.5 + Vlad Jr. TB O1.5 + Varsho O0.5 hits + TOR run line -1.5</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.5">Raw combined: 74.8% × 78.2% × 72.4% × 73.1% × 62.3% = ≈26.4% · With correlation bonuses ≈ 29.8% · Approx. odds: +1100 to +1300 · High variance — max 0.5% bankroll only.</div>
+  </div></div>
+
+  <div class="rep-lbl">Bankroll Sizing</div>
+  <div class="rep-g3">
+    <div class="rep-cell"><div class="rl">3-Leg Lock</div><div class="rv">2.0%</div><div class="rs">Max per APEX rules</div></div>
+    <div class="rep-cell"><div class="rl">2-Leg Safe</div><div class="rv">1.5%</div><div class="rs">Lower variance play</div></div>
+    <div class="rep-cell"><div class="rl">5-Leg Flyer</div><div class="rv">0.5%</div><div class="rs">High variance only</div></div>
+  </div>
+
+  <div class="rep-intel" style="margin-top:1rem">
+    <div style="font-weight:700;color:var(--blue);margin-bottom:6px">Sharp Closing Intelligence</div>
+    The sharpest money in this game is on Gausman's strikeout props and TOR run production. The -300 moneyline doesn't offer the 5% ML minimum edge required by APEX, so we avoid it as a standalone. The Rockies' Monday 14-run game is a sample-size trap — it came against Cody Ponce on 0.2 IP before he was carted off injured. The underlying COL offense is bottom-third in OPS (excl. that outlier). Freeland's career marks vs. TOR (9.31 ERA) are not an artifact — he simply doesn't miss bats (4.2 K/9 this season) and Toronto's lineup is built to punish contact pitchers. The Vlad Jr. total bases prop is the sleeper leg: he's averaging 2.6 TB over his last 5 games, his xTB projection vs. Freeland is 2.1, and the correlation bonus pushes this leg's adjusted value meaningfully above threshold. The 3-Leg Lock combination score of 46.6% adjusted clears the 45% hurdle cleanly.
+  </div>
+</div>
+
+<!-- TAB 7: LEDGER -->
+<div class="tc" id="t7">
+  <div class="pnl"><div class="ph"><span class="ph-t t">SEASON LEDGER</span><span class="ph-s">ALL GAMES · BOTH TEAMS</span></div>
+    <div class="lgrid">
+      <div class="lstat"><div class="ll">RECORD</div><div class="lv mt">—/—/—</div></div>
+      <div class="lstat"><div class="ll">BETS</div><div class="lv mt">0</div></div>
+      <div class="lstat"><div class="ll">NET UNITS</div><div class="lv mt">+0.00</div></div>
+      <div class="lstat"><div class="ll">ROI</div><div class="lv mt">0.0%</div></div>
+      <div class="lstat"><div class="ll">LOCK RECORD</div><div class="lv mt">0–0</div></div>
+      <div class="lstat"><div class="ll">PASSED</div><div class="lv g">—</div></div>
+    </div>
+    <div style="padding:10px 16px;font-size:9px;color:var(--text3);border-top:1px solid var(--border2)">▶ LOG BY EDGE SOURCE FOR SLCM WEEKLY AUDIT</div>
+  </div>
+</div>
+
+  </div>
+</div>
+</div>
+

@@ -1,0 +1,421 @@
+/* Player props row — matches quick-games ticker: gradient shell stripped via --ticker viewport, edge mask, MLB ticker cards */
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section {
+  margin-top: 14px;
+  margin-bottom: 10px;
+  padding: 0 14px 6px;
+}
+
+.apex-html-root.apex-ios .apex-ppc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px 14px;
+  margin-bottom: 10px;
+}
+
+.apex-html-root.apex-ios .apex-ppc-hint-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px 10px;
+  max-width: 100%;
+}
+
+.apex-html-root.apex-ios .apex-ppc-hint {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text3, #7a9bb5);
+  opacity: 0.9;
+  line-height: 1.3;
+  max-width: min(100%, 420px);
+}
+
+.apex-html-root.apex-ios .apex-ppc-book-select {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: min(200px, 52vw);
+  padding: 5px 28px 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text, #fff);
+  background: rgba(118, 118, 128, 0.14);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' fill-opacity='0.55' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  cursor: pointer;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-ppc-book-select {
+  color: var(--text);
+  background: rgba(118, 118, 128, 0.1);
+  border-color: rgba(0, 0, 0, 0.1);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000000' fill-opacity='0.45' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}
+
+.apex-html-root.apex-ios .apex-ppc-book-select:focus-visible {
+  outline: 2px solid rgba(10, 132, 255, 0.65);
+  outline-offset: 2px;
+}
+
+/* Slide widths + duration come from PlayerPropsCarousel.js (same cell math as quick-games ticker). */
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-track {
+  padding-block: 2px 6px;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-qg-carousel-viewport--ticker .apex-qg-slide.apex-ppc-slide {
+  cursor: default;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-slide-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-card-img-wrap {
+  flex-shrink: 0;
+  align-self: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.14) 0%, rgba(30, 35, 45, 0.95) 55%, rgba(10, 12, 18, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-card-img-wrap {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 246, 250, 0.98) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  /* Silo headshots are often under-exposed on dark UI — lift slightly */
+  filter: brightness(1.12) contrast(1.06) saturate(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-card-img {
+    filter: brightness(1.08) contrast(1.04);
+  }
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-card-img-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.88);
+  background: linear-gradient(145deg, rgba(10, 132, 255, 0.35), rgba(60, 60, 67, 0.5));
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-card-img-fallback {
+  color: rgba(60, 60, 67, 0.92);
+  background: linear-gradient(145deg, rgba(0, 122, 255, 0.2), rgba(240, 240, 245, 0.95));
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-card-body {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: #fff;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-name {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-meta {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text3, #8e9baa);
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-prop {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.3;
+  margin-top: 1px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-prop {
+  color: var(--text3);
+}
+
+/* Right rail: side (Over/Under) + American odds line */
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-odds {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  margin-left: auto;
+  padding-left: 4px;
+  text-align: right;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-side {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-side {
+  color: var(--text3);
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-line {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: #7dffcb;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-line {
+  color: #0a6b4d;
+}
+
+/* Not pickable like games — no pointer / focus ring from game carousel */
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-qg-slide.apex-ppc-slide:focus-visible {
+  outline: none;
+}
+
+/* —— Multi-line pitcher K (O/U ladder) — same headshot + market title + 2-col O|U rows —— */
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-slide--ladder {
+  min-height: 0;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-slide-inner--ladder {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ladder-head {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-slide--ladder .apex-ppc-card-img-wrap {
+  width: 52px;
+  height: 52px;
+  align-self: flex-start;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ladder-head-text {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-prop-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-prop--ladder-market {
+  margin-top: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.88);
+  -webkit-line-clamp: 2;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-prop--ladder-market {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-book-pill {
+  flex: 0 0 auto;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: rgba(125, 255, 203, 0.95);
+  border: 0.5px solid rgba(125, 255, 203, 0.35);
+  background: rgba(125, 255, 203, 0.1);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-book-pill {
+  color: #0a6b4d;
+  border-color: rgba(10, 107, 77, 0.35);
+  background: rgba(10, 107, 77, 0.08);
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-slide--ladder .apex-ppc-name {
+  white-space: normal;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-implied-bar {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 1px;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-implied-bar-text {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(125, 255, 203, 0.85);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-implied-bar-text {
+  color: #0a6b4d;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios.apex-ppc-implied-on .apex-player-props-carousel-section .apex-ppc-ou-row--implied .apex-ppc-ou-cell {
+  border-color: rgba(125, 255, 203, 0.45);
+  box-shadow: 0 0 0 1px rgba(125, 255, 203, 0.12);
+}
+
+.apex-html-root.apex-ios.apex-theme-light.apex-ppc-implied-on .apex-player-props-carousel-section .apex-ppc-ou-row--implied .apex-ppc-ou-cell {
+  border-color: rgba(10, 107, 77, 0.4);
+  box-shadow: 0 0 0 1px rgba(10, 107, 77, 0.1);
+}
+
+/* Implied line label + highlight: only during fullscreen game analysis (.apex-ppc-implied-on on root). */
+.apex-html-root.apex-ios:not(.apex-ppc-implied-on) .apex-player-props-carousel-section .apex-ppc-implied-bar {
+  display: none;
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 7px;
+  border-radius: 8px;
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-ou-cell {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-cell-main {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-ou-cell-main {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-side {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-right: 2px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-ou-side {
+  color: var(--text3);
+}
+
+.apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-price {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #7dffcb;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-ou-price {
+  color: #0a6b4d;
+}
+

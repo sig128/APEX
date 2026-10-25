@@ -1,0 +1,37 @@
+rules_version = '2';
+
+// Invite codes are written only by Cloud Functions (Admin SDK) or the Firebase Console.
+// Users can read their own profile to see invite status.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /inviteCodes/{code} {
+      allow read, write: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Audit log — one doc per invite code (doc id = code). Written only by Cloud Functions.
+    match /used_invites/{code} {
+      allow read, write: if false;
+    }
+
+    // Saved ANALYZE sessions (per user). Client writes only own docs; userId must match auth.
+    // App config (sport toggles) — read by clients; writes only via Cloud Function + Admin SDK.
+    match /apexConfig/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /pastGames/{gameId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+  }
+}

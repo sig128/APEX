@@ -1,0 +1,169 @@
+[user]
+===== GAME TO ANALYZE =====
+HOME TEAM: blue jays
+AWAY TEAM: dodgers
+DATE: april 6th 2026
+GAME TIME: 707pm est
+STADIUM: (auto-search)
+HOME STARTER: (auto-search)
+AWAY STARTER: (auto-search)
+CONTEXT: bluejays lost last 3 days
+
+IMPORTANT: Dual-team analysis. Stay condensed: one merged prop board for real edges, not a separate giant table per hitter. No raw search dumps or long quotes. Finish A→G in order so the answer does not truncate mid-section. Follow compact sections (A–G) in the system prompt. Web search for uncertain lineups, odds, weather.
+
+---
+
+[assistant]
+Excellent — I now have enough confirmed data. Let me build the full A→G analysis.
+
+---
+
+# ⚾ APEX MLB v4 | LAD @ TOR | April 6, 2026
+
+---
+
+## A) SETUP
+
+| Item | Detail |
+|---|---|
+| **Venue** | Rogers Centre, Toronto, ON |
+| **First Pitch** | 7:07 PM ET |
+| **Home SP** | Max Scherzer (TOR) — 1-0, 1.50 ERA 2026 |
+| **Away SP** | Justin Wrobleski (LAD) — 0-0, 6.75 ERA 2026 |
+| **Moneyline** | LAD -140 to -182 (book-dependent) / TOR +115 to +150 |
+| **Total** | 8.5–9.0 (book-dependent) |
+| **Records** | TOR 4–4, LAD 6–2 |
+| **ATS context** | Dodgers are 7-2 ATS this season; Blue Jays are 2-7 ATS |
+| **Line timing note** | Lines opened TOR as favorite at some books (World Series rematch home field premium); sharp money on LAD has moved it to LAD -140/TOR +115 range at BetMGM, widening to -182 at some others. Book disparity = line shop opportunity on either side. |
+
+**Key Injury/IL flags:**
+- Blake Snell is on the 15-day IL (left shoulder fatigue); Tommy Edman is on the 10-day IL (right ankle surgery) for LAD.
+- TOR has Bowden Francis (60-day IL, UCL), Shane Bieber (15-day IL, elbow inflammation), and Trey Yesavage (15-day IL, shoulder impingement) all unavailable.
+- Addison Barger also exited TOR's last game with bilateral ankle discomfort — **status uncertain; confirm before betting his props.**
+
+---
+
+## B) HOME — TORONTO BLUE JAYS
+
+### SP: Max Scherzer (RHP, Age 41)
+- Scherzer is 1-0 with a 1.50 ERA to start 2026.
+- In 2025 with TOR: 5–5, 5.19 ERA, 82 Ks in 85 IP across 17 starts. ERA estimators ran ~4.6, so partially bad luck.
+- His 2.01 HR/9 in 2025 was a career high; as a fly-ball pitcher, HR suppression matters — Rogers Centre is a dome with moderate HR factors.
+- K/9 trajectory: career ~9.2 historically; slipped to ~8.7 in 2025 given age. 2026 start (1.50 ERA) suggests he's sharp early. **Scherzer K OVER** (book line ~4.5–5.5) is in play if he's on the right side of Dodgers' high-K lineup.
+- The Dodgers' lineup is righty-heavy against a RHP Scherzer. Blue Jays hitters have struck out in just 18% of their PAs overall — 2nd-best against RHP — but this stat applies to their own hitters, not the Dodgers. Dodgers do have swing-and-miss profiles (Ohtani, Freeman, Muncy, Tucker).
+- **⚠️ Pitch count risk:** 41-year-old, early season, limited build-up. Book likely prices him for 5–6 IP. Outs recorded UNDER is a viable secondary angle.
+
+### Projected TOR Lineup (Opening Day base — Barger status uncertain):
+1. Springer DH · 2. Lukes LF · 3. Vladdy 1B · 4. Barger RF *(ankle — monitor)* · 5. Kirk C · 6. Varsho CF · 7. Okamoto 3B · 8. Clement 2B · 9. Giménez SS
+
+**Key hitter bullets vs. Wrobleski (RHP, 6.75 ERA, 8.7 H/9 career, 1.28 WHIP):**
+
+- **Vladimir Guerrero Jr.:** Elite contact vs. RHP; best PA spot (3-hole, most RBI leverage). Hits OVER is a function of Wrobleski's high hit-rate tendency. Mild edge on 1+ hit prop.
+- **George Springer:** Leadoff, most PAs. Bounce-back candidate. TB OVER is interesting if Wrobleski is hittable early.
+- **Ernie Clement:** Clement has hit the Hits Over in 22 of his last 25 games (+16.20 units, 33% ROI trend) — the single hottest trend on the board. Bottom-of-order against a soft arm = prime PA slot. **PRIME prop angle.**
+- **Alejandro Kirk:** Contact-first catcher, decent OBP, low K. Matchup vs. RHP Wrobleski is neutral-favorable.
+- **Andres Giménez:** Cold to start year; Giménez has hit Home Runs Over in 2 of his last 6 games (+13.00 units, 217% ROI trend) — small sample but notable. No-play on HR prop; hit prop is too thin to justify.
+- **Barger, Varsho, Okamoto:** Monitor only pending Barger health; Okamoto (Japanese-league import) is still adjusting.
+
+**Bullpen note:** TOR ranks 30th in MLB in save percentage at 16.7% — bullpen has been a liability early. Yimi García and Berríos are both on the IL, thinning out the pen. High leverage outs late in a close game is a risk if Scherzer exits early.
+
+---
+
+## C) AWAY — LOS ANGELES DODGERS
+
+### SP: Justin Wrobleski (RHP, 0-0, 6.75 ERA)
+- Career: 107 IP, 104 Ks, 4.88 ERA, 1.28 WHIP, 8.7 H/9, 34 walks; 6-7 career record, 4.81 FIP across 451 career batters.
+- The Dodgers entered 2026 carrying Wrobleski as a 6th starter/long reliever; he was expected to shift to starting after the first few turns of the rotation. He's now pushed into a start earlier than projected due to the Snell IL.
+- 6.75 ERA, 4.81 FIP = real bleed. K/9 around 8.7 career suggests average strikeout upside, not elite.
+- **Fade Wrobleski outs recorded UNDER** — soft arm, early season, cold weather dome, in front of TOR's contact-oriented lineup.
+- Fading Wrobleski's outs could hold value given his shaky start to the year.
+
+### LAD Lineup (confirmed starters):
+Ohtani, Freeman, Muncy, Tucker, Pages, Hernandez area. Note: Tommy Edman is on the 10-day IL, so expect a utility fill-in at 2B/OF.
+
+**Key Dodger hitter bullets:**
+
+- **Shohei Ohtani (DH/batting):** Ohtani picked up two hits in each of the three games vs. the Nationals and scored a run in each game. Hot streak confirmed. Ohtani has hit the Hits Over in his last 8 away games (+9.30 units, 64% ROI). **PRIME away hit prop.** His xwOBA sits at .421 per Statcast; the contact quality is elite. Scherzer vs. Ohtani L vs. R (Ohtani bats left) — platoon edge to Ohtani.
+- **Freddie Freeman:** Freeman drove in six runs in the Washington series. Red-hot RBI bat. Freeman has hit the Walks Under in his last 8 games. RBI OVER is the play; Walks Under is a real lean given Scherzer's improving command (1.50 ERA, low BB early).
+- **Kyle Tucker:** Tucker was 5-for-10 against the Nationals after going 4-for-23 previously. Late breakout — recency suggests positive regression is real, but 4/23 start means xStats may not yet support a big hit prop edge.
+- **Max Muncy:** Muncy has hit the Home Runs Over in 3 of his last 7 away games (+9.50 units, 136% ROI). He's a LHH vs. RHP Scherzer — neutral platoon. Scherzer is a fly-ball prone pitcher with a career-high HR rate in 2025; Rogers Centre is dome, moderate HR factor. Muncy HR prop is MONITOR.
+- **Andy Pages:** Pages has hit the Runs Under in 19 of his last 25 games. That's a STANDARD lean — low in lineup, not a table-setter.
+
+**LAD Bullpen:** Evan Phillips is on the 60-day IL (elbow); Brusdar Graterol is also on the IL (shoulder). The back-end is depleted. If Wrobleski exits early (likely), LAD will lean on a thinned-out 'pen.
+
+---
+
+## D) CROSS-TEAM: GAME SCRIPT / PARK / UMP
+
+- **Offensive temperature gap:** Toronto's offense is ice cold — just 7 runs in 3 games vs. the White Sox. The Dodgers scored 31 runs in a 3-game sweep of the Nationals. Massive momentum divergence.
+- **Dodgers road dominance:** Dodgers hitters have a road OPS of 1.066 (best in MLB), batting .361 on the road (best in MLB), and slugging .647 on the road (best in MLB).
+- **Park:** Rogers Centre (dome) — neutral to mild HR suppressor vs. open-air parks; turf speeds up grounders. Good for contact/hit props, neutral for HR.
+- **Game script:** Wrobleski likely exits mid-game → TOR bullpen under pressure with depleted 'pen → OVER lean on total. However, if Scherzer is sharp (1.50 ERA form), could keep it close early. Most models lean OVER 9.0.
+- **Umpire:** Not confirmed in search results — assume league average zone; no K-prop adjustment needed without data.
+- **First inning:** The Dodgers were 42-11 when they scored in the first inning in 2025 — 2nd best in MLB. First inning scoring is a live bet angle.
+- TOR is batting just .048 when facing the starting pitcher for the 3rd time this season — lowest in MLB. This hurts TOR's NRFI and late-inning hitting props.
+
+---
+
+## E) MERGED PROP BOARD
+
+| # | Prop | Side | Tier | Core Logic |
+|---|---|---|---|---|
+| 1 | **Ernie Clement — Hits** | OVER (0.5) | 🔴 PRIME | 22/25 games hit trend; soft RHP Wrobleski; bottom-order = more PAs vs tiring pen |
+| 2 | **Shohei Ohtani — Hits** | OVER (0.5–1.5) | 🔴 PRIME | Hits over in last 8 away games; xwOBA .421; bats LH vs RHP Scherzer; red-hot |
+| 3 | **Dodgers ML** | LAD Win | 🟠 STANDARD | 6-2 record, 7-2 ATS; road OPS 1.066; TOR 3-game skid; Wrobleski risk is offset by LAD lineup vs depleted TOR 'pen |
+| 4 | **Game Total OVER 9.0** | OVER | 🟠 STANDARD | Wrobleski soft arm, depleted pens both sides, LAD bats scorching; TOR lineup cold (negative correlation risk noted — see G) |
+| 5 | **Freddie Freeman — RBI** | OVER 0.5 | 🟠 STANDARD | 6 RBI in last 3 games; best RBI position in LAD lineup; Scherzer age/fly-ball concern |
+| 6 | **Wrobleski — Outs Recorded** | UNDER (book ~14–15 outs) | 🟠 STANDARD | 6.75 ERA, early exit risk, pushed into rotation early; TOR makes contact |
+| 7 | **Max Muncy — HR** | OVER 0.5 | 🟡 MONITOR | 3/7 away game HR trend; LHH vs RHP; Scherzer HR rate concern; small sample |
+| 8 | **Andy Pages — Runs** | UNDER 0.5 | 🟡 MONITOR | 19/25 games under; buried in lineup; only viable if line is short juice |
+| 9 | **Scherzer — Ks** | OVER 4.5–5.5 | 🟡 MONITOR | Sharp early start (1.50 ERA), but age and pitch count limits exit risk; confirm line |
+| 10 | **TOR ML** | TOR Win | ⚫ NO PLAY | Momentum, ATS record, lineup health (Barger?), LAD road form all argue against |
+| 11 | **Andres Giménez — Hit** | NO PLAY | ⚫ NO PLAY | Small sample; cold to open year |
+
+---
+
+## F) PARLAYS
+
+### 🔒 3-Leg Core Parlay (~65%+ model per leg)
+| Leg | Prop | Assumed Win % |
+|---|---|---|
+| 1 | Shohei Ohtani HITS OVER 0.5 | ~72% (8 straight away game trend + elite xwOBA + LH platoon) |
+| 2 | Ernie Clement HITS OVER 0.5 | ~70% (22/25 game trend + soft SP matchup) |
+| 3 | Dodgers ML | ~65% (road form, ATS record, lineup momentum vs cold TOR) |
+
+> **⚠️ Correlation check:** Ohtani and Clement hitting are on *opposite teams* — no correlated script fight. Dodgers ML + Dodgers bats is mildly correlated (positive, not problematic). ✅ This parlay is structurally sound.
+
+**Combined estimated probability:** ~0.72 × 0.70 × 0.65 ≈ **~33% true probability** (3-leg parlays always compress — use small unit sizing, ~1–2% of bankroll).
+
+---
+
+### 🛡️ Safer 2-Leg Alternative
+| Leg | Prop |
+|---|---|
+| 1 | Ohtani Hits OVER 0.5 |
+| 2 | Game Total OVER 9.0 |
+
+> Note: Ohtani scoring/hitting and the game going OVER are *positively correlated* — this is an acceptable correlation (same team, same script). Book may limit same-game parlays. Check availability.
+
+---
+
+## G) RISKS + EXECUTION NOTES
+
+1. **Barger scratch risk:** Addison Barger left Sunday's game with bilateral ankle discomfort. If he's out, TOR's lineup drops a meaningful bat — check lineup confirmation post-5:00 PM ET before any TOR hitting props.
+
+2. **Wrobleski early exit / bullpen variance:** If Wrobleski exits in the 3rd inning, Dodgers pen is also taxed (Phillips, Graterol, Stewart all on IL). This creates chaos for OVER bets — favorable — but also creates scoring-drought windows.
+
+3. **Scherzer pitch count:** At 41, early April, there's a real floor on IP. If he's pulled early, TOR 'pen is exposed (save% 30th in MLB). Don't combine Scherzer K OVER with a pitching duel game total — negative script correlation.
+
+4. **Line shopping is essential:** Book spread is wide — LAD -140 (BetMGM) vs. LAD -182 (DocSports). That's enormous. Take LAD ML at -140 max, not -182.
+
+5. **Total line variance:** 8.5 vs. 9.0 matters. Take OVER 8.5 if available; OVER 9.0 is marginal juice.
+
+6. **World Series rematch framing:** This is billed as a World Series rematch, with the Dodgers opening a high-profile series in Toronto. Public money will flood TOR (home underdog + emotional narrative). Sharp money is on LAD — fade the public narrative.
+
+7. **Early season caution:** Only 8–9 games played per team. Trends (22/25 Clement, 8 straight Ohtani) are meaningful but sample-size caveats apply. Never bet more than you can afford to lose.
+
+---
+
+> 🎰 **Responsible Gambling Reminder:** This analysis is for **entertainment and educational purposes only**. No outcome is guaranteed. If gambling is affecting you or someone you know, call **1-800-GAMBLER** (1-800-426-2537) for free, confidential support. Set strict limits and never chase losses.

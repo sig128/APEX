@@ -1,0 +1,12 @@
+# Option A — seed from your machine (service account JSON must NOT be committed; keep it gitignored):
+#   cd functions && GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to-adminsdk.json npm run seed-invites
+# Prints the new codes and writes them to Firestore.
+#
+# Option B — Firebase Console → Firestore → collection: inviteCodes
+# Document ID = the exact code string users type (e.g. APEX- + 8 hex chars).
+# Fields (per document):
+#   active        (boolean)  true
+#   usesRemaining (number)    1   ← increase in Console for more uses per code; omit for unlimited (not decremented)
+#
+# Deploy rules and the callable once:
+#   firebase deploy --only firestore:rules,functions:redeemInvite

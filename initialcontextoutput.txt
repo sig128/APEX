@@ -1,0 +1,39 @@
+╔══════════════════════════════════════════════════════════════════╗
+║              APEX SYSTEM v3.0 — LIVE SNAPSHOT                    ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Game: Oakland Athletics @ Toronto Blue Jays                     ║
+║  Date: Friday, March 27, 2026 | 7:07 PM ET                       ║
+║  Stadium: Rogers Centre | AstroTurf | Retractable Dome           ║
+║  Season: Game 1 of 162 | Tier: ALPHA                             ║
+║  Weights: Spring 35% / Career 40% / Prior Season 25%            ║
+╠══════════════════════════════════════════════════════════════════╣
+║  HOME: Kevin Gausman | RHP | 5 days rest | Proj IP: 5.2–6.0      ║
+║  Stuff: B+ | Cmd: A | Regression: NEUTRAL (FIP ≈ ERA)           ║
+║  AWAY: Luis Severino | RHP | Full rest | Proj IP: 4.2–5.0        ║
+║  Stuff: C+ | Cmd: C+ | Regression: BUY (road/H2 upside)         ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Lineups: PROJECTED (Opening Day rosters confirmed)              ║
+║  Vegas ML: TOR -180 / OAK +155 | True: ~63.9% / 36.1%           ║
+║  Vegas Total: 9.5 | F5: ~4.5 est | Movement: Stable             ║
+║  Sharp signal: NONE detected — Opening Day = high public action  ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Umpire: UNCONFIRMED — Opening Day assignment TBA                ║
+║  Weather: DOME — Rogers Centre retractable roof, climate neutral ║
+║  Postponement risk: 0% (dome)                                    ║
+╠══════════════════════════════════════════════════════════════════╣
+║  INJURIES: Anthony Santander (shoulder — miss 2026 start)       ║
+║             Jose Berrios (elbow stress fracture — IL)            ║
+║             Shane Bieber (forearm fatigue — IL)                  ║
+║             Trey Yesavage (shoulder impingement — IL)            ║
+║             Bowden Francis (UCL reconstruction — IL)             ║
+║             Lawrence Butler (knee — limited workload)            ║
+║             Gunnar Hoglund OAK (knee — IL)                       ║
+║  REGRESSION: Severino ERA overstate (FIP ~3.88 vs 4.54 ERA)     ║
+║               Gausman reliable — FIP/ERA tightly aligned        ║
+║  MOMENTUM: 🔥 Vlad Jr. (WBC dominant), Varsho (5 ST HRs)        ║
+║             Barger (hot from World Series carry-over)            ║
+╠══════════════════════════════════════════════════════════════════╣
+║  SEASON LEDGER (Blue Jays 2026):                                 ║
+║  Record: 0-0 | Bets: 0 | ROI: — | Units: 0.0                    ║
+║  3-Leg Lock: 0-0 | Win rate: — | Last 5: FIRST GAME             ║
+╚══════════════════════════════════════════════════════════════════╝

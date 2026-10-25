@@ -1,0 +1,8 @@
+A normal prop line is what the sportsbook puts up first. Say a hitter’s line is 1.5 hits. To win, he needs 2 or more hits. The payout is usually close to even money because it’s a coin-flip-ish bet.
+An alternative line (alt line) is the sportsbook letting you move that number up or down in exchange for a different payout.
+
+	∙	Move it down to 0.5 hits → he only needs 1 hit to cash. Way easier to win, but the payout shrinks (you might risk $100 to win $30 instead of $100).
+
+	∙	Move it up to 2.5 hits → he needs 3 hits. Much harder, but the payout balloons (risk $100 to win $400).
+
+Same player, same game — you’re just picking how safe or risky you want the bet to be.

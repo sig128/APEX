@@ -1,0 +1,18 @@
+.apex-api-banner {
+  position: relative;
+  z-index: 50;
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #1a1510;
+  background: linear-gradient(135deg, #f0c14b, #e8a820);
+  border-bottom: 2px solid #8a7018;
+}
+
+.apex-api-banner code {
+  font-size: 11px;
+  padding: 1px 4px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 3px;
+}

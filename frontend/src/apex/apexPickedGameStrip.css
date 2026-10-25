@@ -1,0 +1,110 @@
+/* Picked schedule matchup — logos + title beside Analyze (see ApexStaticBody #apex-picked-game) */
+
+.apex-html-root.apex-ios .apex-picked-game {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 1 auto;
+  max-width: min(100%, 280px);
+  padding: 6px 10px;
+  border-radius: 14px;
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-picked-game {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.apex-html-root.apex-ios .apex-picked-game-logos {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.apex-html-root.apex-ios .apex-picked-game-logo-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(40, 44, 52, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-picked-game-logo-wrap {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(240, 240, 245, 0.95);
+}
+
+.apex-html-root.apex-ios .apex-picked-game-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.apex-html-root.apex-ios .apex-picked-game-logo-fallback {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-picked-game-logo-fallback {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-picked-game-vs {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-picked-game-vs {
+  color: var(--text3);
+}
+
+.apex-html-root.apex-ios .apex-picked-game-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.apex-html-root.apex-ios .apex-picked-game-label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(125, 255, 203, 0.75);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-picked-game-label {
+  color: #0a6b4d;
+}
+
+.apex-html-root.apex-ios .apex-picked-game-matchup {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.15px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-picked-game-matchup {
+  color: var(--text);
+}

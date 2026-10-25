@@ -1,0 +1,287 @@
+/* Analyze page — live prop O/U ladder (separate panel under bet cards) */
+
+.apex-html-root.apex-ios .apex-analyze-prop-ladder {
+  margin: 12px 0 0;
+  padding: 12px 14px 14px;
+  border-radius: 12px;
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-prop-ladder {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.apex-html-root.apex-ios .apex-analyze-prop-ladder-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0 0 10px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-prop-ladder-title {
+  color: rgba(60, 60, 67, 0.55);
+}
+
+.apex-html-root.apex-ios .apex-apl-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.apex-html-root.apex-ios .apex-apl-inner--player-board .apex-apl-submarkets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.apex-html-root.apex-ios .apex-apl-submarket {
+  padding-top: 8px;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.1);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-submarket {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+.apex-html-root.apex-ios .apex-apl-submarket:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.apex-html-root.apex-ios .apex-apl-msg--inline {
+  margin: 4px 0 0;
+  font-size: 12px;
+  opacity: 0.88;
+}
+
+.apex-html-root.apex-ios .apex-apl-yesno-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-yesno-grid {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-apl-yesno-cell .apex-apl-ou-side {
+  opacity: 0.75;
+  margin-right: 4px;
+}
+
+.apex-html-root.apex-ios .apex-apl-msg {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-msg {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-apl-msg--secondary {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.82;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-msg--secondary {
+  opacity: 0.9;
+}
+
+.apex-html-root.apex-ios .apex-apl-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.apex-html-root.apex-ios .apex-apl-head {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.apex-html-root.apex-ios .apex-apl-img-wrap {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(30, 35, 45, 0.6);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-img-wrap {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.apex-html-root.apex-ios .apex-apl-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+.apex-html-root.apex-ios .apex-apl-img-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.apex-html-root.apex-ios .apex-apl-head-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-apl-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 4px;
+}
+
+.apex-html-root.apex-ios .apex-apl-market {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-market {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-apl-book {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: rgba(125, 255, 203, 0.95);
+  border: 0.5px solid rgba(125, 255, 203, 0.35);
+  background: rgba(125, 255, 203, 0.1);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-book {
+  color: #0a6b4d;
+  border-color: rgba(10, 107, 77, 0.35);
+  background: rgba(10, 107, 77, 0.08);
+}
+
+.apex-html-root.apex-ios .apex-apl-player {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-player {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-apl-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.apex-html-root.apex-ios .apex-apl-implied-bar {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 1px;
+}
+
+.apex-html-root.apex-ios .apex-apl-implied-bar-text {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(125, 255, 203, 0.85);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-implied-bar-text {
+  color: #0a6b4d;
+}
+
+.apex-html-root.apex-ios .apex-apl-ou-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.apex-html-root.apex-ios .apex-apl-ou-row--implied .apex-apl-ou-cell {
+  border-color: rgba(125, 255, 203, 0.45);
+  box-shadow: 0 0 0 1px rgba(125, 255, 203, 0.12);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-row--implied .apex-apl-ou-cell {
+  border-color: rgba(10, 107, 77, 0.4);
+  box-shadow: 0 0 0 1px rgba(10, 107, 77, 0.1);
+}
+
+.apex-html-root.apex-ios .apex-apl-ou-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-cell {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.apex-html-root.apex-ios .apex-apl-ou-main {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-main {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-apl-ou-side {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-right: 2px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-side {
+  color: var(--text3);
+}
+
+.apex-html-root.apex-ios .apex-apl-ou-price {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #7dffcb;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-price {
+  color: #0a6b4d;
+}

@@ -1,0 +1,61 @@
+MODULE: HOT ZONE CONVERGENCE LAYER (HZCL v1.0)
+APEX MLB v4.0 — Add-On Module
+
+Cross-reference pitcher location tendencies against hitter hot zones to calculate the probability a pitcher delivers into a batter's damage zone on a given plate appearance.
+
+OBJECTIVE
+Produce a Zone Match Probability (ZMP) per hitter-pitcher matchup that quantifies how often the pitcher historically attacks the exact 3x3 grid cells where the hitter does the most damage, then feed it into the UAC Convergence Score for hitter props (H, TB, HR, RBI).
+
+ZONE GRID (9 CELLS + 4 CHASE)
+Use standard Statcast 3x3 strike zone grid:
+- Cells 1–3: Upper third (Up-In, Up-Mid, Up-Away)
+- Cells 4–6: Middle third (Mid-In, Heart, Mid-Away)
+- Cells 7–9: Lower third (Low-In, Low-Mid, Low-Away)
+- Chase zones: 11 (up), 12 (in), 13 (down), 14 (away)
+
+PITCHER INPUTS (LAST 5 STARTS, WEIGHTED)
+- Pitch location % per cell, split by pitch type (FB, BB, OS)
+- Location % vs. same-handed vs. opposite-handed hitters
+- First-pitch zone tendency (establishes attack plan)
+- 2-strike zone tendency (putaway location)
+- Behind-in-count zone tendency (get-me-over location)
+- Edge% and Heart% rates from last 5 starts
+- Pitch mix % vs. current opponent handedness
+
+HITTER INPUTS (SEASON + LAST 15 GAMES)
+- xwOBA per zone cell (damage map)
+- SLG per zone cell
+- Whiff% per zone cell (cold zones)
+- Damage zones defined as cells with xwOBA ≥ .400
+- Cold zones defined as cells with whiff% ≥ 30% or xwOBA ≤ .280
+- Split damage map by pitch type (FB/BB/OS)
+
+CALCULATION: ZONE MATCH PROBABILITY (ZMP)
+Step 1: Identify hitter's top 3 damage cells (by xwOBA, pitch-type weighted)
+Step 2: Pull pitcher's location % into those exact cells vs. matching handedness
+Step 3: Weight by expected pitch mix for the matchup
+Step 4: Apply count-state adjustment (first-pitch + 2-strike blend)
+Step 5: ZMP = weighted probability pitcher delivers into hitter's damage zones
+
+ZMP OUTPUT TIERS
+- High Exposure:   ZMP ≥ 32%  → bullish hitter props OVER (H, TB, HR lean)
+- Elevated:        ZMP 26–31% → moderate lean OVER
+- Neutral:         ZMP 20–25% → no edge from this module
+- Suppressed:      ZMP 14–19% → lean hitter props UNDER
+- Avoidance:       ZMP ≤ 13%  → strong fade, pitcher actively avoids damage
+
+COLD ZONE CROSS-CHECK (CZC)
+Simultaneously calculate Cold Zone Exposure (CZE): % chance pitcher attacks hitter's whiff cells.
+- If CZE ≥ 35% AND ZMP ≤ 19% → flag as "K-Prop Target" for pitcher strikeout OVER
+- If CZE ≤ 15% AND ZMP ≥ 32% → flag as "Damage Primed" for hitter props OVER
+
+CONVERGENCE RULE
+ZMP must agree directionally with:
+- Pitcher AFS (FAL module)
+- Hitter recent xwOBA trend (L15)
+- SLCM line read
+If 3 of 4 confirm → certify prop per UAC mandate. If split → downgrade one tier.
+
+OUTPUT FORMAT
+Append to Section A/B matchup analysis as:
+[Hitter] vs [Pitcher]: ZMP X.X% (Tier) | CZE X.X% | Flag: [TARGET/PRIMED/NEUTRAL/FADE] | Convergence: CONFIRM/CONFLICT

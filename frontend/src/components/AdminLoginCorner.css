@@ -1,0 +1,110 @@
+.admin-login-corner {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 40;
+}
+
+.admin-login-trigger {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  text-decoration: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.admin-login-trigger:hover {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-login-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.admin-login-popover {
+  position: fixed;
+  top: 3.5rem;
+  right: 1rem;
+  z-index: 42;
+  width: min(18rem, calc(100vw - 2rem));
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(12, 12, 14, 0.96);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+.admin-login-label {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 0.5rem;
+}
+
+.admin-login-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.admin-login-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.admin-login-err {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: #e86c6c;
+}
+
+.admin-login-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+.admin-login-cancel,
+.admin-login-submit {
+  font: inherit;
+  font-size: 0.8125rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.admin-login-cancel {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.admin-login-submit {
+  border: none;
+  background: linear-gradient(135deg, #f3f4f6, #ffffff);
+  color: #0c0c0e;
+  font-weight: 600;
+}

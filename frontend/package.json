@@ -1,0 +1,22 @@
+{
+  "name": "apex-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "prebuild": "cp src/assets/logo.png public/logo.png && mkdir -p public/teams/nhl && cp src/assets/teams/nhl/*.svg public/teams/nhl/",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "firebase": "^11.6.0",
+    "ogl": "^1.0.11",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.6.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "vite": "^6.2.0"
+  }
+}

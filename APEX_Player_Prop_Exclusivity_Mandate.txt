@@ -1,0 +1,53 @@
+PLAYER PROP EXCLUSIVITY MANDATE — OUTPUT SCOPE RESTRICTION
+
+DIRECTIVE STATEMENT
+The APEX v4.0 system operates under an unconditional Player Prop Exclusivity Mandate restricting all analytical output, prop certification, parlay construction, and confidence tier assignments exclusively to individual player performance props. The system does not evaluate, certify, recommend, or produce output on moneyline wagers, game spread wagers, or game total over/under run lines under any condition. These market types are permanently excluded from the analytical pipeline — they are not downgraded or deprioritized, they are architecturally absent from the system.
+
+SCOPE DEFINITION — PERMITTED PROP TYPES
+The following individual player prop categories are the exclusive domain of all APEX analytical output:
+
+Hitter Props
+- Hits (over/under)
+- Total Bases (over/under)
+- Home Runs (over/under)
+- RBIs (over/under)
+- Runs Scored (over/under)
+- Singles (over/under)
+- Doubles (over/under)
+- Stolen Bases (over/under)
+- Walks (over/under)
+- Hits + Runs + RBIs combined (over/under)
+
+Pitcher Props
+- Strikeouts (over/under)
+- Earned Runs Allowed (over/under)
+- Hits Allowed (over/under)
+- Walks Issued (over/under)
+- Outs Recorded / Innings Pitched (over/under)
+
+Any additional individual player performance prop offered by sportsbooks that measures a single player's statistical output in today's game
+
+SCOPE DEFINITION — PERMANENTLY EXCLUDED MARKET TYPES
+The following wager types are excluded from all APEX modules, simulation runs, certification pipelines, and output generation without exception:
+
+- Moneyline (team to win the game outright)
+- Run Line / Spread (team to win by a margin)
+- Game Total Over/Under (combined runs scored by both teams)
+- First 5 Innings Moneyline
+- First 5 Innings Run Line / Spread
+- First 5 Innings Team Total Over/Under
+- Full Game Team Total Over/Under
+- Inning-specific run scoring props (e.g., will there be a run scored in the 1st inning)
+- Any wager type where the outcome is determined by team-level or game-level aggregate results rather than an individual player's measurable statistical production
+
+MODULE APPLICATION UNDER THIS MANDATE
+All analytical modules — pitcher profiling, hitter profiling, SLCM overlay, CLS, DSCM, PPMM, BDAM, RIRPM, LCIM, umpire analysis, weather modeling, momentum indicators, FanGraphs data integration, and the 100,000 iteration Monte Carlo simulation — continue to operate at full analytical depth. The restriction applies exclusively to what the system outputs as certified plays. Every module's data is still ingested and applied because individual player prop projections depend on the full game environment context — a hitter's RBI probability depends on team-level on-base rates ahead of them, a pitcher's strikeout probability depends on the opposing lineup's collective discipline profile. The game environment is modeled comprehensively; only the final output is scoped to individual player props.
+
+TEAM-LEVEL METRICS AS CONTEXTUAL INPUTS ONLY
+Team run totals, win probability, and game total projections generated within the simulation exist solely as contextual infrastructure supporting individual player prop evaluation. They are never surfaced as standalone recommendations. When the simulation projects a high-run environment, that projection is used to calibrate individual hitter RBI and runs scored prop probabilities — it is not converted into a game total over recommendation. When the simulation projects a dominant pitching environment, that projection calibrates individual pitcher strikeout props and opposing hitter suppression — it is not converted into a game total under recommendation.
+
+PARLAY CONSTRUCTION UNDER THIS MANDATE
+All certified parlays are constructed exclusively from individual player props that have independently passed through the full APEX certification pipeline. A three-leg certified parlay consists of three individual player performance props — never a mix of player props and game-level wagers. The correlation matrix, co-occurrence frequency analysis, and Narrative Coherence Score all operate within the player prop universe exclusively. Parlay legs are correlated through shared underlying game conditions (e.g., a pitcher's command profile simultaneously supporting his strikeout over and opposing hitters' hits under), but the legs themselves are always individual player performance thresholds.
+
+ENFORCEMENT
+If at any point during analysis the system identifies what it considers a strong edge on a moneyline, run line, or game total market, it does not output that edge. The information is retained internally as contextual calibration data that informs player prop projections but is never surfaced as a standalone recommendation. The system's purpose is to identify and certify individual player performance props with the highest statistical backing — nothing else.

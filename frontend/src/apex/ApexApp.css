@@ -1,0 +1,4179 @@
+/* -------------------------------------------------------------------------- */
+/* iOS-style shell + collapsible sidebar (nav lives in .apex-sidebar)          */
+/* -------------------------------------------------------------------------- */
+
+body:has(.apex-html-root.apex-theme-light) {
+  background: #f2f2f7;
+  color: #000;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Text',
+    'Segoe UI',
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body:has(.apex-html-root.apex-theme-dark) {
+  background: #000000;
+  color: #fff;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Text',
+    'Segoe UI',
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.apex-html-root.apex-ios {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  box-sizing: border-box;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.apex-html-root.apex-ios.apex-theme-light {
+  --bg: #f2f2f7;
+  --bg2: #ffffff;
+  --bg3: #e5e5ea;
+  --panel: #ffffff;
+  --border: rgba(60, 60, 67, 0.18);
+  --border2: rgba(60, 60, 67, 0.12);
+  --gold: #007aff;
+  --gold2: #5ac8fa;
+  --teal: #34c759;
+  --red: #ff3b30;
+  --blue: #007aff;
+  --purple: #af52de;
+  --orange: #ff9500;
+  --cyan: #5ac8fa;
+  --text: #000000;
+  --text2: rgba(60, 60, 67, 0.65);
+  --text3: rgba(60, 60, 67, 0.45);
+  --muted: #8e8e93;
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark {
+  --bg: #000000;
+  --bg2: #1c1c1e;
+  --bg3: #2c2c2e;
+  --panel: #1c1c1e;
+  --border: rgba(255, 255, 255, 0.12);
+  --border2: rgba(255, 255, 255, 0.08);
+  --gold: #0a84ff;
+  --gold2: #64d2ff;
+  --teal: #30d158;
+  --red: #ff453a;
+  /* Dark theme: use white as the accent color (temporary). */
+  --blue: #ffffff;
+  --purple: #bf5af2;
+  --orange: #ff9f0a;
+  --cyan: #64d2ff;
+  --text: #ffffff;
+  --text2: rgba(235, 235, 245, 0.6);
+  --text3: rgba(235, 235, 245, 0.45);
+  --muted: #8e8e93;
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios *,
+.apex-html-root.apex-ios *::before,
+.apex-html-root.apex-ios *::after {
+  box-sizing: border-box;
+}
+
+/* Top bar: logo + theme / sign out only (no pill) */
+.apex-html-root.apex-ios .hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto 10px;
+  padding: 6px 16px 4px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.apex-html-root.apex-ios .apex-top-nav {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.apex-html-root.apex-ios .apex-top-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.15px;
+  color: #fff;
+  text-decoration: none;
+  opacity: 0.72;
+  transition: opacity 0.15s ease;
+}
+
+.apex-html-root.apex-ios .apex-top-nav-link-icon {
+  display: none;
+}
+
+.apex-html-root.apex-ios .apex-top-nav-link-label {
+  display: inline-block;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-top-nav-link {
+  color: #000;
+}
+
+.apex-html-root.apex-ios .apex-top-nav-link.on,
+.apex-html-root.apex-ios .apex-top-nav-link:hover {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  #root::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  .apex-html-root.apex-ios,
+  .apex-html-root.apex-ios * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .apex-html-root.apex-ios::-webkit-scrollbar,
+  .apex-html-root.apex-ios *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  .apex-html-root.apex-ios .apex-top-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    z-index: 9500;
+    justify-content: space-around;
+    gap: 0;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    border-radius: 0;
+    border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+    background: #08090c;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .apex-html-root.apex-ios.apex-theme-light .apex-top-nav {
+    border-color: rgba(0, 0, 0, 0.1);
+    background: #f7f7fa;
+  }
+
+  .apex-html-root.apex-ios .apex-top-nav-link {
+    flex: 1 1 0;
+    flex-direction: column;
+    text-align: center;
+    border-radius: 0;
+    padding: 2px 4px 0;
+    background: transparent;
+    border: none;
+    gap: 4px;
+    opacity: 1;
+    color: rgba(146, 150, 160, 0.95);
+  }
+
+  .apex-html-root.apex-ios .apex-top-nav-link-icon {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .apex-html-root.apex-ios.apex-theme-light .apex-top-nav-link-icon {
+    color: currentColor;
+  }
+
+  .apex-html-root.apex-ios .apex-top-nav-link-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .apex-html-root.apex-ios .apex-top-nav-link-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+    color: currentColor;
+  }
+
+  .apex-html-root.apex-ios.apex-theme-light .apex-top-nav-link {
+    color: rgba(88, 93, 104, 0.95);
+  }
+
+  .apex-html-root.apex-ios .apex-top-nav-link.on .apex-top-nav-link-label {
+    color: #fff;
+  }
+
+  .apex-html-root.apex-ios.apex-theme-light .apex-top-nav-link.on .apex-top-nav-link-label {
+    color: #0f1115;
+  }
+}
+
+/* High radius shell: sits under the header, above the game input panel */
+.apex-html-root.apex-ios .apex-game-input-heading {
+  position: relative;
+  z-index: 30;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  margin-bottom: 18px;
+  border: 0.5px solid var(--border2);
+  border-radius: 30px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  /* Must not clip the schedule search dropdown (absolutely positioned below). */
+  overflow: visible;
+  isolation: isolate;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-input-heading {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-game-input-heading {
+  background: rgba(28, 28, 30, 0.92);
+}
+
+.apex-html-root.apex-ios .apex-team-search-ph {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+}
+
+.apex-html-root.apex-ios .apex-team-search-row {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  direction: ltr;
+}
+
+.apex-html-root.apex-ios .apex-odds-sport-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Hidden span mirrors selected option text — JS sets select width so short labels (e.g. MLB) don’t leave a gap. */
+.apex-html-root.apex-ios .apex-odds-sport-measure {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  font-family: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+.apex-html-root.apex-ios .apex-odds-sport-select {
+  flex: 0 0 auto;
+  order: 2;
+  width: auto;
+  min-width: 0;
+  max-width: min(280px, 46vw);
+  margin: 0;
+  padding: 4px 22px 4px 2px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+  background-size: 12px 12px;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-odds-sport-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.apex-html-root.apex-ios .apex-odds-sport-select:focus,
+.apex-html-root.apex-ios .apex-odds-sport-select:focus-visible,
+.apex-html-root.apex-ios .apex-odds-sport-select:active {
+  outline: none;
+  box-shadow: none;
+}
+
+.apex-html-root.apex-ios .apex-team-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  order: 1;
+  min-width: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.apex-html-root.apex-ios .apex-team-search-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 16px;
+  border: 0.5px solid var(--border2);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  -webkit-overflow-scrolling: touch;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-team-search-results {
+  background: rgba(36, 36, 38, 0.98);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.apex-html-root.apex-ios .apex-team-search-hit {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  text-align: left;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.apex-html-root.apex-ios .apex-team-search-hit:hover,
+.apex-html-root.apex-ios .apex-team-search-hit:focus-visible {
+  background: rgba(0, 0, 0, 0.06);
+  outline: none;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-team-search-hit:hover,
+.apex-html-root.apex-ios.apex-theme-dark .apex-team-search-hit:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.apex-html-root.apex-ios .apex-team-search-hit-title {
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.apex-html-root.apex-ios .apex-team-search-hit-meta {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text3);
+}
+
+.apex-html-root.apex-ios .apex-team-search-hit--finished {
+  cursor: not-allowed;
+  opacity: 0.88;
+}
+
+.apex-html-root.apex-ios .apex-team-search-hit--finished:hover,
+.apex-html-root.apex-ios .apex-team-search-hit--finished:focus-visible,
+.apex-html-root.apex-ios .apex-team-search-hit--finished.apex-team-search-hit--flash {
+  background: rgba(255, 149, 0, 0.14);
+  outline: none;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-team-search-hit--finished:hover,
+.apex-html-root.apex-ios.apex-theme-dark .apex-team-search-hit--finished:focus-visible,
+.apex-html-root.apex-ios.apex-theme-dark .apex-team-search-hit--finished.apex-team-search-hit--flash {
+  background: rgba(255, 149, 0, 0.18);
+}
+
+.apex-html-root.apex-ios .apex-team-search-status {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--text3);
+}
+
+.apex-html-root.apex-ios .apex-team-search-status--err {
+  color: #e83c3c;
+}
+
+.apex-html-root.apex-ios .apex-team-search-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  opacity: 0.9;
+}
+
+.apex-html-root.apex-ios .apex-team-search-icon svg {
+  display: block;
+}
+
+.apex-html-root.apex-ios .apex-team-search-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 4px 0;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.apex-html-root.apex-ios .apex-team-search-input::placeholder {
+  color: var(--text3);
+  font-weight: 400;
+}
+
+.apex-html-root.apex-ios .apex-team-search-input:focus {
+  outline: none;
+}
+
+.apex-html-root.apex-ios .apex-team-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.apex-html-root.apex-ios .hdr .logo {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.apex-html-root .hdr-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.apex-html-root.apex-ios .hdr::after {
+  display: none;
+}
+
+.apex-html-root.apex-ios .logo {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--text);
+  text-shadow: none;
+}
+
+@media (min-width: 769px) {
+  .apex-html-root.apex-ios .logo {
+    font-size: 32px;
+  }
+}
+
+.apex-html-root.apex-ios .logo-ver {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+@media (min-width: 769px) {
+  .apex-html-root.apex-ios .logo-ver {
+    font-size: 12px;
+  }
+}
+
+.apex-html-root.apex-ios .sub {
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.15px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+.apex-html-root .apex-theme-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Theme + sign out: icon-only with subtle matching containers */
+.apex-html-root .apex-theme-toggle {
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(142, 142, 147, 0.16);
+  color: var(--text2);
+  cursor: pointer;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.apex-html-root .apex-theme-toggle:hover {
+  background: rgba(142, 142, 147, 0.24);
+  opacity: 0.88;
+}
+
+.apex-html-root .apex-theme-toggle:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+  opacity: 1;
+}
+
+.apex-html-root .apex-theme-toggle svg {
+  display: block;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-theme-toggle {
+  color: var(--text2);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-theme-toggle {
+  color: #fff;
+  background: rgba(142, 142, 147, 0.22);
+}
+
+/* Sidebar expand/collapse: first row above ANALYZER (inside .apex-sidebar-nav) */
+.apex-html-root .apex-sidebar-toggle-host {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 0 12px 6px;
+  margin-bottom: 2px;
+}
+
+.apex-html-root .apex-sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: rgba(118, 118, 128, 0.12);
+  color: var(--blue);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.2s ease;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-sidebar-toggle {
+  background: rgba(118, 118, 128, 0.28);
+}
+
+.apex-html-root .apex-sidebar-toggle:hover {
+  background: rgba(118, 118, 128, 0.2);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-sidebar-toggle:hover {
+  background: rgba(118, 118, 128, 0.4);
+}
+
+.apex-html-root .apex-sidebar-toggle-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5em;
+  height: 1.5em;
+}
+
+.apex-html-root .apex-sidebar-toggle-arrow::before {
+  content: '‹';
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.apex-html-root.apex-sidebar-collapsed .apex-sidebar-toggle-arrow::before {
+  content: '›';
+}
+
+.apex-html-root.apex-sidebar-collapsed .apex-sidebar-toggle-host {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 6px;
+}
+
+.apex-signout-wrap {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+}
+
+.apex-html-root .apex-btn-signout {
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(142, 142, 147, 0.16);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.apex-html-root .apex-btn-signout:hover {
+  background: rgba(142, 142, 147, 0.24);
+  opacity: 0.88;
+}
+
+.apex-html-root .apex-btn-signout:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+  opacity: 1;
+}
+
+.apex-html-root .apex-btn-signout svg {
+  display: block;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-btn-signout {
+  color: var(--text2);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-btn-signout {
+  background: rgba(142, 142, 147, 0.22);
+  color: #fff;
+}
+
+/* Flex row: sidebar | main */
+.apex-html-root .apex-layout {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+}
+
+/* Sidebar: scrollable nav (theme / sign out live in .hdr-actions) */
+.apex-html-root .apex-sidebar {
+  position: relative;
+  flex-shrink: 0;
+  width: 252px;
+  max-width: 86vw;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 12px 10px 0;
+  margin: 0;
+  overflow: hidden;
+  min-height: 0;
+  transition:
+    width 0.28s cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 0.28s cubic-bezier(0.25, 0.1, 0.25, 1),
+    padding 0.28s ease;
+  border-right: 0.5px solid var(--border, rgba(60, 60, 67, 0.18));
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.04);
+}
+
+.apex-html-root .apex-sidebar-nav {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 12px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-sidebar {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-sidebar {
+  background: rgba(28, 28, 30, 0.98);
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+.apex-html-root .apex-sidebar .tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  text-align: left;
+  justify-content: flex-start;
+  border-radius: 10px;
+  border: none;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text, #000);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.apex-html-root .apex-sidebar .tab:hover {
+  background: rgba(118, 118, 128, 0.1);
+  color: var(--text, #000);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-sidebar .tab.on {
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--blue);
+  box-shadow: none;
+  border: none;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-sidebar .tab.on {
+  background: rgba(10, 132, 255, 0.22);
+  color: var(--blue);
+  box-shadow: none;
+  border: none;
+}
+
+.apex-html-root .apex-sidebar .tab-ico {
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.apex-html-root .apex-sidebar .tab-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapsed: icon rail */
+.apex-html-root.apex-sidebar-collapsed .apex-sidebar {
+  width: 58px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.apex-html-root.apex-sidebar-collapsed .apex-sidebar .tab {
+  justify-content: center;
+  padding: 10px 8px;
+}
+
+.apex-html-root.apex-sidebar-collapsed .apex-sidebar .tab-text {
+  display: none;
+}
+
+.apex-html-root .apex-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.apex-html-root.apex-ios .apex-main {
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+
+.apex-html-root .apex-main .wrap {
+  flex: 1;
+  width: 100%;
+}
+
+/* Sidebar disabled (temporary): hide on desktop + mobile */
+.apex-html-root .apex-sidebar,
+.apex-html-root .apex-sidebar-scrim {
+  display: none !important;
+}
+
+/* Fullscreen Analyze page overlay */
+.apex-html-root.apex-ios .apex-analyze-page {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page {
+  background: rgba(242, 242, 247, 0.86);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-top {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 56px;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-back {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-back {
+  background: rgba(0, 0, 0, 0.06);
+  color: #000;
+}
+
+@media (max-width: 768px) {
+  .apex-html-root.apex-ios .apex-analyze-stream-body {
+    overflow: hidden;
+    border-radius: 12px;
+    isolation: isolate;
+    contain: paint;
+  }
+
+  .apex-html-root.apex-ios .apex-analyze-stream-body .apex-stream-live {
+    border-radius: 12px;
+    overflow: hidden;
+    contain: paint;
+  }
+
+  .apex-html-root.apex-ios .apex-analyze-page-live.is-processing .apex-analyze-stream-body .apex-stream-live {
+    clip-path: inset(0 round 12px);
+    -webkit-clip-path: inset(0 round 12px);
+  }
+
+  .apex-html-root.apex-ios .apex-analyze-page-top {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 0;
+    gap: 8px;
+  }
+
+  .apex-html-root.apex-ios .apex-analyze-page-back {
+    position: static;
+    align-self: flex-start;
+    margin-bottom: 0;
+  }
+
+  .apex-html-root.apex-ios .apex-analyze-page-head {
+    min-width: 100%;
+    padding: 0;
+  }
+}
+
+/* Desktop: stack back control above matchup (mobile already uses column layout in max-width:768px block) */
+@media (min-width: 769px) {
+  .apex-html-root.apex-ios .apex-analyze-page-top {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 0;
+    gap: 10px;
+  }
+
+  .apex-html-root.apex-ios .apex-analyze-page-back {
+    position: static;
+    align-self: flex-start;
+  }
+
+  .apex-html-root.apex-ios .apex-analyze-page-head {
+    min-width: 100%;
+    padding: 0;
+  }
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-head {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  text-align: center;
+  padding: 0;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-ticker {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border-radius: 16px;
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(140% 120% at 12% 0%, rgba(16, 78, 178, 0.24) 0%, rgba(7, 11, 22, 0.9) 45%, rgba(6, 8, 16, 0.96) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 24px rgba(0, 0, 0, 0.34);
+  padding: 14px 18px;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-team {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-logo {
+  width: 76px;
+  height: 76px;
+  border-radius: 999px;
+  justify-content: center;
+  overflow: hidden;
+  flex: 0 0 76px;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-logo-img {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-logo-fallback {
+  font-size: 24px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-team-name {
+  font-size: 19px;
+  font-weight: 760;
+  letter-spacing: -0.18px;
+  line-height: 1.18;
+  color: #f7f8fb;
+  text-wrap: balance;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-mid {
+  min-width: 150px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-day {
+  font-size: 14px;
+  font-weight: 760;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-time {
+  font-size: 13px;
+  font-weight: 650;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-logo-fallback {
+  color: rgba(28, 28, 30, 0.78);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-ticker {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: radial-gradient(130% 120% at 10% 0%, rgba(64, 116, 203, 0.14) 0%, rgba(252, 253, 255, 0.97) 58%, rgba(246, 248, 253, 0.99) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    0 8px 22px rgba(0, 0, 0, 0.08);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-team-name {
+  color: #121318;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-day {
+  color: rgba(29, 33, 41, 0.78);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-time {
+  color: rgba(60, 60, 67, 0.66);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-analyzed-at {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-analyzed-at {
+  color: rgba(60, 60, 67, 0.58);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-body {
+  width: 100%;
+  max-width: 980px;
+  margin: 14px auto 0;
+  box-sizing: border-box;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-live {
+  margin-top: 12px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* display:flex on .apex-analyze-page-live beats [hidden] otherwise — collapse stream UI when done */
+#apex-analyze-page-live[hidden] {
+  display: none !important;
+}
+
+.apex-html-root.apex-ios .apex-analyze-stream-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  text-align: center;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-stream-head {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.apex-html-root.apex-ios .apex-analyze-stream-head-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-stream-head-kicker {
+  color: rgba(60, 60, 67, 0.55);
+}
+
+.apex-html-root.apex-ios .apex-analyze-mode-badge {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-mode-badge {
+  color: rgba(28, 28, 30, 0.95);
+}
+
+.apex-html-root.apex-ios .apex-analyze-stream-body {
+  position: relative;
+  border-radius: 12px;
+  min-height: min(56vh, 520px);
+}
+
+.apex-html-root.apex-ios .apex-analyze-stream-body .apex-stream-live {
+  height: min(56vh, 520px);
+  max-height: min(56vh, 520px);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-live.is-processing .apex-analyze-stream-body .apex-stream-live {
+  filter: blur(1.8px);
+  opacity: 0.48;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 12, 22, 0.62);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 16px 20px;
+  pointer-events: none;
+  overflow: hidden;
+  backdrop-filter: blur(6px) saturate(118%);
+  -webkit-backdrop-filter: blur(6px) saturate(118%);
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-sheen {
+  position: absolute;
+  inset: -40% -50%;
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    rgba(10, 132, 255, 0.06) 44%,
+    rgba(191, 90, 242, 0.05) 50%,
+    rgba(52, 209, 88, 0.04) 56%,
+    transparent 62%
+  );
+  animation: apex-analyze-sheen 5.5s ease-in-out infinite;
+}
+
+@keyframes apex-analyze-sheen {
+  0%,
+  100% {
+    transform: translateX(-4%) rotate(0deg);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateX(4%) rotate(1deg);
+    opacity: 0.55;
+  }
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  max-width: 100%;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-viz {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  opacity: 0.88;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-rings {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-top-color: rgba(10, 132, 255, 0.42);
+  border-right-color: rgba(191, 90, 242, 0.18);
+  animation: apex-analyze-spin 2.4s linear infinite;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-ring--reverse {
+  inset: 10px;
+  border-top-color: rgba(52, 209, 88, 0.32);
+  border-right-color: rgba(255, 200, 80, 0.12);
+  animation: apex-analyze-spin 3.4s linear infinite reverse;
+}
+
+@keyframes apex-analyze-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-core {
+  position: absolute;
+  inset: 28px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.12), transparent 52%),
+    radial-gradient(circle at 50% 50%, rgba(10, 132, 255, 0.2), rgba(6, 8, 18, 0.88));
+  box-shadow:
+    0 0 14px rgba(10, 132, 255, 0.18),
+    inset 0 0 16px rgba(255, 255, 255, 0.04);
+  animation: apex-analyze-core-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes apex-analyze-core-pulse {
+  0%,
+  100% {
+    transform: scale(0.98);
+    opacity: 0.82;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.95;
+  }
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-orbit {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: apex-analyze-orbit 4.5s linear infinite;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-orbit span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px;
+  border-radius: 50%;
+  transform-origin: center center;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 6px rgba(10, 132, 255, 0.35);
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-orbit span:nth-child(1) {
+  transform: rotate(0deg) translateY(-34px);
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-orbit span:nth-child(2) {
+  background: rgba(191, 90, 242, 0.5);
+  box-shadow: 0 0 6px rgba(191, 90, 242, 0.35);
+  transform: rotate(120deg) translateY(-34px);
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-orbit span:nth-child(3) {
+  background: rgba(52, 209, 88, 0.45);
+  box-shadow: 0 0 6px rgba(52, 209, 88, 0.3);
+  transform: rotate(240deg) translateY(-34px);
+}
+
+@keyframes apex-analyze-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-mode-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-mode-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-mode {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.35px;
+  line-height: 1.1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(180, 210, 255, 0.75) 50%, rgba(120, 180, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-loading-mode {
+  background: linear-gradient(135deg, #0a0a0c 0%, #1c4aa8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-mode-hint {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  color: rgba(255, 255, 255, 0.62);
+  max-width: 260px;
+  line-height: 1.35;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-loading-mode-hint {
+  color: rgba(60, 60, 67, 0.65);
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: min(340px, 92vw);
+  padding: 0 4px;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-live.is-processing .apex-analyze-loading {
+  display: flex;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-text {
+  max-width: min(300px, 88vw);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  line-height: 1.4;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-dots {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  animation: apex-loading-bounce 1.25s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.apex-html-root.apex-ios .apex-analyze-loading-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes apex-loading-bounce {
+  0%, 80%, 100% {
+    transform: translateY(0) scale(0.92);
+    opacity: 0.45;
+  }
+  40% {
+    transform: translateY(-3px) scale(1);
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apex-html-root.apex-ios .apex-analyze-loading-sheen,
+  .apex-html-root.apex-ios .apex-analyze-loading-ring,
+  .apex-html-root.apex-ios .apex-analyze-loading-ring--reverse,
+  .apex-html-root.apex-ios .apex-analyze-loading-core,
+  .apex-html-root.apex-ios .apex-analyze-loading-orbit,
+  .apex-html-root.apex-ios .apex-analyze-loading-dots span {
+    animation: none !important;
+  }
+
+  .apex-html-root.apex-ios .apex-analyze-page-live.is-processing .apex-analyze-stream-body .apex-stream-live {
+    filter: blur(1px);
+    opacity: 0.55;
+  }
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-loading {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(250, 250, 252, 0.88);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-loading-mode-label {
+  color: rgba(60, 60, 67, 0.55);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-loading-text {
+  color: rgba(28, 28, 30, 0.88);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-loading-dots span {
+  background: rgba(28, 28, 30, 0.85);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason {
+  margin-top: 14px;
+  padding: 14px 14px 16px;
+  border-radius: 12px;
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-reason {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  color: #000;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-reason-title {
+  color: rgba(60, 60, 67, 0.55);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-body {
+  display: grid;
+  gap: 10px;
+  color: inherit;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-item {
+  border-radius: 10px;
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 10px 11px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-reason-item {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-item-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 5px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-reason-item-title {
+  color: rgba(60, 60, 67, 0.62);
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-item-bet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+  color: #f7f8fb;
+  margin-bottom: 8px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-reason-item-bet {
+  color: #121318;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-item-bet-legs {
+  margin: 0;
+  padding-left: 1.15em;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-item-bet-legs li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  margin-bottom: 4px;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-item-bet-pick {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-item-bet-leg-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-item-bet-legs li:last-child {
+  margin-bottom: 0;
+}
+
+.apex-html-root.apex-ios .apex-analyze-page-reason-item-body {
+  font-size: 13px;
+  line-height: 1.65;
+  word-break: break-word;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-page-reason-item-body {
+  color: rgba(29, 33, 41, 0.92);
+}
+
+/* Scrim: mobile drawer */
+.apex-html-root .apex-sidebar-scrim {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .apex-html-root .apex-sidebar {
+    --apex-sidebar-peek: 52px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 400;
+    width: min(288px, 88vw);
+    padding-top: max(12px, env(safe-area-inset-top));
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.12);
+    transform: translateX(0);
+  }
+
+  /* Peek strip keeps the arrow reachable (toggle lives inside the sidebar) */
+  .apex-html-root.apex-sidebar-collapsed .apex-sidebar {
+    width: min(288px, 88vw);
+    transform: translateX(calc(-100% + var(--apex-sidebar-peek)));
+    pointer-events: auto;
+  }
+
+  .apex-html-root.apex-sidebar-collapsed .apex-sidebar .tab-text {
+    display: none;
+  }
+
+  /* Peek shows the drawer’s right edge: keep the arrow in that strip */
+  .apex-html-root.apex-sidebar-collapsed .apex-sidebar-toggle-host {
+    justify-content: flex-end;
+  }
+
+  .apex-html-root:not(.apex-sidebar-collapsed) .apex-sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 399;
+    background: rgba(0, 0, 0, 0.38);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+}
+
+@media (min-width: 769px) {
+  .apex-html-root .apex-sidebar-scrim {
+    display: none !important;
+  }
+}
+
+/* Live NDJSON stream while Claude / web search runs */
+.apex-stream-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+  max-height: min(50vh, 420px);
+}
+
+.apex-html-root.apex-ios .apex-stream-status {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  text-transform: none;
+  color: var(--blue);
+  padding: 8px 12px;
+  background: rgba(0, 122, 255, 0.08);
+  border: 0.5px solid rgba(0, 122, 255, 0.2);
+  border-radius: 10px;
+}
+
+.apex-stream-status {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.95);
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.apex-html-root.apex-ios .apex-stream-hint {
+  font-size: 11px;
+  letter-spacing: -0.05em;
+  text-transform: none;
+  color: var(--text3);
+}
+
+.apex-stream-hint {
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(180, 175, 160, 0.75);
+  line-height: 1.35;
+}
+
+/* Claude chat: Chat vs Analyzed games */
+.prm-subtabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.apex-html-root.apex-ios .prm-subtab {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  text-transform: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(118, 118, 128, 0.12);
+  color: var(--text2);
+}
+
+.apex-html-root.apex-ios .prm-subtab.on {
+  color: #fff;
+  background: var(--blue);
+}
+
+/* Chat header buttons: dark pill + white text (no blue accent) */
+.apex-html-root.apex-ios.apex-theme-dark .prm-subtab {
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .prm-subtab.on {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.prm-subtab {
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  cursor: pointer;
+  border: 1px solid rgba(61, 139, 255, 0.25);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text3, #7a9bb5);
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.prm-subtab:hover {
+  color: var(--text2, #c8d8e8);
+  border-color: rgba(61, 139, 255, 0.45);
+}
+
+.prm-subtab.on {
+  color: var(--gold, #ffffff);
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.prm-pane {
+  display: none;
+}
+
+.prm-pane.on {
+  display: block;
+}
+
+.prm-pane--past {
+  padding: 12px 14px 16px;
+  border-top: 1px solid var(--border2, #0f1f2d);
+}
+
+.past-games-hint {
+  font-size: 10px;
+  color: var(--text3, #7a9bb5);
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+
+.past-games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(50vh, 480px);
+  overflow-y: auto;
+}
+
+.past-game-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  padding: 12px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #1a2d3d);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text2, #c8d8e8);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.apex-html-root.apex-ios .past-game-card {
+  border-radius: 12px;
+  border: 0.5px solid var(--border);
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .past-game-card {
+  background: rgba(28, 28, 30, 0.48);
+}
+
+.past-game-card:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.apex-html-root.apex-ios .past-game-card:hover {
+  border-color: rgba(0, 122, 255, 0.35);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .past-game-card:hover {
+  background: rgba(28, 28, 30, 0.54);
+}
+
+.past-game-teams {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--gold, #ffffff);
+  margin-bottom: 0;
+}
+
+.past-game-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.past-game-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.past-game-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex: 0 0 28px;
+}
+
+.past-game-logo-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.past-game-logo-fallback {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text2, #c8d8e8);
+}
+
+.past-game-analyzed-at {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text3, #7a9bb5);
+  white-space: nowrap;
+}
+
+.past-game-when {
+  font-size: 10px;
+  color: var(--text2, #c8d8e8);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.past-game-preview {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  color: var(--text2);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* Mobile: no bet snippet on the card — full bets appear after tap (analyze overlay). */
+@media (max-width: 768px) {
+  .past-game-preview {
+    display: none !important;
+  }
+
+}
+
+.past-game-card--open {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+
+/* Bottom-right confirmation when ANALYZE stream completes */
+.apex-html-root.apex-ios .apex-analyzer-toast {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.15px;
+  text-transform: none;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.82);
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.apex-analyzer-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  max-width: min(320px, calc(100vw - 48px));
+  padding: 12px 16px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #0a0e12;
+  background: linear-gradient(135deg, #ffffff, #f3f4f6);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+.apex-analyzer-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-stream-live {
+  font-family:
+    ui-monospace,
+    'SF Mono',
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: rgba(242, 242, 247, 0.9);
+  border: 0.5px solid var(--border2);
+  border-radius: 10px;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-stream-live {
+  font-family:
+    ui-monospace,
+    'SF Mono',
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: rgba(44, 44, 46, 0.95);
+  border: 0.5px solid var(--border2);
+  border-radius: 10px;
+}
+
+.apex-stream-live {
+  margin: 0;
+  flex: 1;
+  min-height: 80px;
+  overflow: auto;
+  padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(232, 228, 218, 0.92);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border2, rgba(255, 255, 255, 0.08));
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Main content: iOS-style cards & tabs override (legacy .tabs horizontal rules) */
+.apex-html-root.apex-ios .wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 12px 16px 28px;
+}
+
+@media (max-width: 768px) {
+  .apex-html-root.apex-ios .wrap {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
+}
+
+.apex-html-root.apex-ios .tc.on {
+  margin-top: 12px;
+}
+
+/* Top-level pseudo-pages */
+.apex-html-root.apex-route-analyze #t1,
+.apex-html-root.apex-route-analyze #apex-today-page {
+  display: none;
+}
+
+.apex-html-root.apex-route-analyze #t1 {
+  display: block;
+}
+
+.apex-html-root.apex-route-analyze #t11,
+.apex-html-root.apex-route-analyze #t12,
+.apex-html-root.apex-route-analyze #t2,
+.apex-html-root.apex-route-analyze #t3,
+.apex-html-root.apex-route-analyze #t4,
+.apex-html-root.apex-route-analyze #t5,
+.apex-html-root.apex-route-analyze #t6,
+.apex-html-root.apex-route-analyze #t7,
+.apex-html-root.apex-route-analyze #t8,
+.apex-html-root.apex-route-analyze #t9,
+.apex-html-root.apex-route-analyze #t10 {
+  display: none;
+}
+
+.apex-html-root.apex-route-analyze #t1 .prm {
+  display: none;
+}
+
+/* Analyze /apex — mobile: Live lines directly under team search; then schedule ticker, form */
+@media (max-width: 768px) {
+  .apex-html-root.apex-route-analyze #t1 {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .apex-html-root.apex-route-analyze #t1 > .apex-game-input-heading {
+    order: 1;
+  }
+
+  .apex-html-root.apex-ios.apex-route-analyze #t1 > #apex-player-props-carousel-section {
+    order: 2;
+    margin-top: 0;
+  }
+
+  .apex-html-root.apex-route-analyze #t1 > .apex-quick-games-section:not(#apex-player-props-carousel-section) {
+    order: 3;
+  }
+
+  .apex-html-root.apex-route-analyze #t1 > .inp-panel {
+    order: 4;
+  }
+
+  .apex-html-root.apex-route-analyze #t1 > #apex-bet-cards {
+    order: 5;
+  }
+
+  .apex-html-root.apex-route-analyze #t1 > .prm {
+    order: 6;
+  }
+}
+
+.apex-html-root.apex-route-mygames #t1 {
+  display: block;
+}
+
+.apex-html-root.apex-route-mygames #apex-today-page,
+.apex-html-root.apex-route-mygames #t11,
+.apex-html-root.apex-route-mygames #t12,
+.apex-html-root.apex-route-mygames #t2,
+.apex-html-root.apex-route-mygames #t3,
+.apex-html-root.apex-route-mygames #t4,
+.apex-html-root.apex-route-mygames #t5,
+.apex-html-root.apex-route-mygames #t6,
+.apex-html-root.apex-route-mygames #t7,
+.apex-html-root.apex-route-mygames #t8,
+.apex-html-root.apex-route-mygames #t9,
+.apex-html-root.apex-route-mygames #t10 {
+  display: none;
+}
+
+.apex-html-root.apex-route-mygames #t1 .apex-game-input-heading,
+.apex-html-root.apex-route-mygames #t1 .apex-quick-games-section,
+.apex-html-root.apex-route-mygames #t1 .inp-panel {
+  display: none;
+}
+
+/* My Games: past list on page background — no inner card clipping or short scroll box */
+.apex-html-root.apex-route-mygames .past-games-list {
+  max-height: none;
+  overflow: visible;
+}
+
+.apex-html-root.apex-ios.apex-route-mygames #t1 .prm {
+  margin-top: 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: visible;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark.apex-route-mygames #t1 .prm {
+  background: transparent;
+}
+
+.apex-html-root.apex-ios.apex-route-mygames #t1 .prm-h {
+  padding: 8px 0 12px;
+  border-bottom: none;
+}
+
+.apex-html-root.apex-ios.apex-route-mygames #t1 .prm-pane--past {
+  padding: 0 0 8px;
+  border-top: none;
+}
+
+.apex-html-root.apex-route-mygames .past-games-hint {
+  margin-bottom: 10px;
+}
+
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide {
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+
+.apex-html-root.apex-ios.apex-theme-light.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 1) 0%, rgba(248, 248, 250, 0.95) 100%);
+}
+
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-mid {
+  gap: 4px;
+}
+
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .past-game-card__analyzed {
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  margin-top: 2px;
+  text-align: center;
+  max-width: 100%;
+  line-height: 1.25;
+}
+
+.apex-html-root.apex-route-today #apex-today-page {
+  display: block;
+}
+
+.apex-html-root.apex-route-today #apex-today-page .pnl {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.apex-html-root.apex-route-today #apex-today-page .ph {
+  border-bottom-color: transparent;
+}
+
+.apex-html-root.apex-route-today #t1,
+.apex-html-root.apex-route-today #t11,
+.apex-html-root.apex-route-today #t12,
+.apex-html-root.apex-route-today #t2,
+.apex-html-root.apex-route-today #t3,
+.apex-html-root.apex-route-today #t4,
+.apex-html-root.apex-route-today #t5,
+.apex-html-root.apex-route-today #t6,
+.apex-html-root.apex-route-today #t7,
+.apex-html-root.apex-route-today #t8,
+.apex-html-root.apex-route-today #t9,
+.apex-html-root.apex-route-today #t10 {
+  display: none;
+}
+
+.apex-html-root.apex-ios .apex-today-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px 10px;
+  margin: 0 -14px 2px;
+}
+
+.apex-html-root.apex-ios .apex-today-toolbar-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.75;
+}
+
+.apex-html-root.apex-ios .apex-today-toggle {
+  display: inline-flex;
+  border-radius: 10px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-today-toggle {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.apex-html-root.apex-ios .apex-today-toggle-btn {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  opacity: 0.65;
+  cursor: pointer;
+}
+
+.apex-html-root.apex-ios .apex-today-toggle-btn.on {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-today-toggle-btn.on {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.apex-html-root.apex-ios .apex-today-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* display:grid on .apex-today-grid overrides native [hidden]; keep grid hidden when toggled off */
+.apex-html-root.apex-ios .apex-today-grid[hidden] {
+  display: none !important;
+}
+
+.apex-html-root.apex-ios .apex-today-carousel-wrap[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .apex-html-root.apex-ios .apex-today-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-slide--empty {
+  grid-column: 1 / -1;
+}
+
+.apex-html-root.apex-ios .apex-today-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+.apex-html-root.apex-ios .apex-today-offseason {
+  margin: 0;
+  padding: 8px 14px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.45;
+  color: var(--text3);
+  text-align: center;
+}
+
+.apex-html-root.apex-ios .apex-today-league-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 0 10px;
+  margin: 0 0 4px;
+  border: none;
+  background: transparent;
+  cursor: default;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.apex-html-root.apex-ios #apex-today-page.apex-today-page--grid .apex-today-league-head {
+  cursor: pointer;
+}
+
+.apex-html-root.apex-ios #apex-today-page:not(.apex-today-page--grid) .apex-today-league-chevron {
+  display: none;
+}
+
+.apex-html-root.apex-ios .apex-today-league-head:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.apex-html-root.apex-ios #apex-today-page:not(.apex-today-page--grid) .apex-today-league-head:focus-visible {
+  outline: none;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-today-league-head:focus-visible {
+  outline-color: rgba(0, 0, 0, 0.35);
+}
+
+.apex-html-root.apex-ios .apex-today-league-title {
+  font-size: calc(13px * 1.5);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin: 0;
+  padding: 0;
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-today-league-chevron {
+  flex-shrink: 0;
+  display: inline-block;
+  font-size: 0.85em;
+  line-height: 1;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.apex-html-root.apex-ios #apex-today-page.apex-today-page--grid .apex-today-league--collapsed .apex-today-league-chevron {
+  transform: rotate(-90deg);
+}
+
+.apex-html-root.apex-ios #apex-today-page.apex-today-page--grid .apex-today-league--collapsed .apex-today-league-body {
+  display: none !important;
+}
+
+.apex-html-root.apex-ios .apex-today-row {
+  width: 100%;
+}
+
+.apex-html-root.apex-ios .pnl {
+  border-radius: 12px;
+  border: 0.5px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.apex-html-root.apex-ios .inp-panel {
+  margin-bottom: 22px;
+  border-radius: 12px;
+  border: 0.5px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  /* Override legacy apex-app.css blue gradient so the shell matches .icell / --panel */
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  background-image: none;
+  /* Legacy apex-app.css sets overflow:hidden — clips Line reasoning popover above the row */
+  overflow: visible;
+  position: relative;
+  /* Above .apex-quick-games-section (1) and .apex-game-input-heading (30) so the popover isn’t covered */
+  z-index: 40;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .inp-panel {
+  background: rgba(28, 28, 30, 0.54);
+}
+
+.apex-html-root.apex-ios .inp-panel::before {
+  display: none;
+}
+
+/* Bet summary cards (parsed from compact analyzer JSON block) — above chat */
+.apex-html-root.apex-ios .apex-bet-cards {
+  margin: 22px 0 0;
+  padding: 0;
+}
+
+.apex-html-root.apex-ios .apex-bet-cards-inner {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .apex-html-root.apex-ios .apex-bet-cards-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.apex-html-root.apex-ios .apex-bet-card {
+  margin: 0;
+  padding: 14px 14px 16px;
+  border-radius: 12px;
+  border: 0.5px solid var(--border);
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-bet-card {
+  background: rgba(28, 28, 30, 0.5);
+}
+
+.apex-html-root.apex-ios .apex-bet-card-title {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.apex-html-root.apex-ios .apex-bet-card-body {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-bet-card-body-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-bet-card-line-tag {
+  flex: 0 0 auto;
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 14%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--blue) 35%, transparent);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .apex-bet-card-line-tag {
+  background: rgba(10, 132, 255, 0.16);
+  border-color: rgba(10, 132, 255, 0.35);
+  color: #7ecbff;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-bet-card-line-tag {
+  color: #0a5cad;
+  background: rgba(10, 92, 173, 0.1);
+  border-color: rgba(10, 92, 173, 0.28);
+}
+
+.apex-html-root.apex-ios .apex-bet-card-body--empty {
+  font-weight: 500;
+  color: var(--text3);
+}
+
+.apex-html-root.apex-ios .apex-bet-card-legs {
+  margin: 0;
+  padding: 0 0 0 1.1em;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-bet-card-leg {
+  margin: 0 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+}
+
+.apex-html-root.apex-ios .apex-bet-card-leg:last-child {
+  margin-bottom: 0;
+}
+
+.apex-html-root.apex-ios .apex-bet-card-leg-l {
+  font-weight: 700;
+  color: var(--blue);
+  margin-right: 4px;
+}
+
+.apex-html-root.apex-ios .apex-bet-card-leg-t {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+}
+
+/* APEX CHAT (.prm) — same card shell as .inp-panel (single surface, no nested grey box) */
+.apex-html-root.apex-ios .prm {
+  margin-top: 22px;
+  border-radius: 12px;
+  border: 0.5px solid var(--border);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  background-image: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .prm {
+  background: rgba(28, 28, 30, 0.5);
+}
+
+.apex-html-root.apex-ios .prm-h {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--border2);
+  gap: 10px;
+  background: transparent;
+}
+
+.apex-html-root.apex-ios .prm-h .prm-subtabs {
+  justify-content: flex-start;
+}
+
+.apex-html-root.apex-ios .cbtn {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  text-transform: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 0.5px solid var(--border);
+  background: rgba(118, 118, 128, 0.1);
+  color: var(--blue);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.apex-html-root.apex-ios .cbtn:hover {
+  background: rgba(118, 118, 128, 0.16);
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .cbtn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .cbtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.apex-html-root.apex-ios .prm-pane--chat {
+  padding: 0 0 4px;
+}
+
+.apex-html-root.apex-ios .prm-pane--past {
+  padding: 16px;
+  border-top: 0.5px solid var(--border2);
+}
+
+.apex-html-root.apex-ios .chat-wrap {
+  margin: 0 16px 12px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.apex-html-root.apex-ios .chat-log {
+  max-height: min(62vh, 720px);
+  padding: 4px 0 16px;
+  font-size: 14px;
+  line-height: 1.45;
+  gap: 12px;
+}
+
+.apex-html-root.apex-ios .chat-msg {
+  font-size: 14px;
+  border-radius: 16px;
+}
+
+.apex-html-root.apex-ios .chat-msg .who {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.apex-html-root.apex-ios .chat-placeholder {
+  font-size: 14px;
+  font-style: normal;
+  color: var(--text3);
+  padding: 12px 0;
+  line-height: 1.45;
+}
+
+.apex-html-root.apex-ios .chat-compose {
+  padding: 14px 0 0;
+  margin: 0;
+  border-top: 0.5px solid var(--border2);
+  background: transparent;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.apex-html-root.apex-ios .chat-compose textarea {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 0.5px solid var(--border);
+  background: rgba(118, 118, 128, 0.08);
+  min-height: 48px;
+  resize: vertical;
+}
+
+.apex-html-root.apex-ios .chat-compose textarea:focus {
+  border-color: var(--blue);
+  outline: none;
+}
+
+.apex-html-root.apex-ios .chat-compose textarea:disabled {
+  opacity: 0.55;
+}
+
+.apex-html-root.apex-ios .sendbtn {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  text-transform: none;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.2px;
+  min-height: 48px;
+  padding: 12px 18px;
+}
+
+.apex-html-root.apex-ios .sendbtn:hover {
+  filter: brightness(1.08);
+}
+
+.apex-html-root.apex-ios .sendbtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Main team row: no vertical gutters (legacy .igrid uses gap:1px + bg for dividers) */
+.apex-html-root.apex-ios .apex-game-main-igrid {
+  gap: 0;
+  background: transparent;
+}
+
+/* Advanced panel: same — no cell gutters or section border-top lines */
+.apex-html-root.apex-ios .apex-game-input-advanced .igrid {
+  gap: 0;
+  background: transparent;
+  border-top: none;
+}
+
+.apex-html-root.apex-ios .inp-panel .icell {
+  background: transparent;
+}
+
+.apex-html-root.apex-ios .inp-panel .icell input,
+.apex-html-root.apex-ios .inp-panel .icell textarea {
+  border-bottom-color: rgba(255, 255, 255, 0.18);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .inp-panel .icell input,
+.apex-html-root.apex-ios.apex-theme-light .inp-panel .icell textarea {
+  border-bottom-color: rgba(0, 0, 0, 0.14);
+}
+
+.apex-html-root.apex-ios .inp-panel .icell select.apex-analyze-sport-select {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 6px 22px 6px 0;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+  background-size: 12px 12px;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .inp-panel .icell select.apex-analyze-sport-select {
+  border-bottom-color: rgba(0, 0, 0, 0.14);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.apex-html-root.apex-ios .inp-panel .icell select.apex-analyze-sport-select:focus,
+.apex-html-root.apex-ios .inp-panel .icell select.apex-analyze-sport-select:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .inp-panel .ilbl {
+  color: #fff;
+}
+
+.apex-html-root.apex-ios.apex-theme-dark .inp-panel .ilbl .rq,
+.apex-html-root.apex-ios.apex-theme-dark .inp-panel .ilbl .op {
+  color: #fff;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .inp-panel .ilbl {
+  color: #000;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .inp-panel .ilbl .rq,
+.apex-html-root.apex-ios.apex-theme-light .inp-panel .ilbl .op {
+  color: #000;
+}
+
+.apex-html-root.apex-ios .apex-game-context-grid {
+  grid-template-columns: 1fr;
+}
+
+.apex-html-root.apex-ios .apex-game-advanced-odds-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Upcoming games: gradient frame + glass viewport — stripped for ticker (cards only) */
+.apex-html-root.apex-ios .apex-quick-games-section {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin-bottom: 22px;
+}
+
+/* Match .apex-player-props-carousel-section horizontal padding (14px) so titles align with Live Lines */
+.apex-html-root.apex-ios #apex-schedule-games-section .apex-qg-head {
+  padding: 0 14px 8px;
+}
+
+.apex-html-root.apex-ios #apex-schedule-games-section .apex-qg-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.3;
+  color: var(--text3);
+  opacity: 0.92;
+}
+
+.apex-html-root.apex-ios.apex-theme-light #apex-schedule-games-section .apex-qg-title {
+  color: var(--text2, #3a3f4a);
+  opacity: 0.95;
+}
+
+.apex-html-root.apex-ios .apex-qg-offseason {
+  margin: 0;
+  padding: 8px 14px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.45;
+  color: var(--text3);
+  text-align: center;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel[hidden] {
+  display: none !important;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel {
+  width: 100%;
+  padding: 2px;
+  border-radius: 20px;
+  background: linear-gradient(
+    145deg,
+    rgba(10, 132, 255, 0.35),
+    rgba(191, 90, 242, 0.2),
+    rgba(52, 209, 88, 0.12),
+    rgba(10, 132, 255, 0.15)
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 12px 40px rgba(0, 0, 0, 0.35),
+    0 4px 16px rgba(10, 132, 255, 0.08);
+}
+
+/* Ticker: no outer pill — only game cards read as containers */
+.apex-html-root.apex-ios .apex-qg-carousel:has(.apex-qg-carousel-viewport--ticker) {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-carousel {
+  background: linear-gradient(
+    145deg,
+    rgba(0, 122, 255, 0.2),
+    rgba(175, 82, 222, 0.12),
+    rgba(52, 199, 89, 0.1),
+    rgba(0, 122, 255, 0.12)
+  );
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06) inset,
+    0 8px 28px rgba(0, 0, 0, 0.08);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-carousel:has(.apex-qg-carousel-viewport--ticker) {
+  background: transparent;
+  box-shadow: none;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport {
+  overflow: hidden;
+  width: 100%;
+  border-radius: 17px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-carousel-viewport {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+/* Ticker: no glass panel behind the row; edge fade only (game cards stay the only UI chrome) */
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker {
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 6%,
+    #000 14%,
+    #000 86%,
+    rgba(0, 0, 0, 0.35) 94%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 6%,
+    #000 14%,
+    #000 86%,
+    rgba(0, 0, 0, 0.35) 94%,
+    transparent 100%
+  );
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-carousel-viewport--ticker {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-track {
+  display: flex;
+  flex-direction: row;
+  will-change: transform;
+}
+
+/* Stock-style ticker: three games per row, slow seamless horizontal loop */
+@keyframes apex-qg-ticker {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-carousel-track {
+  --apex-qg-ticker-gap: 12px;
+  gap: var(--apex-qg-ticker-gap);
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-track--ticker {
+  width: max-content;
+  animation: apex-qg-ticker var(--apex-qg-ticker-duration, 120s) linear infinite;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--paused .apex-qg-carousel-track--ticker {
+  animation-play-state: paused;
+}
+
+/* Mobile (≤768px): RAF auto-scroll + touch drag/flick; flick velocity decays back to baseline speed */
+@media (max-width: 768px) {
+  .apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker.apex-qg-carousel-viewport--swipe {
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+  }
+
+  .apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker.apex-qg-carousel-viewport--swipe .apex-qg-carousel-track--ticker {
+    animation: none !important;
+    width: max-content;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker:hover .apex-qg-carousel-track--ticker {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apex-html-root.apex-ios .apex-qg-carousel-track--ticker {
+    animation: none;
+    transform: none;
+  }
+}
+
+.apex-html-root.apex-ios .apex-qg-slide {
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 12px 8px 10px;
+  overflow: hidden;
+}
+
+.apex-html-root.apex-ios .apex-qg-slide:not(.apex-qg-slide--empty) {
+  cursor: pointer;
+}
+
+.apex-html-root.apex-ios .apex-qg-slide.apex-qg-slide--finished {
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+
+.apex-html-root.apex-ios .apex-qg-game-over {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 8px;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+  pointer-events: none;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-game-over {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.apex-html-root.apex-ios .apex-qg-slide--finished:hover .apex-qg-game-over,
+.apex-html-root.apex-ios .apex-qg-slide--finished:active .apex-qg-game-over,
+.apex-html-root.apex-ios .apex-qg-slide--finished.apex-qg-slide--finished-flash .apex-qg-game-over {
+  opacity: 1;
+}
+
+.apex-html-root.apex-ios .apex-qg-slide--finished:hover {
+  filter: brightness(1.06);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-slide--finished:hover {
+  filter: brightness(0.97);
+}
+
+.apex-html-root.apex-ios .apex-qg-slide:not(.apex-qg-slide--empty):focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 3px;
+}
+
+@keyframes apex-qg-slide-pick {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  40% {
+    transform: scale(1.045);
+    filter: brightness(1.14);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes apex-qg-slide-pick-light {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  40% {
+    transform: scale(1.045);
+    filter: brightness(0.97);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+/* Front-page carousel: brief “pop” when a game is selected */
+.apex-html-root.apex-ios .apex-qg-slide.apex-qg-slide--picked:not(.apex-qg-slide--empty) {
+  position: relative;
+  z-index: 3;
+  animation: apex-qg-slide-pick 0.55s cubic-bezier(0.34, 1.35, 0.64, 1) forwards;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.12) inset,
+    0 0 0 2px rgba(120, 200, 255, 0.55),
+    0 14px 36px rgba(0, 0, 0, 0.45);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-slide.apex-qg-slide--picked:not(.apex-qg-slide--empty) {
+  animation-name: apex-qg-slide-pick-light;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 0 0 2px rgba(0, 122, 255, 0.45),
+    0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apex-html-root.apex-ios .apex-qg-slide.apex-qg-slide--picked:not(.apex-qg-slide--empty) {
+    animation: none;
+    box-shadow: inherit;
+  }
+}
+
+/* Flying chip: carousel pick → Analyze button (see apexQuickGamesCarousel.js) */
+.apex-qg-fly-to-analyze {
+  position: fixed;
+  z-index: 99999;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: linear-gradient(165deg, rgba(36, 44, 58, 0.96) 0%, rgba(12, 14, 20, 0.98) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.12) inset,
+    0 12px 40px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  will-change: transform, opacity;
+}
+
+.apex-qg-fly-to-analyze__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 7px;
+}
+
+.apex-qg-fly-to-analyze__bolt {
+  font-size: 22px;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(120, 200, 255, 0.55));
+}
+
+.apex-qg-fly-to-analyze__letter {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-fly-to-analyze__letter {
+  color: rgba(28, 28, 30, 0.9);
+  text-shadow: none;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-fly-to-analyze {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 247, 252, 0.98) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+@keyframes apex-abtn-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1.07);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--pulse {
+  animation: apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+
+/* Analyze button: infinite 3-color border glow after carousel pick (composes with `.apex-abtn--pulse` on transform) */
+@keyframes apex-abtn-glow-mlb-d {
+  0% {
+    border-color: rgba(255, 110, 98, 0.62);
+    box-shadow:
+      0 0 0 1px rgba(255, 69, 58, 0.35) inset,
+      0 0 24px rgba(255, 69, 58, 0.48),
+      0 0 42px rgba(255, 100, 88, 0.22);
+  }
+
+  33% {
+    border-color: rgba(110, 175, 255, 0.62);
+    box-shadow:
+      0 0 0 1px rgba(10, 132, 255, 0.38) inset,
+      0 0 24px rgba(10, 132, 255, 0.48),
+      0 0 42px rgba(80, 160, 255, 0.28);
+  }
+
+  66% {
+    border-color: rgba(230, 235, 248, 0.45);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+      0 0 22px rgba(255, 255, 255, 0.18),
+      0 0 38px rgba(10, 132, 255, 0.2);
+  }
+
+  100% {
+    border-color: rgba(255, 110, 98, 0.62);
+    box-shadow:
+      0 0 0 1px rgba(255, 69, 58, 0.35) inset,
+      0 0 24px rgba(255, 69, 58, 0.48),
+      0 0 42px rgba(255, 100, 88, 0.22);
+  }
+}
+
+@keyframes apex-abtn-glow-nfl-d {
+  0% {
+    border-color: rgba(130, 235, 155, 0.62);
+    box-shadow:
+      0 0 0 1px rgba(52, 209, 88, 0.35) inset,
+      0 0 24px rgba(52, 209, 88, 0.46),
+      0 0 42px rgba(80, 220, 120, 0.22);
+  }
+
+  33% {
+    border-color: rgba(255, 195, 110, 0.62);
+    box-shadow:
+      0 0 0 1px rgba(255, 159, 10, 0.35) inset,
+      0 0 24px rgba(255, 159, 10, 0.44),
+      0 0 42px rgba(255, 190, 80, 0.26);
+  }
+
+  66% {
+    border-color: rgba(255, 225, 160, 0.55);
+    box-shadow:
+      0 0 0 1px rgba(255, 200, 100, 0.28) inset,
+      0 0 22px rgba(255, 200, 120, 0.32),
+      0 0 38px rgba(52, 209, 88, 0.2);
+  }
+
+  100% {
+    border-color: rgba(130, 235, 155, 0.62);
+    box-shadow:
+      0 0 0 1px rgba(52, 209, 88, 0.35) inset,
+      0 0 24px rgba(52, 209, 88, 0.46),
+      0 0 42px rgba(80, 220, 120, 0.22);
+  }
+}
+
+@keyframes apex-abtn-glow-nba-d {
+  0% {
+    border-color: rgba(255, 165, 75, 0.65);
+    box-shadow:
+      0 0 0 1px rgba(255, 149, 0, 0.4) inset,
+      0 0 24px rgba(255, 149, 0, 0.5),
+      0 0 42px rgba(255, 175, 60, 0.28);
+  }
+
+  33% {
+    border-color: rgba(255, 115, 45, 0.65);
+    box-shadow:
+      0 0 0 1px rgba(255, 95, 25, 0.38) inset,
+      0 0 24px rgba(255, 95, 30, 0.48),
+      0 0 42px rgba(255, 130, 50, 0.26);
+  }
+
+  66% {
+    border-color: rgba(255, 205, 120, 0.58);
+    box-shadow:
+      0 0 0 1px rgba(255, 185, 90, 0.32) inset,
+      0 0 22px rgba(255, 195, 100, 0.4),
+      0 0 38px rgba(255, 160, 50, 0.22);
+  }
+
+  100% {
+    border-color: rgba(255, 165, 75, 0.65);
+    box-shadow:
+      0 0 0 1px rgba(255, 149, 0, 0.4) inset,
+      0 0 24px rgba(255, 149, 0, 0.5),
+      0 0 42px rgba(255, 175, 60, 0.28);
+  }
+}
+
+@keyframes apex-abtn-glow-nhl-d {
+  0% {
+    border-color: rgba(120, 185, 255, 0.62);
+    box-shadow:
+      0 0 0 1px rgba(10, 132, 255, 0.38) inset,
+      0 0 24px rgba(10, 132, 255, 0.46),
+      0 0 42px rgba(80, 170, 255, 0.26);
+  }
+
+  33% {
+    border-color: rgba(130, 225, 255, 0.62);
+    box-shadow:
+      0 0 0 1px rgba(100, 210, 255, 0.35) inset,
+      0 0 24px rgba(100, 210, 255, 0.48),
+      0 0 42px rgba(120, 220, 255, 0.3);
+  }
+
+  66% {
+    border-color: rgba(220, 240, 255, 0.5);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.22) inset,
+      0 0 22px rgba(255, 255, 255, 0.16),
+      0 0 38px rgba(10, 132, 255, 0.22);
+  }
+
+  100% {
+    border-color: rgba(120, 185, 255, 0.62);
+    box-shadow:
+      0 0 0 1px rgba(10, 132, 255, 0.38) inset,
+      0 0 24px rgba(10, 132, 255, 0.46),
+      0 0 42px rgba(80, 170, 255, 0.26);
+  }
+}
+
+@keyframes apex-abtn-glow-mlb-l {
+  0% {
+    border-color: rgba(213, 0, 50, 0.55);
+    box-shadow:
+      0 0 0 1px rgba(213, 0, 50, 0.22) inset,
+      0 0 18px rgba(213, 0, 50, 0.32),
+      0 0 32px rgba(213, 0, 50, 0.18);
+  }
+
+  33% {
+    border-color: rgba(0, 122, 255, 0.55);
+    box-shadow:
+      0 0 0 1px rgba(0, 122, 255, 0.22) inset,
+      0 0 18px rgba(0, 122, 255, 0.32),
+      0 0 32px rgba(0, 122, 255, 0.2);
+  }
+
+  66% {
+    border-color: rgba(100, 110, 130, 0.45);
+    box-shadow:
+      0 0 0 1px rgba(60, 60, 67, 0.12) inset,
+      0 0 16px rgba(60, 60, 67, 0.12),
+      0 0 28px rgba(0, 122, 255, 0.12);
+  }
+
+  100% {
+    border-color: rgba(213, 0, 50, 0.55);
+    box-shadow:
+      0 0 0 1px rgba(213, 0, 50, 0.22) inset,
+      0 0 18px rgba(213, 0, 50, 0.32),
+      0 0 32px rgba(213, 0, 50, 0.18);
+  }
+}
+
+@keyframes apex-abtn-glow-nfl-l {
+  0% {
+    border-color: rgba(52, 199, 89, 0.52);
+    box-shadow:
+      0 0 0 1px rgba(52, 199, 89, 0.2) inset,
+      0 0 18px rgba(52, 199, 89, 0.28),
+      0 0 30px rgba(52, 199, 89, 0.16);
+  }
+
+  33% {
+    border-color: rgba(255, 149, 0, 0.52);
+    box-shadow:
+      0 0 0 1px rgba(255, 149, 0, 0.2) inset,
+      0 0 18px rgba(255, 149, 0, 0.3),
+      0 0 30px rgba(255, 149, 0, 0.18);
+  }
+
+  66% {
+    border-color: rgba(175, 82, 222, 0.42);
+    box-shadow:
+      0 0 0 1px rgba(175, 82, 222, 0.15) inset,
+      0 0 16px rgba(175, 82, 222, 0.2),
+      0 0 28px rgba(52, 199, 89, 0.12);
+  }
+
+  100% {
+    border-color: rgba(52, 199, 89, 0.52);
+    box-shadow:
+      0 0 0 1px rgba(52, 199, 89, 0.2) inset,
+      0 0 18px rgba(52, 199, 89, 0.28),
+      0 0 30px rgba(52, 199, 89, 0.16);
+  }
+}
+
+@keyframes apex-abtn-glow-nba-l {
+  0% {
+    border-color: rgba(255, 149, 0, 0.55);
+    box-shadow:
+      0 0 0 1px rgba(255, 149, 0, 0.28) inset,
+      0 0 18px rgba(255, 149, 0, 0.34),
+      0 0 30px rgba(255, 170, 60, 0.2);
+  }
+
+  33% {
+    border-color: rgba(230, 95, 20, 0.55);
+    box-shadow:
+      0 0 0 1px rgba(220, 90, 15, 0.26) inset,
+      0 0 18px rgba(230, 95, 20, 0.32),
+      0 0 30px rgba(255, 130, 50, 0.2);
+  }
+
+  66% {
+    border-color: rgba(255, 185, 90, 0.5);
+    box-shadow:
+      0 0 0 1px rgba(255, 175, 75, 0.22) inset,
+      0 0 16px rgba(255, 195, 110, 0.28),
+      0 0 28px rgba(255, 149, 0, 0.16);
+  }
+
+  100% {
+    border-color: rgba(255, 149, 0, 0.55);
+    box-shadow:
+      0 0 0 1px rgba(255, 149, 0, 0.28) inset,
+      0 0 18px rgba(255, 149, 0, 0.34),
+      0 0 30px rgba(255, 170, 60, 0.2);
+  }
+}
+
+@keyframes apex-abtn-glow-nhl-l {
+  0% {
+    border-color: rgba(0, 122, 255, 0.52);
+    box-shadow:
+      0 0 0 1px rgba(0, 122, 255, 0.2) inset,
+      0 0 18px rgba(0, 122, 255, 0.28),
+      0 0 30px rgba(0, 122, 255, 0.18);
+  }
+
+  33% {
+    border-color: rgba(90, 200, 255, 0.52);
+    box-shadow:
+      0 0 0 1px rgba(90, 200, 255, 0.22) inset,
+      0 0 18px rgba(90, 200, 255, 0.3),
+      0 0 30px rgba(90, 200, 255, 0.2);
+  }
+
+  66% {
+    border-color: rgba(100, 130, 180, 0.42);
+    box-shadow:
+      0 0 0 1px rgba(60, 60, 67, 0.1) inset,
+      0 0 16px rgba(100, 130, 180, 0.18),
+      0 0 28px rgba(0, 122, 255, 0.12);
+  }
+
+  100% {
+    border-color: rgba(0, 122, 255, 0.52);
+    box-shadow:
+      0 0 0 1px rgba(0, 122, 255, 0.2) inset,
+      0 0 18px rgba(0, 122, 255, 0.28),
+      0 0 30px rgba(0, 122, 255, 0.18);
+  }
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow='baseball_mlb'] {
+  animation: apex-abtn-glow-mlb-d 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow='americanfootball_nfl'] {
+  animation: apex-abtn-glow-nfl-d 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow='basketball_nba'] {
+  animation: apex-abtn-glow-nba-d 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow='icehockey_nhl'] {
+  animation: apex-abtn-glow-nhl-d 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow.apex-abtn--pulse[data-sport-glow='baseball_mlb'] {
+  animation:
+    apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+    apex-abtn-glow-mlb-d 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow.apex-abtn--pulse[data-sport-glow='americanfootball_nfl'] {
+  animation:
+    apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+    apex-abtn-glow-nfl-d 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow.apex-abtn--pulse[data-sport-glow='basketball_nba'] {
+  animation:
+    apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+    apex-abtn-glow-nba-d 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow.apex-abtn--pulse[data-sport-glow='icehockey_nhl'] {
+  animation:
+    apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+    apex-abtn-glow-nhl-d 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow='baseball_mlb'] {
+  animation: apex-abtn-glow-mlb-l 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow='americanfootball_nfl'] {
+  animation: apex-abtn-glow-nfl-l 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow='basketball_nba'] {
+  animation: apex-abtn-glow-nba-l 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow='icehockey_nhl'] {
+  animation: apex-abtn-glow-nhl-l 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow.apex-abtn--pulse[data-sport-glow='baseball_mlb'] {
+  animation:
+    apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+    apex-abtn-glow-mlb-l 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow.apex-abtn--pulse[data-sport-glow='americanfootball_nfl'] {
+  animation:
+    apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+    apex-abtn-glow-nfl-l 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow.apex-abtn--pulse[data-sport-glow='basketball_nba'] {
+  animation:
+    apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+    apex-abtn-glow-nba-l 4.8s ease-in-out infinite;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow.apex-abtn--pulse[data-sport-glow='icehockey_nhl'] {
+  animation:
+    apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards,
+    apex-abtn-glow-nhl-l 4.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow] {
+    animation: none;
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+      0 0 18px rgba(255, 255, 255, 0.12);
+  }
+
+  .apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn.apex-abtn--sport-glow[data-sport-glow] {
+    border-color: rgba(0, 0, 0, 0.22);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.06) inset,
+      0 0 14px rgba(0, 0, 0, 0.06);
+  }
+}
+
+/* Three-up ticker: each game is its own padded card; spacing between cards = track gap */
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-slide:not(.apex-qg-slide--empty),
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-slide:not(.apex-qg-slide--empty),
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide {
+  gap: 4px;
+  padding: 16px 12px 14px;
+  min-height: 88px;
+  border-radius: 14px;
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-carousel-viewport--ticker .apex-qg-slide:not(.apex-qg-slide--empty),
+.apex-html-root.apex-ios.apex-theme-light .apex-today-grid .apex-qg-slide:not(.apex-qg-slide--empty),
+.apex-html-root.apex-ios.apex-theme-light.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 248, 250, 0.88) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-league,
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-league,
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-league {
+  top: 6px;
+  right: 6px;
+  font-size: 8px;
+  padding: 3px 6px;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-mid,
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-mid,
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-mid {
+  min-width: 0;
+  flex: 0 0 auto;
+  padding: 2px 4px;
+  gap: 2px;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-day,
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-day,
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-day {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-time,
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-time,
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-time {
+  font-size: 12px;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-team-name,
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-team-name,
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-team-name {
+  font-size: 9px;
+  -webkit-line-clamp: 2;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-logo:not(.apex-qg-logo--svg):not(.apex-qg-logo--img),
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-logo:not(.apex-qg-logo--svg):not(.apex-qg-logo--img),
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-logo:not(.apex-qg-logo--svg):not(.apex-qg-logo--img) {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-logo.apex-qg-logo--img,
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-logo.apex-qg-logo--img,
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-logo.apex-qg-logo--img {
+  width: 36px;
+  height: 36px;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-logo-img,
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-logo-img,
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-logo-img {
+  width: 36px;
+  height: 36px;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-logo--svg,
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-logo--svg,
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-logo--svg {
+  width: 36px;
+  height: 36px;
+}
+
+.apex-html-root.apex-ios .apex-qg-carousel-viewport--ticker .apex-qg-logo--svg img,
+.apex-html-root.apex-ios .apex-today-grid .apex-qg-logo--svg img,
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide .apex-qg-logo--svg img {
+  width: 36px;
+  height: 36px;
+}
+
+.apex-html-root.apex-ios .apex-qg-slide[data-sport]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(10, 132, 255, 0.85),
+    rgba(191, 90, 242, 0.65),
+    rgba(52, 209, 88, 0.5),
+    transparent
+  );
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.apex-html-root.apex-ios .apex-qg-slide[data-sport='americanfootball_nfl']::before {
+  background: linear-gradient(90deg, transparent, rgba(52, 209, 88, 0.9), rgba(255, 159, 10, 0.7), transparent);
+}
+
+.apex-html-root.apex-ios .apex-qg-slide[data-sport='basketball_nba']::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 149, 0, 0.92),
+    rgba(255, 105, 25, 0.78),
+    rgba(255, 185, 75, 0.55),
+    transparent
+  );
+}
+
+.apex-html-root.apex-ios .apex-qg-slide[data-sport='baseball_mlb']::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 69, 58, 0.8), rgba(10, 132, 255, 0.7), transparent);
+}
+
+.apex-html-root.apex-ios .apex-qg-slide[data-sport='icehockey_nhl']::before {
+  background: linear-gradient(90deg, transparent, rgba(10, 132, 255, 0.85), rgba(100, 210, 255, 0.65), transparent);
+}
+
+/* My Games: same layout as carousel cards — no colored sport accent strip */
+.apex-html-root.apex-ios.apex-route-mygames #past-games-list .past-game-card.apex-qg-slide[data-sport]::before {
+  display: none;
+}
+
+.apex-html-root.apex-ios .apex-qg-league {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-league {
+  color: rgba(60, 60, 67, 0.65);
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+.apex-html-root.apex-ios .apex-qg-slide--empty {
+  justify-content: center;
+  align-items: center;
+  min-height: 88px;
+  padding: 16px;
+}
+
+.apex-html-root.apex-ios .apex-qg-empty-msg {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text3);
+  text-align: center;
+  margin: 0;
+  padding: 8px;
+}
+
+.apex-html-root.apex-ios .apex-qg-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Team initial bubble (fallback when ESPN logo missing / failed to load) */
+.apex-html-root.apex-ios .apex-qg-logo:not(.apex-qg-logo--svg):not(.apex-qg-logo--img) {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.35), transparent 55%),
+    var(--qg, #444);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.apex-html-root.apex-ios .apex-qg-logo.apex-qg-logo--img {
+  width: 44px;
+  height: 44px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.apex-html-root.apex-ios .apex-qg-logo-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  display: block;
+}
+
+.apex-html-root.apex-ios .apex-qg-logo--svg {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.apex-html-root.apex-ios .apex-qg-logo--svg img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  display: block;
+}
+
+.apex-html-root.apex-ios .apex-qg-team-name {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-align: center;
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.apex-html-root.apex-ios .apex-qg-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 72px;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.apex-html-root.apex-ios .apex-qg-day {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text3);
+  opacity: 0.95;
+}
+
+.apex-html-root.apex-ios .apex-qg-time {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
+  color: var(--text);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-qg-time {
+  text-shadow: none;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  padding: 12px 14px 14px;
+}
+
+/* Row: Clear · Advanced · Line reasoning · Line type · (picked game + Analyze) */
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-analyze-clear,
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-advanced-toggle,
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-line-reasoning {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap {
+  flex: 1 1 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning {
+  position: relative;
+  z-index: 3;
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning--disabled {
+  opacity: 0.48;
+  pointer-events: none;
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-btn {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  border-radius: 18px;
+  border: 0.5px solid var(--border);
+  background: rgba(118, 118, 128, 0.1);
+  color: #fff;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-line-reasoning-btn {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-btn:hover:not(:disabled) {
+  background: rgba(118, 118, 128, 0.16);
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-popover {
+  position: absolute;
+  z-index: 10050;
+  left: 0;
+  right: auto;
+  bottom: calc(100% + 4px);
+  min-width: min(188px, 82vw);
+  max-width: min(228px, 86vw);
+  max-height: min(58vh, 340px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 7px 8px 9px;
+  border-radius: 10px;
+  border: 0.5px solid var(--border);
+  background: rgba(28, 28, 30, 0.96);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  backdrop-filter: blur(12px);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-line-reasoning-popover {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.08) inset;
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-popover-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 1px;
+  align-items: start;
+  cursor: pointer;
+  margin: 0;
+  padding: 6px 6px;
+  border-radius: 7px;
+  transition: background 0.12s ease;
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-label:hover {
+  background: rgba(118, 118, 128, 0.12);
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-label input {
+  grid-row: 1 / span 2;
+  margin-top: 2px;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--blue, #0a84ff);
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-option-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.15px;
+  color: #fff;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-line-reasoning-option-title {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-line-reasoning-option-desc {
+  grid-column: 2;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.32;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-line-reasoning-option-desc {
+  color: var(--text3);
+}
+
+.apex-html-root.apex-ios .apex-analyze-clear {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  border: 0.5px solid var(--border);
+  background: rgba(118, 118, 128, 0.08);
+  color: #fff;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-clear {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-analyze-clear:hover {
+  background: rgba(118, 118, 128, 0.14);
+  color: #fff;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-clear:hover {
+  color: var(--text);
+}
+
+.apex-html-root.apex-ios .apex-advanced-toggle {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  border: 0.5px solid var(--border);
+  background: rgba(118, 118, 128, 0.1);
+  color: #fff;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-advanced-toggle {
+  color: var(--blue);
+}
+
+.apex-html-root.apex-ios .apex-advanced-toggle:hover {
+  background: rgba(118, 118, 128, 0.16);
+  color: #fff;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-advanced-toggle:hover {
+  color: var(--blue);
+}
+
+/* ANALYZE: same neutral fill as Clear / Advanced, blue outline */
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn {
+  box-sizing: border-box;
+  width: auto;
+  min-height: 44px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.16) inset,
+    0 0 16px rgba(255, 255, 255, 0.16),
+    0 0 44px rgba(255, 255, 255, 0.08);
+  background: rgba(118, 118, 128, 0.1);
+  color: #fff;
+  cursor: pointer;
+  text-align: center;
+  text-transform: none;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn {
+  border-color: rgba(0, 0, 0, 0.22);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.08) inset,
+    0 0 16px rgba(0, 0, 0, 0.06);
+  color: var(--blue);
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn:hover:not(:disabled) {
+  background: rgba(118, 118, 128, 0.16);
+  color: #fff;
+  filter: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+    0 0 20px rgba(255, 255, 255, 0.2),
+    0 0 60px rgba(255, 255, 255, 0.1);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn:hover:not(:disabled) {
+  color: var(--blue);
+}
+
+.apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Mobile: Clear · Advanced · Line reasoning · Line type in a 2×2 grid; Analyze full-width below (unchanged emphasis) */
+@media (max-width: 520px) {
+  .apex-html-root.apex-ios .apex-game-actions-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .apex-html-root.apex-ios .apex-game-actions-row > .apex-analyze-clear,
+  .apex-html-root.apex-ios .apex-game-actions-row > .apex-advanced-toggle,
+  .apex-html-root.apex-ios .apex-game-actions-row > .apex-line-reasoning {
+    flex: unset;
+    min-width: 0;
+  }
+
+  .apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* Desktop / tablet: second row = picked strip + Analyze sharing width */
+@media (min-width: 521px) {
+  .apex-html-root.apex-ios .apex-game-actions-row {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .apex-html-root.apex-ios .apex-game-actions-row > .apex-game-actions-analyze-wrap > .apex-analyze-btn-and-timer > .abtn {
+    flex: 1 1 0;
+    max-width: 100%;
+  }
+}
+
+.apex-html-root.apex-ios .notif {
+  border-radius: 12px;
+  font-weight: 500;
+}

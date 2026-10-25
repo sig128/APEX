@@ -1,0 +1,22 @@
+{
+  "name": "apex-functions",
+  "description": "Firebase Cloud Functions — APEX Claude chat API",
+  "type": "module",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "seed-invites": "node seed-invite-codes.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.82.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.0"
+  },
+  "private": true
+}

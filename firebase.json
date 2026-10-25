@@ -1,0 +1,88 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "cp backend/prompts/apexSystemPrompt.js functions/prompts/apexSystemPrompt.js",
+        "cp backend/prompts/apexSystemPromptCompact.js functions/prompts/apexSystemPromptCompact.js",
+        "cp backend/prompts/apexSystemPromptMlbMid.js functions/prompts/apexSystemPromptMlbMid.js",
+        "cp backend/prompts/apexSystemPromptMlbPlayerProp.js functions/prompts/apexSystemPromptMlbPlayerProp.js",
+        "cp backend/prompts/apexSystemPromptNhl.js functions/prompts/apexSystemPromptNhl.js",
+        "cp backend/prompts/apexSystemPromptNhlCompact.js functions/prompts/apexSystemPromptNhlCompact.js",
+        "cp backend/prompts/apexSystemPromptNba.js functions/prompts/apexSystemPromptNba.js",
+        "cp backend/prompts/apexSystemPromptNbaCompact.js functions/prompts/apexSystemPromptNbaCompact.js",
+        "cp backend/prompts/apexSystemPromptNfl.js functions/prompts/apexSystemPromptNfl.js",
+        "cp backend/prompts/apexSystemPromptNflCompact.js functions/prompts/apexSystemPromptNflCompact.js",
+        "cp backend/prompts/resolveApexSystemPrompt.js functions/prompts/resolveApexSystemPrompt.js",
+        "cp backend/anthropicWebTools.js functions/anthropicWebTools.js",
+        "cp backend/streamChat.js functions/streamChat.js",
+        "cp backend/oddsEvents.js functions/oddsEvents.js",
+        "cp backend/sportsConfig.js functions/sportsConfig.js",
+        "cp backend/adminSportsRoutes.js functions/adminSportsRoutes.js",
+        "npm --prefix \"$RESOURCE_DIR\" ci"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "frontend/build",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/chat/stream",
+        "function": "chat"
+      },
+      {
+        "source": "/api/chat",
+        "function": "chat"
+      },
+      {
+        "source": "/api/odds/events",
+        "function": "chat"
+      },
+      {
+        "source": "/api/odds/upcoming",
+        "function": "chat"
+      },
+      {
+        "source": "/api/odds/mlb-player-props-showcase",
+        "function": "chat"
+      },
+      {
+        "source": "/api/odds/mlb-prop-ladder",
+        "function": "chat"
+      },
+      {
+        "source": "/api/odds/mlb-player-props-board",
+        "function": "chat"
+      },
+      {
+        "source": "/api/config/sports",
+        "function": "chat"
+      },
+      {
+        "source": "/api/admin/sports",
+        "function": "chat"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

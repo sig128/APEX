@@ -1,0 +1,64 @@
+/* Countdown next to Analyze — time until Odds API commence_time */
+
+.apex-html-root.apex-ios .apex-analyze-btn-and-timer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-analyze-btn-and-timer > .abtn {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.apex-html-root.apex-ios .apex-analyze-countdown {
+  flex: 0 0 auto;
+  max-width: 42%;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.72);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-countdown {
+  color: rgba(60, 60, 67, 0.72);
+}
+
+.apex-html-root.apex-ios .apex-analyze-countdown--urgent {
+  color: rgba(255, 200, 120, 0.95);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-countdown--urgent {
+  color: #b45309;
+}
+
+.apex-html-root.apex-ios .apex-analyze-countdown--expired {
+  color: rgba(232, 60, 60, 0.9);
+}
+
+.apex-html-root.apex-ios.apex-theme-light .apex-analyze-countdown--expired {
+  color: #b91c1c;
+}
+
+@media (max-width: 900px) {
+  .apex-html-root.apex-ios .apex-analyze-btn-and-timer {
+    flex-wrap: wrap;
+  }
+
+  .apex-html-root.apex-ios .apex-analyze-countdown {
+    max-width: 100%;
+    width: 100%;
+    text-align: right;
+    font-size: 9px;
+  }
+}

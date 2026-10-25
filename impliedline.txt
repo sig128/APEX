@@ -1,0 +1,29 @@
+Great concept to systematize. Here’s how to think about it:
+
+The Implied Line
+The implied line is wherever the O/U is closest to even money — that’s the book’s true projection. For Lopez, that’s 5.5 Ks (-120 / -115 is nearly a coin flip), so the book thinks ~5-6 Ks is the expected outcome.
+
+Alt Lines Below the Implied = Safer
+
+
+
+|Line |Odds|Why                                                                       |
+|-----|----|--------------------------------------------------------------------------|
+|O 4.5|-275|You need 1 fewer K than the implied — higher probability, costs more juice|
+|O 5.5|-120|**This IS the implied line**                                              |
+|O 6.5|+165|You need 1 more K — lower probability, gets you plus money                |
+
+So every full strikeout below the implied line, probability goes up but you pay more juice. Every full K above, you get plus money but it’s riskier.
+
+For Your Code Logic:
+
+find implied line → line where |Over odds - Under odds| is minimized (closest to even)
+
+alt_line_safety_score = implied_line - selected_line
+  → positive score = safer (below implied)
+  → negative score = riskier (above implied)
+  → 0 = at the implied
+
+
+Then you can build a confidence tier around it — e.g., anything 1+ K below implied = SAFE, at implied = STANDARD, above implied = HIGH RISK / NO PLAY under APEX unless edge is confirmed.
+Want me to code this as an actual APEX module function?​​​​​​​​​​​​​​​​
