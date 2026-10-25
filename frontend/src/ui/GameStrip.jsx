@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { TeamLogo } from './Img.jsx'
 import { clock, isLive, isFinal } from '../lib/format.js'
+import { WatchButton } from './WatchButton.jsx'
 
 /** This week's games as one scoreboard band: scores and clocks move live. */
 export function GameStrip({ games }) {
@@ -11,11 +12,14 @@ export function GameStrip({ games }) {
     <nav className="strip" aria-label="This week's games">
       <div className="strip__track">
         {list.map((g) => (
-          <Link key={g.id} to={`/nfl/game/${g.id}`} className={`strip__game${isLive(g) ? ' is-live' : ''}${isFinal(g) ? ' is-final' : ''}`}>
-            <Team t={g.away} other={g.home} g={g} />
-            <Team t={g.home} other={g.away} g={g} />
-            <span className="strip__clock">{clock(g.status, g.date)}</span>
-          </Link>
+          <div key={g.id} className="strip__cell">
+            <Link to={`/nfl/game/${g.id}`} className={`strip__game${isLive(g) ? ' is-live' : ''}${isFinal(g) ? ' is-final' : ''}`}>
+              <Team t={g.away} other={g.home} g={g} />
+              <Team t={g.home} other={g.away} g={g} />
+              <span className="strip__clock">{clock(g.status, g.date)}</span>
+            </Link>
+            {!isFinal(g) && <WatchButton game={g} className="strip__watch" />}
+          </div>
         ))}
       </div>
     </nav>

@@ -4999,3 +4999,256 @@ code {
 .slip-leg .odds-hint {
   font-size: 11px;
 }
+
+/* ---- my games and head to head ------------------------------------------------------------ */
+.watch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--chalk-3);
+  font: inherit;
+  cursor: pointer;
+}
+.watch:hover {
+  color: var(--gold);
+}
+.watch:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.watch.is-on {
+  color: var(--gold);
+}
+.watch--label {
+  padding: 4px 12px;
+  border: 1px solid var(--seat-2);
+  font-size: var(--t-s);
+  font-weight: 700;
+  color: var(--chalk-2);
+}
+.watch--label.is-on {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.strip__cell {
+  position: relative;
+  flex: none;
+}
+.strip__watch {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+}
+.scoreboard__watch {
+  margin-top: 6px;
+}
+.mygames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.chip-toggle {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--seat-2);
+  background: var(--stand);
+  color: var(--chalk);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chip-toggle.is-on {
+  border-color: var(--gold);
+  background: rgba(252, 216, 0, 0.12);
+  color: var(--gold);
+}
+.chip-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.mygames-home {
+  margin: 0 0 18px;
+}
+.mygames-home__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin-bottom: 8px;
+}
+.mygames-home__head .section-h {
+  margin: 0;
+}
+.mygames-home__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 8px;
+}
+.mygame {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  background: var(--stand);
+  border: 1px solid var(--seat);
+  border-left: 3px solid var(--gold);
+  color: var(--chalk);
+  text-decoration: none;
+}
+.mygame:hover {
+  border-color: var(--seat-2);
+  border-left-color: var(--gold);
+}
+.mygame:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.mygame__teams {
+  font-weight: 800;
+}
+.mygame__when {
+  font-size: var(--t-s);
+  color: var(--chalk-3);
+}
+.mygame__go {
+  font-size: var(--t-s);
+  color: var(--link);
+}
+.h2h {
+  display: grid;
+  gap: 14px;
+  padding: 4px 0 24px;
+}
+.h2h__meet {
+  padding: 14px 16px;
+  border-radius: var(--r-l);
+  background: var(--stand);
+  border: 1px solid var(--seat);
+}
+.h2h__k {
+  margin: 0 0 8px;
+  font-weight: 800;
+}
+.h2h__meet ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+}
+.h2h__meet li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: var(--t-s);
+}
+.h2h__meet .num {
+  font-size: 18px;
+}
+.h2h__meet .is-win {
+  color: var(--gold);
+}
+.h2h__note {
+  margin: 0;
+  max-width: 76ch;
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+  line-height: 1.5;
+}
+.h2h__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.h2hrow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 70px 60px auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  background: var(--stand);
+  border: 1px solid var(--seat);
+}
+.h2hrow p {
+  margin: 0;
+}
+.h2hrow__name {
+  font-weight: 700;
+}
+.h2hrow__name a,
+.h2hrow__bet a {
+  color: inherit;
+}
+.h2hrow__bet {
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+}
+.h2hrow__games {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px !important;
+  font-size: var(--t-xs);
+}
+.h2hrow__g {
+  min-width: 28px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-align: center;
+  font-family: var(--font-num);
+  font-size: 14px;
+  background: var(--seat);
+}
+.h2hrow__g.is-hit { background: var(--turf-dim); color: var(--turf); }
+.h2hrow__g.is-miss { background: var(--flag-dim); color: var(--flag); }
+.h2hrow__rec,
+.h2hrow__apex {
+  display: grid;
+  justify-items: center;
+}
+.h2hrow__rec .num,
+.h2hrow__apex .num {
+  font-size: 24px;
+  line-height: 1;
+}
+.h2hrow__rec.is-hot .num { color: var(--turf); }
+.h2hrow__rec.is-cold .num { color: var(--flag); }
+.h2hrow__apex .num { color: var(--gold); }
+.h2hrow__k {
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+@media (max-width: 560px) {
+  .h2hrow {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+  .h2hrow > .btn {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+}
+.strip__cell {
+  scroll-snap-align: start;
+  display: flex;
+}

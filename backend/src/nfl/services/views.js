@@ -2,11 +2,12 @@
 import { buildPropRow, buildTeamRow, diverse, cheatsheets, parlays } from '../analytics/props.js'
 import { buildDvp, DVP_GROUPS } from '../analytics/defense.js'
 import { teamForm, teamPointRows, trendLines } from '../analytics/teams.js'
-import { parsePropId, marketRows } from '../analytics/core.js'
+import { parsePropId, marketRows, outcome } from '../analytics/core.js'
+import { wilsonLower } from '../../lib/stats.js'
 import { MARKETS, CORE_MARKETS, marketOf, POS_GROUP } from '../markets.js'
 import { injurySeverity } from '../../providers/espn/normalize.js'
 import { progressFor, boxLeaders, winCurve } from './live.js'
-import { nameKey, round } from '../../lib/util.js'
+import { nameKey, round, mean, median } from '../../lib/util.js'
 import { findLock } from '../analytics/lock.js'
 
 export function createViews(engine) {
@@ -194,14 +195,14 @@ export function createViews(engine) {
     const side = q.side === 'o' || q.side === 'u' ? q.side : null
     const win = ['L5', 'L10', 'L20', 'season', 'last', 'h2h', 'venue'].includes(q.window) ? q.window : 'L10'
     const minHit = Math.max(0, Math.min(1, Number(q.minHit) || 0))
-    const game = q.game ? String(q.game) : null
+    const game = q.game ? new Set(String(q.game).split(',').filter((x) => /^\d{6,12}$/.test(x)).slice(0, 16)) : null
     const name = q.q ? nameKey(q.q) : ''
     let list = rows.filter((r) => {
       if (r.kind !== kind) return false
       if (kind === 'player' && wantMarkets && !wantMarkets.has(r.market)) return false
       if (pos && !pos.has(POS_GROUP(r.pos))) return false
       if (side && r.side !== side) return false
-      if (game && r.gameId !== game) return false
+      if (game && game.size && !game.has(r.gameId)) return false
       if (name && !nameKey(r.name).includes(name)) return false
       if (!name && q.all !== '1' && (r.role ?? 1) < 0.45) return false
       if (minHit > 0) {
@@ -485,6 +486,52 @@ export function createViews(engine) {
     return { ...data, logs: logs.map((x) => ({ date: x.date?.slice(0, 10), opp: x.oppAbbr, home: x.home, v: x.v })), gameInfo: g }
   }
 
+  // ---- head to head -----------------------------------------------------------------------------
+  /**
+   * One game through the matchup: each prop ranked by how the player has done against this
+   * opponent (two seasons of logs, 2+ meetings), blended with the APEX probability, plus the
+   * recent meetings between the teams.
+   */
+  function h2h(id) {
+    const g = wh.games.get(String(id))
+    if (!g) return null
+    return cached(`h2h:${g.id}`, wh.aVersion, () => {
+      const out = []
+      for (const r of gameRows(g.id)) {
+        if (r.kind !== 'player' || !r.oppId) continue
+        const games = marketRows(wh.logs.get(r.playerId) || [], r.market).filter((x) => x.oppId === r.oppId)
+        const res = games.map((x) => ({ date: x.date ? String(x.date).slice(0, 10) : null, season: x.season, v: x.v, o: outcome(x.v, r.line, r.side) }))
+        const graded = res.filter((x) => x.o === 'hit' || x.o === 'miss')
+        if (graded.length < 2) continue
+        const hits = graded.filter((x) => x.o === 'hit').length
+        const vals = games.map((x) => x.v)
+        const wl = wilsonLower(hits, graded.length)
+        out.push({ ...card(r), h2h: { hits, n: graded.length, avg: round(mean(vals), 1), median: median(vals), games: res.slice(-6) }, h2hScore: round(0.6 * wl + 0.4 * r.prob, 4) })
+      }
+      out.sort((a, b) => b.h2hScore - a.h2hScore || b.prob - a.prob)
+      // the two teams' meetings, from the players' logs (two seasons), home team's view
+      const seen = new Map()
+      for (const logs of wh.logs.values()) {
+        for (const x of logs) {
+          if (seen.has(x.eventId) || !x.score) continue
+          const homeSide = x.teamId === g.home.id && x.oppId === g.away.id
+          const awaySide = x.teamId === g.away.id && x.oppId === g.home.id
+          if (!homeSide && !awaySide) continue
+          const [a, b] = String(x.score).split('-').map(Number)
+          if (!Number.isFinite(a) || !Number.isFinite(b)) continue
+          // the log's score is "31-24" from either side; the result says which number is theirs
+          const mine = x.result === 'W' ? Math.max(a, b) : x.result === 'L' ? Math.min(a, b) : a
+          const theirs = a + b - mine
+          const homePts = homeSide ? mine : theirs
+          const awayPts = homeSide ? theirs : mine
+          seen.set(x.eventId, { id: x.eventId, date: x.date ? String(x.date).slice(0, 10) : null, season: x.season, home: homePts, away: awayPts, winner: homePts > awayPts ? g.home.abbr : awayPts > homePts ? g.away.abbr : null })
+        }
+      }
+      const meetings = [...seen.values()].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 6)
+      return { game: gameCard(g), rows: out.slice(0, 80), total: out.length, meetings }
+    })
+  }
+
   // ---- the 3-Leg Lock ----------------------------------------------------------------------------
   /**
    * Every prop on games that haven't kicked off, plus the posted alternate lines on the same
@@ -516,5 +563,5 @@ export function createViews(engine) {
     })
   }
 
-  return { ctx, allRows, strip, home, props, game, liveGame, live, trackerDiff, track, findProp, prop, player, search, dvp, rankings, teamProps, propContext, card, lockRows, lock }
+  return { ctx, allRows, strip, home, props, game, liveGame, live, trackerDiff, track, findProp, prop, player, search, dvp, rankings, teamProps, propContext, card, lockRows, lock, h2h }
 }

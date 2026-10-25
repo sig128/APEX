@@ -6,6 +6,7 @@ import { useTitle } from '../lib/hooks.js'
 import { pct, odds, kickoff, clock, ago, ratio } from '../lib/format.js'
 import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
+import { useWatch } from '../lib/watch.js'
 import { GameStrip } from '../ui/GameStrip.jsx'
 import { PropList } from '../ui/PropRow.jsx'
 import { HitChart } from '../ui/HitChart.jsx'
@@ -67,6 +68,7 @@ export function HomePage() {
         </header>
 
         <LockBanner />
+        <MyGames games={data?.games} />
         {loading && <Skeleton kind="hero" rows={1} />}
         {top && <Hero card={top} />}
 
@@ -122,6 +124,38 @@ export function HomePage() {
 }
 
 /** The No. 1 prop on the board, big: who, the line, the last ten against it, and the read. */
+/** The starred games: straight to their head-to-head view. */
+function MyGames({ games }) {
+  const watch = useWatch()
+  const mine = (games || []).filter((g) => watch.includes(g.id) && g.status?.state !== 'post')
+  if (!mine.length) return null
+  return (
+    <section className="mygames-home" aria-labelledby="mygames-h">
+      <div className="mygames-home__head">
+        <h2 className="section-h" id="mygames-h">
+          My games
+        </h2>
+        <Link className="link" to={`/nfl/props?game=${mine.map((g) => g.id).join(',')}&window=h2h&sort=hit`}>
+          Their props, ranked by head to head
+        </Link>
+      </div>
+      <ul className="mygames-home__list">
+        {mine.map((g) => (
+          <li key={g.id}>
+            <Link to={`/nfl/game/${g.id}?tab=h2h`} className="mygame">
+              <span className="mygame__teams">
+                {g.away?.abbr} at {g.home?.abbr}
+              </span>
+              <span className="mygame__when">{clock(g.status, g.date)}</span>
+              <span className="mygame__go">Head to head</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 /** This week's 3-Leg Lock and the season record, from the public ledger. */
 function LockBanner() {
   const { data } = useApi('/api/nfl/lock/ledger', { maxAgeMs: 60_000 })

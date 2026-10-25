@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useWatch } from '../lib/watch.js'
 import { useApi } from '../lib/useApi.js'
 import { useTitle, useMedia } from '../lib/hooks.js'
 import { PropRow } from '../ui/PropRow.jsx'
@@ -45,6 +46,15 @@ export function PropsPage() {
     if (k !== 'page') next.delete('page')
     setQ(next, { replace: true })
   }
+  const setMany = (obj) => {
+    const next = new URLSearchParams(q)
+    for (const [k, v] of Object.entries(obj)) {
+      if (v == null || v === '') next.delete(k)
+      else next.set(k, v)
+    }
+    next.delete('page')
+    setQ(next, { replace: true })
+  }
   const market = get('market', 'core')
   const pos = get('pos') ? get('pos').split(',') : []
   const win = get('window', 'L10')
@@ -60,6 +70,9 @@ export function PropsPage() {
   // on phones the filters fold away behind one button so the props are on the first screen
   const phone = useMedia('(max-width: 759px)')
   const [showFilters, setShowFilters] = useState(false)
+  // "My games": the starred games still on the slate
+  const watch = useWatch()
+  const mine = (facets?.games || []).filter((g) => watch.includes(g.id)).map((g) => g.id)
   const active = ['side', 'minHit', 'game', 'q', 'pos'].filter((k) => get(k)).length + (market !== 'core' ? 1 : 0) + (win !== 'L10' ? 1 : 0)
 
   return (
@@ -72,6 +85,18 @@ export function PropsPage() {
         <button type="button" className="btn btn--quiet btn--block filters-toggle" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
           {showFilters ? 'Hide filters' : `Filters and sorting${active ? ` (${active} on)` : ''}`}
         </button>
+      )}
+      {mine.length > 0 && (
+        <div className="mygames">
+          <button type="button" className={`chip-toggle${get('game') === mine.join(',') ? ' is-on' : ''}`} aria-pressed={get('game') === mine.join(',')} onClick={() => set('game', get('game') === mine.join(',') ? '' : mine.join(','))}>
+            My games ({mine.length})
+          </button>
+          {get('game') === mine.join(',') && (
+            <button type="button" className={`chip-toggle${win === 'h2h' ? ' is-on' : ''}`} aria-pressed={win === 'h2h'} onClick={() => (win === 'h2h' ? setMany({ window: '', sort: '' }) : setMany({ window: 'h2h', sort: 'hit' }))}>
+              Rank by head to head
+            </button>
+          )}
+        </div>
       )}
       {(!phone || showFilters) && (
       <div className="filters">
@@ -87,8 +112,9 @@ export function PropsPage() {
         </label>
         <label className="field field--inline">
           <span>Game</span>
-          <select value={get('game')} onChange={(e) => set('game', e.target.value)}>
+          <select value={mine.length && get('game') === mine.join(',') ? '__mine' : get('game')} onChange={(e) => set('game', e.target.value === '__mine' ? mine.join(',') : e.target.value)}>
             <option value="">All games</option>
+            {mine.length > 0 && <option value="__mine">My games ({mine.length})</option>}
             {(facets?.games || []).map((g) => (
               <option key={g.id} value={g.id}>
                 {g.label}

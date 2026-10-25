@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useApi } from '../lib/useApi.js'
 import { useLive } from '../lib/live.js'
 import { useTitle } from '../lib/hooks.js'
@@ -10,6 +10,10 @@ import { Tabs, Pills, Skeleton, ErrorBox, Empty, Section } from '../ui/Bits.jsx'
 import { ParlayCard } from './HomePage.jsx'
 import { Odds } from '../ui/Odds.jsx'
 import { GameIntel } from '../ui/GameIntel.jsx'
+import { WatchButton } from '../ui/WatchButton.jsx'
+import { toggleLeg } from '../lib/slip.js'
+import { useSlip } from '../lib/useSlip.js'
+import { Headshot } from '../ui/Img.jsx'
 
 export function GamePage() {
   const { id } = useParams()
@@ -20,7 +24,8 @@ export function GamePage() {
   useLive(started && g.status.state === 'in' ? `game:${id}` : null, () => {})
   useLive(!started ? `props:${id}` : null, () => {})
   useTitle(g ? `${g.shortName} props` : 'Game')
-  const [tab, setTab] = useState(null)
+  const [search] = useSearchParams()
+  const [tab, setTab] = useState(() => search.get('tab'))
   // once a game starts, open on where the props stand (live, then the final box)
   const cur = tab || (g && g.status?.state !== 'pre' ? 'live' : 'props')
 
@@ -41,6 +46,7 @@ export function GamePage() {
   }
   const tabs = [
     { key: 'props', label: 'Props', count: data.props.length },
+    { key: 'h2h', label: 'Head to head' },
     { key: 'trends', label: 'Team trends' },
     { key: 'injuries', label: 'Injuries', count: data.home.injuries.length + data.away.injuries.length },
     ...(g.status.state !== 'post' ? [{ key: 'intel', label: 'Intel' }] : []),
@@ -52,6 +58,7 @@ export function GamePage() {
         <Scoreboard data={data} />
         <Tabs tabs={tabs} value={cur} onChange={setTab} label="Game sections" className="game-tabs" />
         {cur === 'props' && <GameProps data={data} />}
+        {cur === 'h2h' && <HeadToHead data={data} />}
         {cur === 'trends' && <Trends data={data} />}
         {cur === 'injuries' && <Injuries data={data} />}
         {cur === 'intel' && <GameIntel gameId={g.id} official={data.home.injuries.length + data.away.injuries.length} />}
@@ -73,6 +80,7 @@ function Scoreboard({ data }) {
           <span className="scoreboard__clock">{clock(g.status, g.date)}</span>
           {g.situation?.text && <span className="scoreboard__sit">{g.situation.text}</span>}
           {g.broadcast && <span className="scoreboard__tv">{g.broadcast}</span>}
+          {g.status.state !== 'post' && <WatchButton game={g} label className="scoreboard__watch" />}
         </div>
         <Side t={g.home} side={data.home} score={!pre} home />
       </div>
@@ -404,3 +412,113 @@ function WinCurve({ points, home, away }) {
 }
 
 export { kickoff }
+
+/**
+ * The matchup lens: every prop on this game ranked by how the player has done against this
+ * opponent, weighted with the APEX probability. Meetings are few, so every line shows its sample.
+ */
+function HeadToHead({ data }) {
+  const g = data.game
+  const { data: h, error, loading, refresh } = useApi(`/api/nfl/games/${g.id}/h2h`, { maxAgeMs: 120_000 })
+  const [team, setTeam] = useState(null)
+  const [market, setMarket] = useState(null)
+  const [all, setAll] = useState(false)
+  const slip = useSlip()
+  const rows = (h?.rows || []).filter((r) => (!team || r.teamAbbr === team) && (!market || r.market === market))
+  const markets = useMemo(() => {
+    const m = new Map()
+    for (const r of h?.rows || []) m.set(r.market, r.marketLabel)
+    return [...m].map(([key, label]) => ({ key, label }))
+  }, [h])
+  if (error && !h) return <ErrorBox error={error} onRetry={refresh} />
+  if (loading || !h) return <Skeleton rows={8} />
+  const abbr = (side) => (side === 'home' ? g.home.abbr : g.away.abbr)
+  return (
+    <div className="h2h">
+      {h.meetings?.length > 0 && (
+        <section className="h2h__meet" aria-label="Recent meetings">
+          <p className="h2h__k">Last meetings</p>
+          <ul>
+            {h.meetings.map((m) => (
+              <li key={m.id}>
+                <span className="muted">{m.date}</span>
+                <span className={m.winner === abbr('away') ? 'is-win' : ''}>
+                  {abbr('away')} <b className="num">{m.away}</b>
+                </span>
+                <span className={m.winner === abbr('home') ? 'is-win' : ''}>
+                  {abbr('home')} <b className="num">{m.home}</b>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <p className="h2h__note">
+        Ranked by each player’s record against this opponent over the last two seasons, weighted with the APEX probability. Teams meet once or twice a year, so every line shows how many games it rests on. Two of two is a lean, not a lock.
+      </p>
+      <div className="filters filters--tight">
+        <Pills
+          label="Team"
+          options={[
+            { key: g.away.abbr, label: g.away.abbr },
+            { key: g.home.abbr, label: g.home.abbr },
+          ]}
+          value={team}
+          onChange={setTeam}
+        />
+        <div className="pills-scroll">
+          <Pills label="Market" options={markets} value={market} onChange={setMarket} />
+        </div>
+      </div>
+      {rows.length ? (
+        <ol className="h2h__list">
+          {(all ? rows : rows.slice(0, 30)).map((r) => {
+            const on = slip.legs.some((l) => l.id === r.id)
+            const rate = r.h2h.hits / r.h2h.n
+            return (
+              <li key={r.id} className="h2hrow">
+                <Headshot src={r.headshot} name={r.name} size={40} />
+                <div className="h2hrow__who">
+                  <p className="h2hrow__name">
+                    <Link to={`/nfl/player/${r.playerId}`}>{r.name}</Link> <span className="muted">{r.pos} {r.teamAbbr}</span>
+                  </p>
+                  <p className="h2hrow__bet">
+                    <Link to={`/nfl/prop/${encodeURIComponent(r.id)}`}>{r.label}</Link>
+                  </p>
+                  <p className="h2hrow__games" aria-label={`Against ${r.oppAbbr}`}>
+                    {r.h2h.games.map((x, i) => (
+                      <span key={i} className={`h2hrow__g is-${x.o || 'none'}`} title={`${x.date}: ${x.v}`}>
+                        {x.v}
+                      </span>
+                    ))}
+                    <span className="muted"> avg {r.h2h.avg} vs {r.oppAbbr}</span>
+                  </p>
+                </div>
+                <div className={`h2hrow__rec${rate === 1 ? ' is-hot' : rate < 0.5 ? ' is-cold' : ''}`}>
+                  <span className="num">
+                    {r.h2h.hits}/{r.h2h.n}
+                  </span>
+                  <span className="h2hrow__k">vs {r.oppAbbr}</span>
+                </div>
+                <div className="h2hrow__apex">
+                  <span className="num">{pct(r.prob)}</span>
+                  <span className="h2hrow__k">APEX</span>
+                </div>
+                <button type="button" className={`btn btn--s ${on ? 'btn--quiet' : 'btn--gold'}`} aria-pressed={on} onClick={() => toggleLeg(r)}>
+                  {on ? 'On slip' : 'Add'}
+                </button>
+              </li>
+            )
+          })}
+        </ol>
+      ) : (
+        <Empty title="No head-to-head history yet">These players haven’t met this opponent in the last two seasons, or the lines aren’t up.</Empty>
+      )}
+      {!all && rows.length > 30 && (
+        <button type="button" className="btn btn--quiet btn--block more" onClick={() => setAll(true)}>
+          Show all {rows.length}
+        </button>
+      )}
+    </div>
+  )
+}

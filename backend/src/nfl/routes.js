@@ -75,6 +75,12 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     if (!out) throw new ApiError(404, 'not_found', 'That prop is not on this week’s board.')
     return out
   })
+  r.get('/games/:id/h2h', { tier: t('games'), cache: C(60, 60, 240) }, (ctx) => {
+    if (!/^\d{6,12}$/.test(ctx.params.id)) throw new ApiError(400, 'bad_game', 'Bad game id.')
+    const out = views.h2h(ctx.params.id)
+    if (!out) throw new ApiError(404, 'not_found', 'That game is not on this week’s slate.')
+    return out
+  })
   r.get('/games/:id', { tier: t('games'), cache: C(10, 10, 30) }, (ctx) => {
     if (!/^\d{6,12}$/.test(ctx.params.id)) throw new ApiError(400, 'bad_game', 'Bad game id.')
     const out = views.game(ctx.params.id)
@@ -265,6 +271,8 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
    * plans until its first leg kicks off.
    */
   r.get('/lock/ledger', { tier: 'free', cache: C(30, 30, 120) }, async (ctx) => {
+    // this week's entry exists even before anyone with Pro opens the lock
+    await ledger.record(views.lock()).catch(() => {})
     await tickLedger()
     const out = await ledger.season()
     const a = await accessFor(ctx.req).catch(() => ({ tier: 'free' }))
