@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { streamNdjson } from '../lib/api.js'
 import { streamUrl } from '../lib/config.js'
 import { Locked } from './Locked.jsx'
@@ -28,52 +28,81 @@ function sections(text) {
 
 const TITLES = { VERDICT: 'Verdict', WHY: 'Why', RISKS: 'Risks', SIZING: 'Sizing', EDGE: 'Edge', NOTE: 'Note' }
 
+// Reads live outside the component: leaving the page mid-stream doesn't throw away a read the
+// user paid for, and coming back shows it again. Keyed by user and prop; a small LRU.
+const IDLE = { text: '', state: 'idle', err: null, usage: null } // state: idle | streaming | done | error
+const MAX_READS = 40
+const reads = new Map() // key -> { snap, ctrl }
+const subs = new Map() // key -> Set<fn>
+
+function put(key, patch) {
+  const cur = reads.get(key) || { snap: IDLE, ctrl: null }
+  reads.delete(key)
+  reads.set(key, { ...cur, snap: { ...cur.snap, ...patch } })
+  for (const [k, v] of reads) {
+    if (reads.size <= MAX_READS) break
+    if (v.snap.state !== 'streaming' && k !== key) reads.delete(k)
+  }
+  for (const fn of subs.get(key) || []) fn()
+}
+
+async function startRead(key, propId, onDone) {
+  reads.get(key)?.ctrl?.abort()
+  const ac = new AbortController()
+  put(key, { text: '', state: 'streaming', err: null })
+  reads.get(key).ctrl = ac
+  const mine = () => reads.get(key)?.ctrl === ac
+  try {
+    const { last, usage } = await streamNdjson(
+      streamUrl('/api/nfl/insight'),
+      { propId },
+      {
+        signal: ac.signal,
+        onEvent: (ev) => {
+          if (!mine()) return
+          if (ev.type === 'text_delta') put(key, { text: reads.get(key).snap.text + ev.text })
+          if (ev.type === 'complete') put(key, { text: ev.text })
+        },
+      },
+    )
+    if (last?.type === 'error') throw new Error(last.error)
+    if (mine()) put(key, { usage, state: 'done' })
+    onDone?.()
+  } catch (e) {
+    if (!mine()) return
+    put(key, e?.name === 'AbortError' ? { state: 'idle' } : { err: e, state: 'error' })
+  } finally {
+    if (mine()) reads.get(key).ctrl = null
+  }
+}
+
+function stopRead(key) {
+  reads.get(key)?.ctrl?.abort()
+}
+
+function useRead(key) {
+  const subscribe = useCallback(
+    (fn) => {
+      if (!subs.has(key)) subs.set(key, new Set())
+      subs.get(key).add(fn)
+      return () => {
+        subs.get(key)?.delete(fn)
+        if (!subs.get(key)?.size) subs.delete(key)
+      }
+    },
+    [key],
+  )
+  const get = useCallback(() => reads.get(key)?.snap || IDLE, [key])
+  return useSyncExternalStore(subscribe, get, get)
+}
+
 /** The AI read of one prop, written with the APEX ruleset. Pro and Elite. */
 export function AskApex({ propId }) {
   const { user, firebaseConfigured } = useAuth()
   const { paywall, refresh } = useBilling()
-  const [text, setText] = useState('')
-  const [state, setState] = useState('idle') // idle | streaming | done | error
-  const [err, setErr] = useState(null)
-  const [usage, setUsage] = useState(null)
-  const ctrl = useRef(null)
-
-  useEffect(() => {
-    setText('')
-    setState('idle')
-    setErr(null)
-    return () => ctrl.current?.abort()
-  }, [propId])
-
-  async function run() {
-    ctrl.current?.abort()
-    const ac = new AbortController()
-    ctrl.current = ac
-    setText('')
-    setErr(null)
-    setState('streaming')
-    try {
-      const { last, usage: u } = await streamNdjson(
-        streamUrl('/api/nfl/insight'),
-        { propId },
-        {
-          signal: ac.signal,
-          onEvent: (ev) => {
-            if (ev.type === 'text_delta') setText((t) => t + ev.text)
-            if (ev.type === 'complete') setText(ev.text)
-          },
-        },
-      )
-      if (last?.type === 'error') throw new Error(last.error)
-      setUsage(u)
-      setState('done')
-      refresh()
-    } catch (e) {
-      if (e?.name === 'AbortError') return
-      setErr(e)
-      setState('error')
-    }
-  }
+  const key = `${user?.uid || ''}|${propId}`
+  const { text, state, err, usage } = useRead(key)
+  const run = () => startRead(key, propId, refresh)
 
   const blocks = sections(text)
   const verdict = blocks.find((b) => b.k === 'VERDICT')?.lines.join(' ') || ''
@@ -98,7 +127,7 @@ export function AskApex({ propId }) {
               </button>
             ))}
           {state === 'streaming' && (
-            <button type="button" className="btn btn--quiet" onClick={() => ctrl.current?.abort() || setState('idle')}>
+            <button type="button" className="btn btn--quiet" onClick={() => stopRead(key)}>
               Stop
             </button>
           )}
