@@ -8,17 +8,15 @@ import { noVig, americanToProb } from '../../lib/odds.js'
 import { normalOver } from '../../lib/stats.js'
 import { round, clamp, mean } from '../../lib/util.js'
 import { teamPointRows } from './teams.js'
-
-const NOUN = { passYds: 'passing yards', passTd: 'passing TDs', passAtt: 'pass attempts', passCmp: 'completions', rushYds: 'rushing yards', rushAtt: 'rushing attempts', rec: 'receptions', recYds: 'receiving yards', rushRecYds: 'scrimmage yards', anyTd: 'touchdowns', longRec: 'long catches' }
-
-const GROUP_PEERS = { WR: ['WR', 'TE'], TE: ['WR', 'TE'], RB: ['RB'], QB: ['QB'] }
+import * as football from '../../sports/football.js'
 
 /** Teammates who are out (or doubtful) and actually mattered: they show up in recent games. */
 export function keyAbsences(player, ctx) {
   const out = []
-  const group = POS_GROUP(player.pos)
-  const peers = GROUP_PEERS[group]
-  if (!peers) return out
+  const fam = ctx.fam || football
+  const group = fam.posGroup(player.pos)
+  const peers = fam.PEERS[group]
+  if (!peers?.length) return out
   const myRows = ctx.logs.get(player.id) || []
   const myEvents = new Map(myRows.map((r) => [r.eventId, r]))
   for (const inj of ctx.injuriesByTeam.get(player.teamId) || []) {
@@ -26,7 +24,7 @@ export function keyAbsences(player, ctx) {
     const sev = injurySeverity(inj.status)
     if (sev !== 'out' && sev !== 'doubtful') continue
     const mate = ctx.players.get(inj.athleteId)
-    if (!mate || !peers.includes(POS_GROUP(mate.pos || inj.pos))) continue
+    if (!mate || !peers.includes(fam.posGroup(mate.pos || inj.pos))) continue
     const mateRows = ctx.logs.get(inj.athleteId)
     if (!mateRows || mateRows.filter((r) => r.season === ctx.season || r.season === ctx.lastSeason).length < 3) continue
     const mateEvents = new Set(mateRows.map((r) => r.eventId))
@@ -38,35 +36,8 @@ export function keyAbsences(player, ctx) {
   return out
 }
 
-/**
- * How big the player's role is, 0..1, from recent usage: attempts for QBs, touches for backs,
- * targets for receivers. The board leans on real roles; the explorer still shows everyone.
- */
-export function roleOf(player, logs, season) {
-  const group = POS_GROUP(player.pos)
-  const cur = logs.filter((r) => r.season === season).slice(-5)
-  const rows = cur.length >= 2 ? cur : logs.slice(-5)
-  if (!rows.length) return 0.5
-  const avg = (f) => mean(rows.map((r) => f(r.s || {})))
-  if (group === 'QB') {
-    const a = avg((s) => s.passAtt || 0)
-    return a >= 22 ? 1 : a >= 12 ? 0.6 : 0.25
-  }
-  if (group === 'RB') {
-    const t = avg((s) => (s.rushAtt || 0) + (s.rec || 0))
-    return t >= 12 ? 1 : t >= 7 ? 0.7 : t >= 4 ? 0.45 : 0.25
-  }
-  if (group === 'WR' || group === 'TE') {
-    const t = avg((s) => s.targets ?? (s.rec || 0) * 1.4)
-    return t >= 6 ? 1 : t >= 4 ? 0.75 : t >= 2.5 ? 0.5 : 0.3
-  }
-  if (group === 'K') return 0.8
-  if (group === 'DEF') {
-    const t = avg((s) => s.tackles || 0)
-    return t >= 6 ? 0.9 : t >= 3.5 ? 0.6 : 0.35
-  }
-  return 0.5
-}
+/** How big the player's role is, 0..1 (football's rule; each sport brings its own). */
+export const roleOf = football.roleOf
 
 /**
  * Lines far from what the player usually does are the ones books price with heavy juice
@@ -114,7 +85,8 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
   if (rows.length < 3) return null
   const isHome = game ? game.home?.id === player.teamId : null
   const opp = game ? (isHome ? game.away : game.home) : null
-  const matchup = opp ? matchupFor(ctx.dvp, opp.id, player.pos, market) : null
+  const fam = ctx.fam || football
+  const matchup = opp ? matchupFor(ctx.dvp, opp.id, player.pos, market, fam) : null
   const absences = keyAbsences(player, ctx)
   // injury boost: how this player produced in games the teammate missed
   let boost = null
@@ -163,7 +135,7 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
   const recent = rows.slice(-20).map((r) => ({ v: r.v, date: r.date, opp: r.oppAbbr, home: r.home, id: r.eventId, o: outcome(r.v, line, s) }))
   const sum = summarize(rows.slice(-20))
   const score = apexScore(p, prob.sample, edge)
-  const role = roleOf(player, logs, ctx.season)
+  const role = fam.roleOf(player, logs, ctx.season)
   const fit = lineFit(sum.avg, line, s, mk.oneSided)
   const id = propId(player.id, market, s, line)
   const move = meta.open != null && meta.open !== line ? { open: meta.open, delta: round(line - meta.open, 1) } : null
@@ -207,7 +179,7 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
     best: best ? { key: best.key, label: best.label, hits: best.hits, n: best.n } : null,
     streak: streakOf(rows.map((r) => r.v), line, s),
     recent,
-    matchup: matchup ? { rank: matchup.rank, of: matchup.of, perGame: round(matchup.perGame, 1), avg: round(matchup.avg, 1), group: matchup.group, stat: matchup.stat, text: `${opp.abbr} allows the ${ordinal(matchup.rank)}-most ${NOUN[matchup.stat] || MARKETS[matchup.stat]?.long?.toLowerCase() || matchup.stat} to ${matchup.group}s` } : null,
+    matchup: matchup ? { rank: matchup.rank, of: matchup.of, perGame: round(matchup.perGame, 1), avg: round(matchup.avg, 1), group: matchup.group, stat: matchup.stat, text: `${opp.abbr} allows the ${ordinal(matchup.rank)}-most ${fam.NOUN[matchup.stat] || MARKETS[matchup.stat]?.long?.toLowerCase() || matchup.stat} to ${fam.GROUP_NAMES?.[matchup.group] || `${matchup.group}s`}` } : null,
     boost,
     move,
     alts: meta.alts || [],
@@ -261,8 +233,8 @@ export function buildTeamRow({ team, market = 'teamPts', line, side, game, sched
     kickoff: game?.date || null,
     market,
     marketLabel: 'Team Total',
-    label: `${s === 'u' ? 'Under' : 'Over'} ${line} Points`,
-    shortLabel: `${s === 'u' ? 'U' : 'O'} ${line} Pts`,
+    label: `${s === 'u' ? 'Under' : 'Over'} ${line} ${(ctx.fam || football).TEAM_LABEL}`,
+    shortLabel: `${s === 'u' ? 'U' : 'O'} ${line} ${{ Points: 'Pts', Runs: 'Runs', Goals: 'Goals' }[(ctx.fam || football).TEAM_LABEL] || 'Pts'}`,
     line,
     side: s,
     prob: round(p, 4),

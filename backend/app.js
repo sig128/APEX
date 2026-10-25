@@ -11,6 +11,7 @@ import { log, errText } from './src/lib/log.js'
 import { ApiError, clientIp } from './src/lib/router.js'
 import { createEngine } from './src/nfl/engine.js'
 import { createNflRouter } from './src/nfl/routes.js'
+import { SPORTS, SPORT_KEYS } from './src/sports/index.js'
 import { createBilling, atLeast } from './src/billing/service.js'
 import { billingConfig } from './src/billing/config.js'
 import { billingRoutes } from './src/billing/routes.js'
@@ -80,6 +81,13 @@ function corsOptions() {
 }
 
 /** Plain-text APEX data for the AI game analyzer (NFL only). */
+/** APEX_SPORTS=nfl,nba,... picks the leagues (all of them by default). */
+function enabledSports() {
+  const raw = String(process.env.APEX_SPORTS || '').trim()
+  const list = raw ? raw.split(',').map((x) => x.trim().toLowerCase()).filter((x) => SPORT_KEYS.includes(x)) : SPORT_KEYS
+  return [...new Set(['nfl', ...list])]
+}
+
 function gameContextFrom(engine) {
   return (game) => {
     const wh = engine.wh
@@ -136,6 +144,13 @@ export function createApexApp({
     oddsApiKey = null
   }
   const engine = createEngine({ mode: engineMode, http, store: engineStore, hub, oddsApiKey, ...(now ? { now } : {}) })
+  // the other leagues: same engine and analytics, their own live hub, started on first use
+  const engines = { nfl: engine }
+  for (const key of enabledSports()) {
+    if (key === 'nfl') continue
+    const h = createHub({ maxClients: envInt('APEX_MAX_STREAMS_OTHER', process.env.K_SERVICE ? 60 : process.env.VERCEL ? 120 : 600, { min: 1, max: 100_000 }), maxPerOwner: envInt('APEX_MAX_STREAMS_PER_IP', 6, { min: 1, max: 1000 }) })
+    engines[key] = createEngine({ mode: engineMode === 'daemon' ? 'lazy' : engineMode, http, store: engineStore, hub: h, sport: key, ...(now ? { now } : {}) })
+  }
   const billing = billingIn || createBilling({ getFirestore, store: engineStore, lookupUid: lookupUidByEmail, ...(now ? { now } : {}) })
   const access = createAccess({ auth, billing })
   const picks = createPicks({ docs: billing.docs, engine, billing, ...(now ? { now } : {}) })
@@ -144,9 +159,14 @@ export function createApexApp({
   })
   setGameContextProvider(gameContextFrom(engine))
 
-  const nfl = createNflRouter(engine, { anthropicKey, auth, access, billing })
-  app.use('/api/nfl', (req, res, next) => {
-    nfl.handle(req, res, next).catch(next)
+  for (const [key, eng] of Object.entries(engines)) {
+    const router = createNflRouter(eng, { anthropicKey, auth, access, billing })
+    app.use(`/api/${key}`, (req, res, next) => {
+      router.handle(req, res, next).catch(next)
+    })
+  }
+  app.get('/api/sports', (req, res) => {
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=120').json({ sports: Object.keys(engines).map((k) => ({ key: k, name: SPORTS[k].name, title: SPORTS[k].title, calendar: SPORTS[k].calendar, offseason: SPORTS[k].offseason })) })
   })
   app.use('/api/billing', billingRoutes({ billing, access, getDb: () => (typeof getFirestore === 'function' ? getFirestore() || null : null), now: now || Date.now }))
   app.use('/api/picks', picksRoutes({ picks, access }))
@@ -419,6 +439,7 @@ export function createApexApp({
       you: clientIp(req),
       database: process.env.APEX_EPHEMERAL !== '1',
       engine: { mode: s.mode, week: s.week, games: s.games, live: s.live, props: s.props, logs: s.logs, at: s.at },
+      sports: Object.keys(engines),
       billing: { paywall: cfg.paywall, network: cfg.network, treasury: Boolean(cfg.treasury), docs: billing.docsKind },
       auth: authMode(),
     })
@@ -437,5 +458,5 @@ export function createApexApp({
     const t = setInterval(() => picks.maybeGrade(), 3 * 60_000)
     t.unref?.()
   }
-  return { app, engine, billing, picks, hub, access }
+  return { app, engine, engines, billing, picks, hub, access }
 }

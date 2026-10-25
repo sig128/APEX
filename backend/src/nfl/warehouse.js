@@ -139,6 +139,55 @@ export function createWarehouse() {
     return false
   }
 
+  /**
+   * Prices for the analytics: ESPN's (DraftKings, for the sports that carry them) under the
+   * odds feed's multi-book prices. Line shopping picks the best price per side across books.
+   */
+  let priceMemo = null
+  w.priceMap = () => {
+    const key = `${w.aVersion}`
+    if (priceMemo?.key === key) return priceMemo.map
+    const map = new Map()
+    const dec = (a) => (a > 0 ? 1 + a / 100 : 1 + 100 / -a)
+    for (const l of w.lines.values()) {
+      for (const p of l.props || []) {
+        if (!p.prices) continue
+        const subject = p.athleteId || (p.teamId ? `t${p.teamId}` : null)
+        if (!subject) continue
+        for (const [line, x] of Object.entries(p.prices)) {
+          map.set(`${subject}:${p.market}:${Number(line)}`, { books: { draftkings: { over: x.over ?? null, under: x.under ?? null, yes: x.yes ?? null } } })
+        }
+      }
+    }
+    for (const [k, v] of w.prices || []) {
+      const cur = map.get(k)
+      // a feed entry without a per-book breakdown is its headline book's price
+      const own = v.books && Object.keys(v.books).length ? v.books : { [v.book || 'book']: { over: v.over ?? null, under: v.under ?? null, yes: v.yes ?? null } }
+      map.set(k, { ...v, books: { ...(cur?.books || {}), ...own } })
+    }
+    for (const v of map.values()) {
+      const order = Object.keys(v.books)
+      const head = v.books.draftkings && (v.books.draftkings.over != null || v.books.draftkings.yes != null) ? 'draftkings' : order.find((b) => v.books[b].over != null && v.books[b].under != null) || order[0]
+      const h = v.books[head] || {}
+      v.book = head
+      v.over = h.over ?? null
+      v.under = h.under ?? null
+      v.yes = h.yes ?? null
+      v.best = {}
+      for (const side of ['over', 'under', 'yes']) {
+        let top = null
+        for (const b of order) {
+          const a = v.books[b][side]
+          if (a == null) continue
+          if (!top || dec(a) > dec(top.price)) top = { price: a, book: b }
+        }
+        if (top) v.best[side] = top
+      }
+    }
+    priceMemo = { key, map }
+    return map
+  }
+
   w.injuryOf = (playerId) => {
     const p = w.players.get(String(playerId))
     const list = p ? w.injuries.get(p.teamId) || [] : []

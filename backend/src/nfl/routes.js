@@ -1,4 +1,5 @@
-// /api/nfl/* — the stats API (free), the live stream, and the AI prop read (Pro).
+// /api/<sport>/* — the stats API (free), the live stream, the AI tools (Pro). One router per
+// sport engine; NFL was first, so the file keeps its name.
 import { createRouter, ApiError, RAW, clientIp } from '../lib/router.js'
 import { ROUTE_TIER, TOPIC_RE, topicAllowed } from './gate.js'
 import { streamPropInsight } from './ai.js'
@@ -292,7 +293,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     const propId = String(req.body?.propId || '')
     if (!parsePropId(propId)) throw new ApiError(400, 'bad_prop', 'That prop id is not valid.')
     const gate = await aiGate(req, res)
-    const out = await streamPropInsight({ propId, views, res, apiKey: key() })
+    const out = await streamPropInsight({ propId, views, res, apiKey: key(), sport: engine.sport })
     if (!out.produced) await gate.refund()
     return RAW
   })
@@ -322,7 +323,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     matched = matched.map((m) => ({ ...m, odds: Number.isFinite(Number(prices[m.id])) && Math.abs(Number(prices[m.id])) >= 100 ? Math.round(Number(prices[m.id])) : null }))
     try {
       if (text || image) {
-        const ex = await extractLegs({ apiKey, text, image })
+        const ex = await extractLegs({ apiKey, text, image, sport: engine.sport })
         const found = matchLegs(ex.legs, engine)
         const seen = new Set(matched.map((m) => m.id))
         matched = [...matched, ...found.matched.filter((m) => !seen.has(m.id))].slice(0, 12)

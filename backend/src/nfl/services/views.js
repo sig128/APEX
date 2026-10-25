@@ -1,17 +1,23 @@
 // Read models for the API, memoized by data version so repeated requests are cheap.
 import { buildPropRow, buildTeamRow, diverse, cheatsheets, parlays } from '../analytics/props.js'
-import { buildDvp, DVP_GROUPS } from '../analytics/defense.js'
+import { buildDvp } from '../analytics/defense.js'
 import { teamForm, teamPointRows, trendLines } from '../analytics/teams.js'
 import { parsePropId, marketRows, outcome } from '../analytics/core.js'
 import { wilsonLower } from '../../lib/stats.js'
-import { MARKETS, CORE_MARKETS, marketOf, POS_GROUP } from '../markets.js'
+import { MARKETS, marketOf } from '../markets.js'
+import * as football from '../../sports/football.js'
 import { injurySeverity } from '../../providers/espn/normalize.js'
-import { progressFor, boxLeaders, winCurve } from './live.js'
+import { progressFor as progressAt, boxLeaders, winCurve } from './live.js'
 import { nameKey, round, mean, median } from '../../lib/util.js'
 import { findLock } from '../analytics/lock.js'
 
 export function createViews(engine) {
   const wh = engine.wh
+  const S = engine.sport || { key: 'nfl', calendar: 'week', espn: { league: 'nfl' } }
+  const fam = S.fam || football
+  const CLOCK = fam.clockFor(S.espn?.league)
+  const progressFor = (row, g, s) => progressAt(row, g, s, CLOCK)
+  const CORE = fam.CORE
   const memo = new Map()
   function cached(key, version, fn) {
     const hit = memo.get(key)
@@ -28,8 +34,8 @@ export function createViews(engine) {
       const season = engine.season()
       const injuriesByTeam = new Map()
       for (const [tid, list] of wh.injuries) injuriesByTeam.set(tid, list)
-      const dvp = buildDvp({ logs: wh.logs, players: wh.players, season })
-      return { players: wh.players, logs: wh.logs, dvp, injuriesByTeam, prices: wh.prices, season, lastSeason: season - 1, teamAbbr: wh.teamAbbr }
+      const dvp = buildDvp({ logs: wh.logs, players: wh.players, season, fam })
+      return { players: wh.players, logs: wh.logs, dvp, injuriesByTeam, prices: wh.priceMap ? wh.priceMap() : wh.prices, season, lastSeason: season - 1, teamAbbr: wh.teamAbbr, fam, sport: S.key }
     })
   }
 
@@ -147,7 +153,7 @@ export function createViews(engine) {
     }
 
   function strip() {
-    return cached('strip', wh.version, () => ({ week: wh.week, season: wh.season, games: [...wh.games.values()].map(gameCard), at: wh.at.scoreboard || null }))
+    return cached('strip', wh.version, () => ({ sport: S.key, calendar: S.calendar, week: wh.week, season: wh.season, games: [...wh.games.values()].map(gameCard), at: wh.at.scoreboard || null }))
   }
 
   // ---- the week -------------------------------------------------------------------------------
@@ -162,7 +168,7 @@ export function createViews(engine) {
         streaks: diverse(roles.filter((r) => r.streak >= 5 && r.fit >= 0.85), { limit: 15, perPlayer: 1, perGame: 5, key: (r) => r.streak * 100 + r.rank }).map(card),
         matchups: diverse(roles.filter((r) => r.matchup && r.fit >= 0.85 && ((r.side === 'o' && r.matchup.rank <= 6) || (r.side === 'u' && r.matchup.rank > r.matchup.of - 6))), { limit: 15, perPlayer: 1, perGame: 4 }).map(card),
         moves: diverse(roles.filter((r) => r.move && r.line >= 2 && Math.abs(r.move.delta) >= Math.max(1, r.line * 0.04)), { limit: 15, perPlayer: 1, perGame: 5, key: (r) => (Math.abs(r.move.delta) / Math.max(1, r.line)) * 1000 + r.rank }).map(card),
-        tds: diverse(players.filter((r) => r.market === 'anyTd'), { limit: 15, perPlayer: 1, perGame: 6, key: (r) => r.prob * 1000 }).map(card),
+        [fam.SPECIAL_TAB.key]: diverse(players.filter(fam.SPECIAL_TAB.filter), { limit: 15, perPlayer: 1, perGame: 6, key: (r) => r.prob * 1000 }).map(card),
       }
       // each cheatsheet row carries the window that earned it its place (e.g. 4/4 vs this team)
       const sheetWin = (key, r) => {
@@ -173,6 +179,10 @@ export function createViews(engine) {
       const sheets = cheatsheets(upcoming).map((s) => ({ ...s, rows: s.rows.map((r) => ({ ...card(r), win: sheetWin(s.key, r) })) }))
       const live = [...wh.games.values()].filter((g) => g.status.state === 'in').length
       return {
+        sport: S.key,
+        calendar: S.calendar,
+        slate: engine.slate ? engine.slate() : wh.week,
+        special: { key: fam.SPECIAL_TAB.key, label: fam.SPECIAL_TAB.label },
         season: wh.season,
         week: wh.week,
         games: strip().games,
@@ -189,7 +199,7 @@ export function createViews(engine) {
   function props(q = {}) {
     const { rows } = allRows()
     const markets = String(q.market || 'core')
-    const wantMarkets = markets === 'all' ? null : markets === 'core' ? new Set(CORE_MARKETS) : new Set(markets.split(',').filter((m) => marketOf(m)))
+    const wantMarkets = markets === 'all' ? null : markets === 'core' ? new Set(CORE) : new Set(markets.split(',').filter((m) => fam.MARKETS[m]))
     const kind = q.kind === 'teams' ? 'team' : 'player'
     const pos = q.pos ? new Set(String(q.pos).toUpperCase().split(',')) : null
     const side = q.side === 'o' || q.side === 'u' ? q.side : null
@@ -200,7 +210,7 @@ export function createViews(engine) {
     let list = rows.filter((r) => {
       if (r.kind !== kind) return false
       if (kind === 'player' && wantMarkets && !wantMarkets.has(r.market)) return false
-      if (pos && !pos.has(POS_GROUP(r.pos))) return false
+      if (pos && !pos.has(fam.posGroup(r.pos))) return false
       if (side && r.side !== side) return false
       if (game && game.size && !game.has(r.gameId)) return false
       if (name && !nameKey(r.name).includes(name)) return false
@@ -234,7 +244,8 @@ export function createViews(engine) {
       window: win,
       rows: list.map((r) => ({ ...card(r), win: r.windows.find((w) => w.key === win) || null })),
       facets: {
-        markets: Object.entries(MARKETS).map(([k, m]) => ({ key: k, label: m.label, core: CORE_MARKETS.includes(k) })),
+        markets: Object.entries(fam.MARKETS).map(([k, m]) => ({ key: k, label: m.label, core: CORE.includes(k) })),
+        groups: fam.GROUPS.map((g) => ({ key: g, label: fam.GROUP_NAMES?.[g] || g })),
         games: [...wh.games.values()].filter((g) => g.status.state === 'pre').map((g) => ({ id: g.id, label: g.shortName, date: g.date })),
       },
     }
@@ -418,15 +429,15 @@ export function createViews(engine) {
       const logs = (wh.logs.get(p.id) || []).slice(-20).reverse()
       const team = wh.teams.get(p.teamId) || null
       const markets = new Set(rows.map((r) => r.market))
-      const group = POS_GROUP(p.pos)
-      const cols = group === 'QB' ? ['passCmp', 'passAtt', 'passYds', 'passTd', 'passInt', 'rushAtt', 'rushYds'] : group === 'RB' ? ['rushAtt', 'rushYds', 'rushTd', 'rec', 'recYds', 'targets'] : group === 'WR' || group === 'TE' ? ['rec', 'targets', 'recYds', 'recTd', 'longRec'] : group === 'K' ? ['fgMade', 'xpMade', 'kickPts'] : ['tackles', 'solo', 'sacks']
+      const group = fam.posGroup(p.pos)
+      const cols = fam.LOG_COLS(group)
       return {
         player: { id: p.id, name: p.name, short: p.short, pos: p.pos, jersey: p.jersey, headshot: p.headshot, teamId: p.teamId, team: team && { id: team.id, abbr: team.abbr, name: team.name, logo: team.logo, color: team.color } },
         injury: wh.injuryOf(p.id),
         next: g ? gameCard(g) : null,
         props: rows.map(card),
         markets: [...markets],
-        log: { cols, rows: logs.map((r) => ({ id: r.eventId, date: r.date, opp: r.oppAbbr, home: r.home, result: r.result, score: r.score, season: r.season, s: Object.fromEntries(cols.map((c) => [c, r.s?.[c] ?? null])) })) },
+        log: { cols, labels: fam.STAT_LABELS || null, rows: logs.map((r) => ({ id: r.eventId, date: r.date, opp: r.oppAbbr, home: r.home, result: r.result, score: r.score, season: r.season, s: Object.fromEntries(cols.map((c) => [c, r.s?.[c] ?? null])) })) },
       }
     })
   }
@@ -450,7 +461,7 @@ export function createViews(engine) {
     return cached('dvp', wh.aVersion, () => {
       const d = ctx().dvp
       const out = {}
-      for (const group of DVP_GROUPS) {
+      for (const group of Object.keys(fam.DVP_STATS)) {
         out[group] = {}
         for (const stat of Object.keys(d.league[group] || {})) {
           out[group][stat] = Object.entries(d.byDef)
@@ -459,7 +470,7 @@ export function createViews(engine) {
             .sort((a, b) => a.rank - b.rank)
         }
       }
-      return { groups: out, league: d.league, labels: Object.fromEntries(Object.entries(MARKETS).map(([k, m]) => [k, m.label])) }
+      return { groups: out, league: d.league, labels: Object.fromEntries(Object.entries(fam.MARKETS).map(([k, m]) => [k, m.label])), groupNames: fam.GROUP_NAMES || null }
     })
   }
 
@@ -467,7 +478,7 @@ export function createViews(engine) {
     return cached('rankings', wh.aVersion, () => {
       const { rows } = allRows()
       const pre = rows.filter((r) => r.kind === 'player' && wh.games.get(r.gameId)?.status.state === 'pre')
-      return Object.fromEntries(CORE_MARKETS.map((m) => [m, diverse(pre.filter((r) => r.market === m), { limit: 10, perPlayer: 1, perGame: 3 }).map(card)]))
+      return Object.fromEntries(CORE.map((m) => [m, diverse(pre.filter((r) => r.market === m), { limit: 10, perPlayer: 1, perGame: 3 }).map(card)]))
     })
   }
 
@@ -559,7 +570,7 @@ export function createViews(engine) {
     const t = engine.now()
     return cached('lock', `${wh.aVersion}:${Math.floor(t / (15 * 60_000))}`, () => {
       const out = findLock(lockRows(), { now: t, injuryOf: (id) => wh.injuryOf(id) })
-      return { ...out, season: wh.season, week: wh.week, at: t }
+      return { ...out, sport: S.key, calendar: S.calendar, season: wh.season, week: engine.slate ? engine.slate() : wh.week, at: t }
     })
   }
 

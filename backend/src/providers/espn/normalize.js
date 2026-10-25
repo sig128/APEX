@@ -1,33 +1,11 @@
 // Turn ESPN's public API payloads into small, stable shapes the engine works with.
 import { num } from '../../lib/util.js'
 import { americanToProb } from '../../lib/odds.js'
+import * as football from '../../sports/football.js'
+import { marketOf } from '../../nfl/markets.js'
 
-/** ESPN prop bet type ids -> our market keys. */
-export const ESPN_PROP_TYPES = {
-  8: 'passYds',
-  9: 'passCmp',
-  10: 'passTd',
-  11: 'rushAtt',
-  12: 'rushYds',
-  13: 'recYds',
-  14: 'rec',
-  15: 'passInt',
-  16: 'passAtt',
-  17: 'longPass',
-  18: 'passRushYds',
-  19: 'longRec',
-  20: 'rushRecYds',
-  21: 'longRush',
-  22: 'kickPts',
-  24: 'fgMade',
-  26: 'tackles',
-  27: 'tacklesAst',
-  28: 'sacks',
-  31: 'anyTd',
-  32: 'td2',
-  98: 'teamPts',
-  104: 'teamTds',
-}
+/** ESPN prop bet type ids -> our market keys (football; other sports bring their own). */
+export const ESPN_PROP_TYPES = Object.fromEntries(Object.entries(football.PROP_TYPES).map(([k, v]) => [k, v.market]))
 
 const logoSmall = (abbr) => (abbr ? `https://a.espncdn.com/i/teamlogos/nfl/500/${String(abbr).toLowerCase()}.png` : null)
 
@@ -208,35 +186,60 @@ function statCells(keys, stats) {
   return out
 }
 
-// Box score keys per category -> the same stat names the game logs use.
-const BOX_KEYS = {
-  passing: { completions: 'passCmp', passingAttempts: 'passAtt', passingYards: 'passYds', passingTouchdowns: 'passTd', interceptions: 'passInt', sacks: 'sacksTaken', longPassing: 'longPass' },
-  rushing: { rushingAttempts: 'rushAtt', rushingYards: 'rushYds', rushingTouchdowns: 'rushTd', longRushing: 'longRush' },
-  receiving: { receptions: 'rec', receivingYards: 'recYds', receivingTouchdowns: 'recTd', longReception: 'longRec', receivingTargets: 'targets' },
-  fumbles: { fumbles: 'fum', fumblesLost: 'fumLost' },
-  defensive: { totalTackles: 'tackles', soloTackles: 'solo', sacks: 'sacks', tacklesForLoss: 'tfl', passesDefended: 'pd', QBHits: 'qbHits', defensiveTouchdowns: 'defTd' },
-  interceptions: { interceptions: 'defInt', interceptionTouchdowns: 'defIntTd' },
-  kickReturns: { kickReturnTouchdowns: 'krTd' },
-  puntReturns: { puntReturnTouchdowns: 'prTd' },
-  kicking: { fieldGoalsMade: 'fgMade', fieldGoalAttempts: 'fgAtt', extraPointsMade: 'xpMade', totalKickingPoints: 'kickPts', longFieldGoalMade: 'longFg' },
+/**
+ * One stat value by its mapping: "key", ["made", "attempted"] for "4-11" cells,
+ * { key, parse: 'clock' } for "20:06" (minutes), { key, parse: 'innings' } for "5.2" (outs).
+ */
+export function putStat(out, spec, raw) {
+  if (spec == null || raw == null || raw === '' || raw === '-' || raw === '--') return
+  if (Array.isArray(spec)) {
+    const m = /^(\d+)-(\d+)$/.exec(String(raw))
+    if (m) {
+      out[spec[0]] = Number(m[1])
+      out[spec[1]] = Number(m[2])
+    }
+    return
+  }
+  if (typeof spec === 'object') {
+    if (spec.parse === 'clock') {
+      const m = /^(\d+):(\d{2})$/.exec(String(raw))
+      if (m) out[spec.key] = Math.round((Number(m[1]) + Number(m[2]) / 60) * 10) / 10
+      return
+    }
+    if (spec.parse === 'innings') {
+      const m = /^(\d+)(?:\.(\d))?$/.exec(String(raw))
+      if (m) out[spec.key] = Number(m[1]) * 3 + Number(m[2] || 0)
+      return
+    }
+    return
+  }
+  const v = num(raw)
+  if (v != null) out[spec] = v
 }
 
 /** { [athleteId]: { id, name, short, jersey, teamId, stats: {...} } } from a summary boxscore. */
-export function normBoxPlayers(box) {
+export function normBoxPlayers(box, fam = football) {
   const players = {}
   for (const side of box?.players || []) {
     const teamId = String(side.team?.id || '')
     for (const cat of side.statistics || []) {
-      const map = BOX_KEYS[cat.name]
+      const map = fam.boxKeys(cat)
       if (!map) continue
+      const keys = cat.keys || []
       for (const row of cat.athletes || []) {
         const a = row.athlete || {}
-        if (!a.id) continue
+        if (!a.id || row.didNotPlay) continue
         const p = (players[a.id] ||= { id: String(a.id), name: a.displayName || '', short: a.shortName || '', jersey: a.jersey || '', teamId, stats: {} })
-        const cells = statCells(cat.keys || [], row.stats)
-        for (const [k, v] of Object.entries(cells)) {
-          const key = map[k]
-          if (key && v != null) p.stats[key] = v
+        if (fam === football) {
+          // football cells: "24/31" pairs and plain numbers, by category
+          const cells = statCells(keys, row.stats)
+          for (const [k, v] of Object.entries(cells)) {
+            const key = map[k]
+            if (key && v != null) p.stats[key] = v
+          }
+        } else {
+          keys.forEach((k, i) => putStat(p.stats, map[k], row.stats?.[i]))
+          if ((cat.keys || []).includes('saves')) p.stats.gs = row.starter === false ? 0 : 1
         }
       }
     }
@@ -296,7 +299,7 @@ export function injurySeverity(status) {
   return s ? 'other' : null
 }
 
-export function normSummary(j) {
+export function normSummary(j, fam = football) {
   const comp = j?.header?.competitions?.[0] || {}
   const cs = comp.competitors || []
   const home = normCompetitor(cs.find((c) => c.homeAway === 'home'))
@@ -346,7 +349,7 @@ export function normSummary(j) {
     status,
     home,
     away,
-    players: normBoxPlayers(j?.boxscore),
+    players: normBoxPlayers(j?.boxscore, fam),
     teamStats,
     drive: normDrive(j?.drives?.current),
     lastDrive: normDrive((j?.drives?.previous || []).slice(-1)[0]),
@@ -370,10 +373,13 @@ export function normTeams(j) {
   return list.map((t) => normTeam(t.team)).filter(Boolean)
 }
 
-export function normRoster(j, teamId) {
+export function normRoster(j, teamId, headshots = 'nfl') {
   const tid = String(j?.team?.id || teamId || '')
   const out = []
-  for (const g of j?.athletes || []) {
+  // football and hockey group the roster by unit or position; basketball sends one flat list
+  const flat = Array.isArray(j?.athletes) && j.athletes.length && !j.athletes[0]?.items
+  const groups = flat ? [{ position: '', items: j.athletes }] : j?.athletes || []
+  for (const g of groups) {
     const group = g.position || ''
     for (const a of g.items || []) {
       if (!a.id) continue
@@ -387,7 +393,7 @@ export function normRoster(j, teamId) {
         group,
         active: group !== 'injuredReserveOrOut' && group !== 'suspended' && group !== 'practiceSquad' && (a.status?.type || 'active') === 'active',
         injury: a.injuries?.[0]?.status || null,
-        headshot: `https://a.espncdn.com/i/headshots/nfl/players/full/${a.id}.png`,
+        headshot: a.headshot?.href || `https://a.espncdn.com/i/headshots/${headshots}/players/full/${a.id}.png`,
       })
     }
   }
@@ -425,37 +431,13 @@ export function normSchedule(j, teamId) {
 
 // ---- game logs -------------------------------------------------------------------------------
 
-const LOG_KEYS = {
-  completions: 'passCmp',
-  passingAttempts: 'passAtt',
-  passingYards: 'passYds',
-  passingTouchdowns: 'passTd',
-  interceptions: 'passInt',
-  longPassing: 'longPass',
-  sacks: 'sacks',
-  rushingAttempts: 'rushAtt',
-  rushingYards: 'rushYds',
-  rushingTouchdowns: 'rushTd',
-  longRushing: 'longRush',
-  receptions: 'rec',
-  receivingTargets: 'targets',
-  receivingYards: 'recYds',
-  receivingTouchdowns: 'recTd',
-  longReception: 'longRec',
-  totalTackles: 'tackles',
-  soloTackles: 'solo',
-  fieldGoalsMade: 'fgMade',
-  extraPointsMade: 'xpMade',
-  totalKickingPoints: 'kickPts',
-  fumblesLost: 'fumLost',
-}
-
 /**
  * One row per game played: { eventId, date, season, week, home, oppId, oppAbbr, teamId, result, score, s: {stat: n} }.
  * Regular season and postseason both count; preseason is skipped.
  */
-export function normGamelog(j, season) {
+export function normGamelog(j, season, fam = football) {
   const names = j?.names || []
+  const keys = typeof fam.LOG_KEYS === 'function' ? fam.LOG_KEYS(names) : fam.LOG_KEYS
   const rows = []
   const meta = j?.events || {}
   for (const st of j?.seasonTypes || []) {
@@ -468,9 +450,11 @@ export function normGamelog(j, season) {
         const m = meta[ev.eventId] || {}
         const s = {}
         names.forEach((n, i) => {
-          const k = LOG_KEYS[n] || n
-          const v = num(ev.stats?.[i])
-          if (v != null) s[k] = v
+          if (fam === football) {
+            const k = keys[n] || n
+            const v = num(ev.stats?.[i])
+            if (v != null) s[k] = v
+          } else if (keys[n]) putStat(s, keys[n], ev.stats?.[i])
         })
         // A sack stat on a QB log means sacks taken; defenders' logs use the same name for sacks made.
         rows.push({
@@ -498,40 +482,76 @@ export function normGamelog(j, season) {
 
 // ---- prop lines -------------------------------------------------------------------------------
 
-/** ESPN prop bets (DraftKings lines, no prices). Keeps one main line per player and market. */
-export function normPropBets(j) {
+/**
+ * ESPN prop bets (DraftKings). One main line per player and market plus alternates; football
+ * comes without prices, other sports bring them: each over/under pair arrives over first, and
+ * milestones ("20+ points") are alternate overs with a yes price. Lines carry `prices`:
+ * { [line]: { over, under, yes } }.
+ */
+export function normPropBets(j, fam = football) {
+  const types = fam.PROP_TYPES
   const grouped = new Map()
+  const seenPair = new Map()
   for (const it of j?.items || []) {
-    const typeId = Number(it.type?.id)
-    const market = ESPN_PROP_TYPES[typeId]
-    if (!market) continue
+    const t = types[Number(it.type?.id)]
+    if (!t) continue
+    const market = t.market
+    const mk = marketOf(market)
+    if (!mk) continue
     const athleteId = it.athlete?.$ref?.match(/athletes\/(\d+)/)?.[1] || null
     const teamId = it.team?.$ref?.match(/teams\/(\d+)/)?.[1] || null
     if (!athleteId && !teamId) continue
-    let line = num(it.current?.target?.value)
-    if (market === 'anyTd') line = 0.5
-    if (market === 'td2') line = 1.5
-    if (line == null) continue
-    const key = `${athleteId || `t${teamId}`}:${market}`
-    const g = grouped.get(key) || { athleteId, teamId, market, lines: [], open: num(it.open?.target?.value), updated: it.lastUpdated || null }
-    g.lines.push(line)
+    if (market === 'teamPts' ? !teamId : !athleteId) continue
+    const target = num(it.current?.target?.value)
+    let line
+    if (mk.oneSided) line = mk.fixedLine
+    else if (t.milestone) line = target == null ? null : target - 0.5
+    else line = target
+    if (line == null || !(line >= 0)) continue
+    const subject = athleteId || `t${teamId}`
+    const key = `${subject}:${market}`
+    const g = grouped.get(key) || { athleteId: market === 'teamPts' ? null : athleteId, teamId: market === 'teamPts' ? teamId : null, market, main: [], milestones: [], open: null, updated: it.lastUpdated || null, prices: {} }
+    if (t.milestone) g.milestones.push(line)
+    else {
+      g.main.push(line)
+      if (g.open == null) g.open = num(it.open?.target?.value)
+    }
     if (it.lastUpdated && (!g.updated || it.lastUpdated > g.updated)) g.updated = it.lastUpdated
+    const price = num(it.odds?.american?.value)
+    if (price != null && Math.abs(price) >= 100) {
+      const p = (g.prices[line] ||= {})
+      if (mk.oneSided) p.yes = price
+      else if (t.milestone) p.over ??= price
+      else {
+        // the pair arrives over first, then under
+        const k2 = `${key}:${line}`
+        const n2 = (seenPair.get(k2) || 0) + 1
+        seenPair.set(k2, n2)
+        if (n2 === 1) p.over = price
+        else if (n2 === 2) p.under = price
+      }
+    }
     grouped.set(key, g)
   }
   const out = []
   for (const g of grouped.values()) {
-    // Several targets for one market = main line plus alternates. The median is the main line.
-    const sorted = [...new Set(g.lines)].sort((a, b) => a - b)
-    const main = sorted[Math.floor((sorted.length - 1) / 2)]
+    // Several targets for one market = main line plus alternates. The median of the posted
+    // over/unders is the main line; milestone-only markets use their middle milestone.
+    const mains = [...new Set(g.main)].sort((a, b) => a - b)
+    const all = [...new Set([...g.main, ...g.milestones])].sort((a, b) => a - b)
+    const pool = mains.length ? mains : all
+    const main = pool[Math.floor((pool.length - 1) / 2)]
+    const mk = marketOf(g.market)
     out.push({
       athleteId: g.athleteId,
       teamId: g.teamId,
       market: g.market,
       line: main,
-      alts: sorted.filter((x) => x !== main),
-      open: g.market === 'anyTd' || g.market === 'td2' ? null : g.open,
+      alts: all.filter((x) => x !== main),
+      open: mk?.oneSided ? null : g.open,
       updated: g.updated,
       book: 'DraftKings',
+      prices: Object.keys(g.prices).length ? g.prices : null,
     })
   }
   return out

@@ -2,7 +2,7 @@
 // leg. The legs are matched to the APEX board, played out in the simulator, scored, and then
 // the AI says which to keep, which to cut and why, grounded in those numbers.
 import Anthropic from '@anthropic-ai/sdk'
-import { MARKETS, marketOf } from './markets.js'
+import { MARKETS, FOOTBALL_MARKETS, marketOf } from './markets.js'
 import { parsePropId } from './analytics/core.js'
 import { simulateSlip } from './analytics/sim.js'
 import { _brief } from './ai.js'
@@ -17,22 +17,24 @@ export const MAX_IMAGE_CHARS = 1_600_000 // base64, about 1.2 MB
 export const MAX_TEXT = 4000
 const MAX_LEGS = 12
 
-const MARKET_LIST = Object.entries({ ...MARKETS, teamPts: { long: 'Team Total Points' } })
-  .map(([k, m]) => `${k} = ${m.long || m.label}`)
-  .join('; ')
+const marketList = (markets) =>
+  Object.entries({ ...markets, teamPts: { long: 'Team Total' } })
+    .map(([k, m]) => `${k} = ${m.long || m.label}`)
+    .join('; ')
 
-const EXTRACT_SYSTEM = `You read sports betslips. Extract every NFL leg from the user's betslip (a screenshot or pasted text).
+const NFL_SPORT = { title: 'NFL', fam: { MARKETS: FOOTBALL_MARKETS } }
+const extractSystem = (sport = NFL_SPORT) => `You read sports betslips. Extract every ${sport.title} leg from the user's betslip (a screenshot or pasted text).
 Reply with JSON only, no prose, in exactly this shape:
 {"legs":[{"player":"Full Name","team":"DET or null","market":"<key>","side":"o or u","line":245.5,"odds":-115}],"parlayOdds":600,"notes":"anything you could not read"}
 Rules:
-- market must be one of these keys: ${MARKET_LIST}. Use "teamPts" with player = the team name for team totals.
+- market must be one of these keys: ${marketList(sport.fam?.MARKETS || MARKETS)}. Use "teamPts" with player = the team name for team totals.
 - side "o" for over, more than, or "+" style (e.g. "250+ yards" means over 249.5); "u" for under. Anytime TD is side "o", line 0.5; 2+ TDs is line 1.5.
 - line is the number on the slip. For "X+" milestones use X - 0.5.
 - odds: the leg's American odds if shown, else null. parlayOdds: the whole slip's American odds if shown, else null.
 - Skip moneylines, spreads and game totals; mention them in notes.
 - If it isn't a betslip, return {"legs":[],"parlayOdds":null,"notes":"not a betslip"}.`
 
-export const CHECK_SYSTEM = `You are APEX NFL Betting Intelligence (SLCM v1.0) reviewing a parlay before it's placed, leg by leg.
+export const checkSystem = (sport = NFL_SPORT) => `You are APEX ${sport.title} Betting Intelligence (SLCM v1.0) reviewing a parlay before it's placed, leg by leg.
 
 For every leg decide, holding it to the APEX rules and the rule checks you are given:
 - KEEP: it passes the rules (65%+ to win, an edge over the price or a price to beat, a real sample, recent form that agrees, a projection that backs it, a steady role, the market not against it).
@@ -55,6 +57,7 @@ Sizing in BEST: a 3-leg parlay at most ${RULES.stake.lock * 100}% of bankroll, a
 This is analysis, not advice. Never promise a win.
 
 ${RULES_PROMPT}`
+export const CHECK_SYSTEM = checkSystem()
 
 const anthropicClient = (apiKey) => new Anthropic({ apiKey })
 
@@ -71,11 +74,11 @@ function parseJsonLoose(text) {
 }
 
 /** Screenshot or text -> [{ player, team, market, side, line, odds }], parlayOdds, notes. */
-export async function extractLegs({ apiKey, text, image }) {
+export async function extractLegs({ apiKey, text, image, sport }) {
   const content = []
   if (image) content.push({ type: 'image', source: { type: 'base64', media_type: image.type, data: image.data } })
   content.push({ type: 'text', text: text ? `Betslip text:\n${text}` : 'Extract the legs from this betslip.' })
-  const msg = await anthropicClient(apiKey).messages.create({ model: MODEL(), max_tokens: 1200, system: EXTRACT_SYSTEM, messages: [{ role: 'user', content }] })
+  const msg = await anthropicClient(apiKey).messages.create({ model: MODEL(), max_tokens: 1200, system: extractSystem(sport || NFL_SPORT), messages: [{ role: 'user', content }] })
   const raw = (msg?.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('')
   const json = parseJsonLoose(raw)
   if (!json || !Array.isArray(json.legs)) return { legs: [], parlayOdds: null, notes: 'Could not read that betslip.' }
@@ -84,7 +87,7 @@ export async function extractLegs({ apiKey, text, image }) {
     .map((l) => ({
       player: String(l.player || '').slice(0, 60),
       team: l.team ? String(l.team).slice(0, 4).toUpperCase() : null,
-      market: marketOf(l.market) ? l.market : null,
+      market: marketOf(l.market) && (l.market === 'teamPts' || (sport?.fam?.MARKETS || MARKETS)[l.market]) ? l.market : null,
       side: l.side === 'u' ? 'u' : 'o',
       line: Number(l.line),
       odds: Number.isFinite(Number(l.odds)) && Math.abs(Number(l.odds)) >= 100 ? Math.round(Number(l.odds)) : null,
@@ -155,6 +158,7 @@ function legBrief(i, ctx, odds, s, sim) {
  * away, then the AI's text. Returns { produced } for the allowance refund.
  */
 export async function streamParlayCheck({ engine, matched, unmatched = [], parlayOdds = null, notes = '', res, apiKey }) {
+  const sport = engine.sport || NFL_SPORT
   const views = engine.views
   const ctxs = matched.map((m) => views.propContext(m.id)).filter(Boolean)
   const rows = ctxs.map((c) => c.prop)
@@ -199,7 +203,7 @@ export async function streamParlayCheck({ engine, matched, unmatched = [], parla
       .filter((x) => x !== '')
       .join('\n\n')
     write({ type: 'start', model: MODEL() })
-    const stream = anthropicClient(apiKey).messages.stream({ model: MODEL(), max_tokens: 1400, system: CHECK_SYSTEM, messages: [{ role: 'user', content: brief }] })
+    const stream = anthropicClient(apiKey).messages.stream({ model: MODEL(), max_tokens: 1400, system: checkSystem(sport), messages: [{ role: 'user', content: brief }] })
     stream.on('text', (d) => {
       text += d
       write({ type: 'text_delta', text: d })

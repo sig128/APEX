@@ -11,14 +11,26 @@ import { createScheduler } from '../lib/scheduler.js'
 import { createViews } from './services/views.js'
 import { log, errText } from '../lib/log.js'
 import { mapLimit } from '../lib/util.js'
+import { sportOf } from '../sports/index.js'
 
 const MIN = 60_000
 const HOUR = 60 * MIN
 
-export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = process.env.THE_ODDS_API_KEY, now = () => Date.now(), backfillBatch } = {}) {
-  const espn = createEspnClient({ http })
+/** YYYYMMDD in US Eastern time (ESPN's day for daily slates), `days` from now. */
+export function etDay(ms, days = 0) {
+  const d = new Date(ms + days * 86_400_000)
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d)
+  const get = (t) => parts.find((p) => p.type === t)?.value
+  return `${get('year')}${get('month')}${get('day')}`
+}
+
+export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl', oddsApiKey = process.env.THE_ODDS_API_KEY, now = () => Date.now(), backfillBatch } = {}) {
+  const S = sportOf(sport)
+  const NS = S.key // store namespace: 'nfl' stays where it always was
+  const espn = createEspnClient({ http, sport: S.espn.sport, league: S.espn.league, fam: S.fam, headshots: S.headshots })
   const wh = createWarehouse()
-  const odds = oddsApiKey ? createOddsApi({ http, store, apiKey: oddsApiKey, now }) : null
+  // sportsbook prices from The Odds API (NFL); the other sports' prices come with ESPN's lines
+  const odds = oddsApiKey && S.key === 'nfl' ? createOddsApi({ http, store, apiKey: oddsApiKey, now }) : null
   let started = null
   let restored = false
   const staleLogs = new Set() // players whose current-season log needs a refetch (their game ended)
@@ -40,8 +52,26 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
   }
 
   // ---- tasks ---------------------------------------------------------------------------------
+  /** Week slates are one scoreboard; day slates are today plus tomorrow (late games roll over). */
+  async function fetchScoreboard(priority) {
+    const today = await espn.scoreboard({}, { priority })
+    if (S.calendar !== 'day') return today
+    let next = null
+    try {
+      next = await espn.scoreboard({ dates: etDay(now(), 1) }, { priority: 'background' })
+    } catch (e) {
+      log.warn('next-day scoreboard failed', { sport: S.key, err: errText(e) })
+    }
+    const seen = new Set(today.games.map((g) => g.id))
+    const games = [...today.games, ...(next?.games || []).filter((g) => !seen.has(g.id))]
+    // a finished day can drop off once the next one has games
+    const t = now()
+    const keep = games.filter((g) => g.status.state !== 'post' || t - Date.parse(g.date) < 30 * HOUR)
+    return { ...today, games: keep }
+  }
+
   async function scoreboardTask() {
-    const sb = await espn.scoreboard({}, { priority: liveGames().length ? 'live' : 'normal' })
+    const sb = await fetchScoreboard(liveGames().length ? 'live' : 'normal')
     const { changed, transitions } = wh.setScoreboard(sb, now())
     for (const tr of transitions) {
       const g = wh.games.get(tr.id)
@@ -151,7 +181,7 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
     const playing = new Set(games().flatMap((g) => [g.home?.id, g.away?.id]))
     for (const [tid, list] of wh.injuries) {
       if (!playing.has(tid)) continue
-      for (const i of list) if (['QB', 'RB', 'WR', 'TE'].includes(i.pos)) ids.add(i.athleteId)
+      for (const i of list) if (S.fam.KEY_POSITIONS.includes(i.pos)) ids.add(i.athleteId)
     }
     return [...ids]
   }
@@ -206,15 +236,15 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
     wh.dirty.clear()
     try {
       if (force || dirty.has('core') || dirty.has('live')) {
-        await store.set('nfl', 'core', wh.snapshotCore())
+        await store.set(NS, 'core', wh.snapshotCore())
         livePersistAt = now()
       }
-      if (force || dirty.has('rosters')) await store.set('nfl', 'rosters', wh.snapshotRosters())
-      if (force || dirty.has('schedules')) await store.set('nfl', 'schedules', wh.snapshotSchedules())
+      if (force || dirty.has('rosters')) await store.set(NS, 'rosters', wh.snapshotRosters())
+      if (force || dirty.has('schedules')) await store.set(NS, 'schedules', wh.snapshotSchedules())
       if (force || dirty.has('logs')) {
         const byTeam = wh.snapshotLogs()
-        await mapLimit([...byTeam], 4, ([tid, doc]) => store.set('nfl', `logs:${tid}`, doc))
-        await store.set('nfl', 'logteams', [...byTeam.keys()])
+        await mapLimit([...byTeam], 4, ([tid, doc]) => store.set(NS, `logs:${tid}`, doc))
+        await store.set(NS, 'logteams', [...byTeam.keys()])
       }
     } catch (e) {
       for (const d of dirty) wh.dirty.add(d)
@@ -226,10 +256,10 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
     if (!store || restored) return
     restored = true
     try {
-      const [core, rosters, schedules, teams] = await Promise.all([store.get('nfl', 'core'), store.get('nfl', 'rosters'), store.get('nfl', 'schedules'), store.get('nfl', 'logteams')])
-      const logs = teams ? await mapLimit(teams, 6, (tid) => store.get('nfl', `logs:${tid}`)) : []
+      const [core, rosters, schedules, teams] = await Promise.all([store.get(NS, 'core'), store.get(NS, 'rosters'), store.get(NS, 'schedules'), store.get(NS, 'logteams')])
+      const logs = teams ? await mapLimit(teams, 6, (tid) => store.get(NS, `logs:${tid}`)) : []
       wh.restore({ core, rosters, schedules, logs })
-      if (core) log.info('restored nfl snapshot', { games: wh.games.size, players: wh.players.size, logs: wh.logs.size, ageMin: Math.round((now() - (core.savedAt || 0)) / MIN) })
+      if (core) log.info(`restored ${NS} snapshot`, { games: wh.games.size, players: wh.players.size, logs: wh.logs.size, ageMin: Math.round((now() - (core.savedAt || 0)) / MIN) })
     } catch (e) {
       log.warn('restore failed', { err: errText(e) })
     }
@@ -316,7 +346,12 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
     }
   }
 
+  /** The slate the lock and its ledger belong to: the week, or the day for daily sports. */
+  const slate = () => (S.calendar === 'week' ? wh.week : `${etDay(now()).slice(0, 4)}-${etDay(now()).slice(4, 6)}-${etDay(now()).slice(6)}`)
+
   const engine = {
+    sport: S,
+    slate,
     mode,
     wh,
     espn,
@@ -346,6 +381,7 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
     },
     status() {
       return {
+        sport: S.key,
         mode,
         season: wh.season,
         week: wh.week,

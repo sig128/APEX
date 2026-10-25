@@ -1,4 +1,7 @@
 // Player and team prop markets: how to read each from a stat line, and how it behaves.
+import { MARKETS as BASKETBALL_MARKETS } from '../sports/basketball.js'
+import { MARKETS as HOCKEY_MARKETS } from '../sports/hockey.js'
+import { MARKETS as BASEBALL_MARKETS } from '../sports/baseball.js'
 const n = (x) => (Number.isFinite(x) ? x : 0)
 
 /**
@@ -8,7 +11,7 @@ const n = (x) => (Number.isFinite(x) ? x : 0)
  * live: false when the live box score can't track it (ESPN's box has no longest completion).
  * keys: a game only counts when at least one of these stats was recorded (missing is not zero).
  */
-export const MARKETS = {
+export const FOOTBALL_MARKETS = {
   passYds: { keys: ['passYds'], label: 'Pass Yards', long: 'Passing Yards', stat: (s) => n(s.passYds), dist: 'normal', cv: 0.27, pos: ['QB'], need: 'passAtt' },
   passAtt: { keys: ['passAtt'], label: 'Pass Attempts', long: 'Passing Attempts', stat: (s) => n(s.passAtt), dist: 'normal', cv: 0.2, pos: ['QB'], need: 'passAtt' },
   passCmp: { keys: ['passCmp'], label: 'Completions', long: 'Pass Completions', stat: (s) => n(s.passCmp), dist: 'normal', cv: 0.22, pos: ['QB'], need: 'passAtt' },
@@ -33,11 +36,15 @@ export const MARKETS = {
 }
 
 export const TEAM_MARKETS = {
-  teamPts: { label: 'Team Total', long: 'Team Total Points', dist: 'normal', cv: 0.38 },
+  teamPts: { label: 'Team Total', long: 'Team Total', dist: 'normal', cv: 0.38 },
 }
 
+export const FOOTBALL_CORE = ['passYds', 'passAtt', 'passCmp', 'passTd', 'rushYds', 'rushAtt', 'rec', 'recYds', 'rushRecYds', 'anyTd']
+export const CORE_MARKETS = FOOTBALL_CORE
+
+/** Every sport's markets in one registry: keys are unique across sports. */
+export const MARKETS = { ...FOOTBALL_MARKETS, ...BASKETBALL_MARKETS, ...HOCKEY_MARKETS, ...BASEBALL_MARKETS }
 export const MARKET_KEYS = Object.keys(MARKETS)
-export const CORE_MARKETS = ['passYds', 'passAtt', 'passCmp', 'passTd', 'rushYds', 'rushAtt', 'rec', 'recYds', 'rushRecYds', 'anyTd']
 
 export function marketOf(key) {
   return MARKETS[key] || TEAM_MARKETS[key] || null
@@ -58,7 +65,7 @@ export function shortLabel(market, side, line) {
   return `${side === 'u' ? 'U' : 'O'} ${line} ${m.label}`
 }
 
-export const POS_GROUP = (pos) => {
+export const footballPos = (pos) => {
   const p = String(pos || '').toUpperCase()
   if (p === 'QB') return 'QB'
   if (p === 'RB' || p === 'FB' || p === 'HB') return 'RB'
@@ -68,3 +75,6 @@ export const POS_GROUP = (pos) => {
   if (['DE', 'DT', 'NT', 'EDGE', 'OLB', 'ILB', 'MLB', 'LB', 'CB', 'S', 'FS', 'SS', 'DB'].includes(p)) return 'DEF'
   return p || 'OTHER'
 }
+
+/** Football's position groups (kept under the old name for the NFL code paths). */
+export const POS_GROUP = footballPos

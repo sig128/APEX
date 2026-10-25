@@ -1,0 +1,91 @@
+{
+  "note": "Shapes trimmed from ESPN's live APIs on 2026-10-25 (NBA LAL @ UTAH: one player's log and lines; NHL, MLB rows). The 10+ points milestone and the box score rows were added for the tests.",
+  "scoreboard": {
+    "season": { "type": 2, "year": 2027 },
+    "leagues": [{ "season": { "year": 2027, "displayName": "2026-27", "type": { "id": "2", "type": 2, "name": "Regular Season", "abbreviation": "reg" } } }],
+    "day": { "date": "2026-10-25" },
+    "events": [
+      {
+        "id": "401909861",
+        "date": "2026-10-25T21:00Z",
+        "name": "Los Angeles Lakers at Utah Jazz",
+        "shortName": "LAL @ UTAH",
+        "season": { "year": 2027, "type": 2, "slug": "regular-season" },
+        "status": { "type": { "state": "pre", "completed": false, "name": "STATUS_SCHEDULED", "shortDetail": "10/25 - 5:00 PM EDT" }, "period": 0, "displayClock": "0.0" },
+        "competitions": [
+          {
+            "id": "401909861",
+            "date": "2026-10-25T21:00Z",
+            "neutralSite": false,
+            "venue": { "fullName": "Delta Center", "address": { "city": "Salt Lake City", "state": "UT" }, "indoor": true },
+            "odds": [{ "provider": { "name": "DraftKings" }, "details": "LAL -6.5", "overUnder": 236.5, "spread": 6.5, "homeTeamOdds": { "favorite": false }, "awayTeamOdds": { "favorite": true } }],
+            "competitors": [
+              { "id": "26", "homeAway": "home", "score": "0", "team": { "id": "26", "abbreviation": "UTAH", "displayName": "Utah Jazz", "shortDisplayName": "Jazz", "name": "Jazz", "location": "Utah", "color": "4e008e", "alternateColor": "79a3dc", "logo": "https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/utah.png" }, "records": [{ "name": "overall", "type": "total", "summary": "1-1" }] },
+              { "id": "13", "homeAway": "away", "score": "0", "team": { "id": "13", "abbreviation": "LAL", "displayName": "Los Angeles Lakers", "shortDisplayName": "Lakers", "name": "Lakers", "location": "Los Angeles", "color": "552583", "alternateColor": "fdb927", "logo": "https://a.espncdn.com/i/teamlogos/nba/500/scoreboard/lal.png" }, "records": [{ "name": "overall", "type": "total", "summary": "2-0" }] }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "gamelog": {
+    "names": ["minutes", "fieldGoalsMade-fieldGoalsAttempted", "fieldGoalPct", "threePointFieldGoalsMade-threePointFieldGoalsAttempted", "threePointPct", "freeThrowsMade-freeThrowsAttempted", "freeThrowPct", "totalRebounds", "assists", "blocks", "steals", "fouls", "turnovers", "points"],
+    "labels": ["MIN", "FG", "FG%", "3PT", "3P%", "FT", "FT%", "REB", "AST", "BLK", "STL", "PF", "TO", "PTS"],
+    "seasonTypes": [
+      { "displayName": "2026-27 Regular Season", "categories": [{ "type": "event", "events": [{ "eventId": "401909851", "stats": ["24", "5-8", "62.5", "3-6", "50.0", "0-0", "0.0", "1", "2", "1", "2", "2", "0", "13"] }, { "eventId": "401909092", "stats": ["23", "1-4", "25.0", "1-2", "50.0", "0-0", "0.0", "3", "1", "1", "1", "3", "1", "3"] }] }] },
+      { "displayName": "2026-27 Preseason", "categories": [{ "type": "event", "events": [{ "eventId": "401898719", "stats": ["25", "3-7", "42.9", "1-4", "25.0", "0-0", "0.0", "5", "3", "0", "1", "2", "1", "7"] }] }] }
+    ],
+    "events": {
+      "401898719": { "id": "401898719", "gameDate": "2026-10-17T02:30:00.000+00:00", "atVs": "vs", "gameResult": "L", "score": "121-106", "homeTeamId": "13", "awayTeamId": "7", "opponent": { "id": "7", "abbreviation": "DEN" }, "team": { "id": "13", "abbreviation": "LAL" } },
+      "401909092": { "id": "401909092", "gameDate": "2026-10-22T02:00:00.000+00:00", "atVs": "vs", "gameResult": "W", "score": "127-105", "homeTeamId": "13", "awayTeamId": "9", "opponent": { "id": "9", "abbreviation": "GS" }, "team": { "id": "13", "abbreviation": "LAL" } },
+      "401909851": { "id": "401909851", "gameDate": "2026-10-24T02:00:00.000+00:00", "atVs": "vs", "gameResult": "W", "score": "125-117", "homeTeamId": "13", "awayTeamId": "12", "opponent": { "id": "12", "abbreviation": "LAC" }, "team": { "id": "13", "abbreviation": "LAL" } }
+    }
+  },
+  "roster": {
+    "team": { "id": "26" },
+    "athletes": [
+      { "id": "4433268", "displayName": "Trey Alexander", "shortName": "T. Alexander", "position": { "abbreviation": "G" }, "jersey": "15", "status": { "type": "active" }, "injuries": [{ "status": "Out", "date": "2026-10-24T23:18Z" }], "headshot": { "href": "https://a.espncdn.com/i/headshots/nba/players/full/4433268.png" } },
+      { "id": "4873138", "displayName": "Ace Bailey", "shortName": "A. Bailey", "position": { "abbreviation": "G" }, "jersey": "19", "status": { "type": "active" }, "injuries": [], "headshot": { "href": "https://a.espncdn.com/i/headshots/nba/players/full/4873138.png" } }
+    ]
+  },
+  "propBets": [
+    { "type": { "id": "1", "name": "Total Points" }, "athlete": { "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/3907498?lang=en&region=us" }, "current": { "target": { "value": 5.5, "displayValue": "5.5" } }, "open": { "target": { "value": 5.5, "displayValue": "5.5" } }, "odds": { "american": { "value": "-128", "open": "-135" } }, "lastUpdated": "2026-10-25T07:36Z" },
+    { "type": { "id": "1", "name": "Total Points" }, "athlete": { "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/3907498?lang=en&region=us" }, "current": { "target": { "value": 5.5, "displayValue": "5.5" } }, "open": { "target": { "value": 5.5, "displayValue": "5.5" } }, "odds": { "american": { "value": "+100", "open": "+106" } }, "lastUpdated": "2026-10-25T07:36Z" },
+    { "type": { "id": "4", "name": "Total 3-Point Field Goals" }, "athlete": { "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/3907498?lang=en&region=us" }, "current": { "target": { "value": 1.5, "displayValue": "1.5" } }, "open": { "target": { "value": 1.5, "displayValue": "1.5" } }, "odds": { "american": { "value": "+140", "open": "+128" } }, "lastUpdated": "2026-10-25T07:36Z" },
+    { "type": { "id": "4", "name": "Total 3-Point Field Goals" }, "athlete": { "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/3907498?lang=en&region=us" }, "current": { "target": { "value": 1.5, "displayValue": "1.5" } }, "open": { "target": { "value": 1.5, "displayValue": "1.5" } }, "odds": { "american": { "value": "-186", "open": "-169" } }, "lastUpdated": "2026-10-25T07:36Z" },
+    { "type": { "id": "218", "name": "Points Milestones" }, "athlete": { "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/3907498?lang=en&region=us" }, "current": { "target": { "value": 6, "displayValue": "6+" } }, "open": { "target": { "value": 6, "displayValue": "6+" } }, "odds": { "american": { "value": "-130", "open": "-127" } }, "lastUpdated": "2026-10-25T07:36Z" },
+    { "type": { "id": "218", "name": "Points Milestones" }, "athlete": { "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/3907498?lang=en&region=us" }, "current": { "target": { "value": 10, "displayValue": "10+" } }, "open": { "target": { "value": 10, "displayValue": "10+" } }, "odds": { "american": { "value": "+260", "open": "+250" } }, "lastUpdated": "2026-10-25T07:36Z" },
+    { "type": { "id": "94", "name": "First Basket" }, "athlete": { "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/3907498?lang=en&region=us" }, "current": {}, "open": {}, "odds": { "american": { "value": "+1200", "open": "+1200" } }, "lastUpdated": "2026-10-25T08:25Z" },
+    { "type": { "id": "98", "name": "Team Total Points" }, "team": { "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/teams/13?lang=en&region=us" }, "current": { "target": { "value": 121.5, "displayValue": "121.5" } }, "open": { "target": { "value": 122.5, "displayValue": "122.5" } }, "odds": { "american": { "value": "-115", "open": "-105" } }, "lastUpdated": "2026-10-25T07:36Z" },
+    { "type": { "id": "98", "name": "Team Total Points" }, "team": { "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/teams/13?lang=en&region=us" }, "current": { "target": { "value": 121.5, "displayValue": "121.5" } }, "open": { "target": { "value": 122.5, "displayValue": "122.5" } }, "odds": { "american": { "value": "-105", "open": "-115" } }, "lastUpdated": "2026-10-25T07:36Z" }
+  ],
+  "nhlSkaterLog": {
+    "names": ["goals", "assists", "points", "plusMinus", "penaltyMinutes", "shotsTotal", "shootingPct", "powerPlayGoals", "powerPlayAssists", "shortHandedGoals", "shortHandedAssists", "gameWinningGoals", "timeOnIcePerGame", "production"],
+    "stats": ["1", "0", "1", "-2", "2", "1", "100.0", "0", "0", "0", "0", "0", "20:06", "20:06"]
+  },
+  "nhlGoalieLog": {
+    "names": ["gameStarted", "timeOnIcePerGame", "wins", "losses", "ties", "overtimeLosses", "goalsAgainst", "avgGoalsAgainst", "shotsAgainst", "saves", "savePct", "shutouts"],
+    "stats": ["1", "60:00", "1", "0", "0", "0", "4", "4.00", "32", "28", ".875", "0"]
+  },
+  "mlbBatterLog": {
+    "names": ["atBats", "runs", "hits", "doubles", "triples", "homeRuns", "RBIs", "walks", "hitByPitch", "strikeouts", "stolenBases", "caughtStealing", "avg", "onBasePct", "slugAvg", "OPS"],
+    "stats": ["4", "1", "2", "1", "0", "1", "3", "1", "0", "1", "0", "0", ".281", ".350", ".512", ".862"]
+  },
+  "mlbPitcherLog": {
+    "names": ["innings", "hits", "runs", "earnedRuns", "homeRuns", "walks", "strikeouts", "groundBalls", "flyBalls", "pitches", "battersFaced", "avgGameScore", "wins-losses", "saves-blownSaves-holds", "ERA"],
+    "stats": ["3.2", "6", "3", "3", "0", "2", "4", "9", "5", "89", "20", "39.0", "-", "-", "2.19"]
+  },
+  "nhlBoxGoalies": {
+    "name": "goalies",
+    "keys": ["goalsAgainst", "shotsAgainst", "shootoutSaves", "shootoutShotsAgainst", "saves", "savePct", "evenStrengthSaves", "powerPlaySaves", "shortHandedSaves", "timeOnIce", "ytdGoals", "penaltyMinutes"],
+    "stats": ["4", "32", "0", "0", "28", ".875", "23", "4", "1", "60:00", "0", "0"]
+  },
+  "mlbBoxPitching": {
+    "keys": ["fullInnings.partInnings", "hits", "runs", "earnedRuns", "walks", "strikeouts", "homeRuns", "pitches-strikes", "ERA", "pitches"],
+    "stats": ["5.1", "4", "2", "2", "1", "7", "1", "88-60", "3.10", "88"]
+  },
+  "nbaBox": {
+    "keys": ["minutes", "points", "fieldGoalsMade-fieldGoalsAttempted", "threePointFieldGoalsMade-threePointFieldGoalsAttempted", "freeThrowsMade-freeThrowsAttempted", "rebounds", "assists", "turnovers", "steals", "blocks", "offensiveRebounds", "defensiveRebounds", "fouls", "plusMinus"],
+    "stats": ["25", "14", "4-11", "0-1", "6-8", "6", "3", "3", "1", "0", "4", "2", "6", "-20"]
+  }
+}

@@ -4,15 +4,30 @@ import { log, errText } from '../lib/log.js'
 import { RULES, RULES_PROMPT } from './rules.js'
 import { certifyLeg } from './analytics/lock.js'
 
-export const PROP_SYSTEM = `You are APEX NFL Betting Intelligence (SLCM v1.0), reading ONE player or team prop.
-
-Use only the data you are given plus general football knowledge. Apply the APEX ruleset:
-- Role first: snaps, targets, carries, red-zone usage. Volume beats talent.
+const LENS = {
+  football: `- Role first: snaps, targets, carries, red-zone usage. Volume beats talent.
 - Matchup: how this defense treats the position (rank and per-game allowed), scheme and pass/rush funnel.
-- Script: spread and total imply the game flow. Favorites run late, trailing teams throw.
+- Script: spread and total imply the game flow. Favorites run late, trailing teams throw.`,
+  basketball: `- Role first: minutes, usage and who's out. Minutes beat talent.
+- Matchup: how this defense treats the position (rank and per-game allowed), pace and size.
+- Script: spread and total imply pace and blowout risk (starters sit in blowouts).`,
+  hockey: `- Role first: ice time, power-play unit, line placement; for goalies, whether he starts.
+- Matchup: shots and goals the opponent allows, and their pace.
+- Script: the total and moneyline imply how many shots and how much pressure each side gets.`,
+  baseball: `- Role first: lineup spot and plate appearances for hitters; pitch count and leash for pitchers.
+- Matchup: the opposing pitcher or lineup, handedness, park and weather.
+- Script: the total implies run environment; bullpens decide late innings.`,
+}
+
+/** The APEX read of one prop, in the sport's terms. */
+export function propSystem(sport = { title: 'NFL', family: 'football' }) {
+  return `You are APEX ${sport.title} Betting Intelligence (SLCM v1.0), reading ONE player or team prop.
+
+Use only the data you are given plus general ${sport.family === 'football' ? 'football' : sport.family} knowledge. Apply the APEX ruleset:
+${LENS[sport.family] || LENS.football}
 - Injuries: teammates out change usage (say who and how much the numbers moved without them).
 - Line: compare the line to the player's recent median and projection; note line moves from open.
-- Correlation and risk: what has to go right, what breaks it (blowout, weather, snap share, late inactive).
+- Correlation and risk: what has to go right, what breaks it.
 
 Answer in this exact shape, plain text, no markdown headings, under 170 words:
 VERDICT: PRIME | STANDARD | MONITOR | NO PLAY — <side and line>
@@ -23,6 +38,8 @@ SIZING: one line. If a book price is given: no edge over the vig means "Pass at 
 Never promise a win. This is analysis, not advice.
 
 ${RULES_PROMPT}`
+}
+export const PROP_SYSTEM = propSystem()
 
 function brief(ctx) {
   const r = ctx.prop
@@ -44,7 +61,7 @@ function brief(ctx) {
 }
 
 /** Returns { ok, produced } so the caller can refund the allowance when nothing came out. */
-export async function streamPropInsight({ propId, views, res, apiKey, model = process.env.ANTHROPIC_INSIGHT_MODEL || process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5', maxTokens = 700 }) {
+export async function streamPropInsight({ propId, views, res, apiKey, sport, model = process.env.ANTHROPIC_INSIGHT_MODEL || process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5', maxTokens = 700 }) {
   const ctx = views.propContext(propId)
   if (!ctx) {
     res.status(404).set('Cache-Control', 'no-store').json({ error: 'That prop is not on the board.', code: 'not_found' })
@@ -73,7 +90,7 @@ export async function streamPropInsight({ propId, views, res, apiKey, model = pr
   try {
     write({ type: 'start', model, prop: ctx.prop.id })
     const anthropic = new Anthropic({ apiKey })
-    const stream = anthropic.messages.stream({ model, max_tokens: maxTokens, system: PROP_SYSTEM, messages: [{ role: 'user', content: brief(ctx) }] })
+    const stream = anthropic.messages.stream({ model, max_tokens: maxTokens, system: sport ? propSystem(sport) : PROP_SYSTEM, messages: [{ role: 'user', content: brief(ctx) }] })
     stream.on('text', (d) => {
       text += d
       if (!closed) write({ type: 'text_delta', text: d })

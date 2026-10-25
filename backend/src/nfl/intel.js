@@ -75,9 +75,9 @@ const allowedUrl = (u) => {
   }
 }
 
-export const INTEL_SYSTEM = `You are APEX Intel. You brief NFL bettors on what changed this week for ONE game, using web search.
+export const intelSystem = (sport = { title: 'NFL', calendar: 'week' }) => `You are APEX Intel. You brief ${sport.title} bettors on what changed ${sport.calendar === 'day' ? 'since the last game' : 'this week'} for ONE game, using web search.
 
-Sources: only established news outlets, the NFL's and the teams' own sites, and the official injury report. Use ONLY public, on-the-record reporting: injury reports, practice participation, coach and player press conferences, depth chart moves, reported role or snap-share changes, weather, and game-plan comments coaches or coordinators made publicly.
+Sources: only established news outlets, the league's and the teams' own sites, and the official injury report. Use ONLY public, on-the-record reporting: injury reports, practice participation, coach and player press conferences, depth chart moves, reported role or snap-share changes, weather, and game-plan comments coaches or coordinators made publicly.
 Never use or repeat leaked, stolen, confidential or "insider" material, private team documents, anonymous social media accounts, betting touts or rumors with no named outlet. If something is only rumored, leave it out.
 
 Search efficiently: the team names with "injury report", "practice", "depth chart", "press conference" for this week.
@@ -90,6 +90,7 @@ Reply with JSON only, no prose before or after, in this shape:
  "angles": [{"player":"Full Name","lean":"boost|hurt","why":"how the news moves his props, under 25 words"}]
 }
 Up to 8 injuries, 6 news items and 6 angles; skip anything without a source link. "impact" is for the named players' production. Plain words a casual bettor understands.`
+export const INTEL_SYSTEM = intelSystem()
 
 function parseJsonLoose(text) {
   const s = String(text || '')
@@ -196,7 +197,7 @@ export function createIntel({ engine, apiKey, now = () => Date.now() }) {
     const data = engine.views.game(gameId)
     if (!data) return null
     const tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: Math.min(10, Math.max(2, Number(process.env.APEX_INTEL_SEARCHES) || 6)), allowed_domains: INTEL_DOMAINS }]
-    const msg = await new Anthropic({ apiKey: key }).messages.create({ model: MODEL(), max_tokens: 2500, system: INTEL_SYSTEM, tools, messages: [{ role: 'user', content: intelBrief(data) }] })
+    const msg = await new Anthropic({ apiKey: key }).messages.create({ model: MODEL(), max_tokens: 2500, system: intelSystem(engine.sport), tools, messages: [{ role: 'user', content: intelBrief(data) }] })
     const blocks = msg?.content || []
     const text = blocks.filter((b) => b.type === 'text').map((b) => b.text).join('')
     const citations = []

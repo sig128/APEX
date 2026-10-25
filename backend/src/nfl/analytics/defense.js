@@ -1,20 +1,17 @@
 // Defense vs position: what each defense allows per game to QBs, RBs, WRs and TEs,
 // shrunk toward the league average so two blowouts don't define a team.
-import { MARKETS, POS_GROUP } from '../markets.js'
+import { MARKETS } from '../markets.js'
+import * as football from '../../sports/football.js'
 
-const STATS = {
-  QB: ['passYds', 'passTd', 'passAtt', 'passCmp', 'rushYds'],
-  RB: ['rushYds', 'rushAtt', 'rec', 'recYds', 'rushRecYds', 'anyTd'],
-  WR: ['rec', 'recYds', 'anyTd', 'longRec'],
-  TE: ['rec', 'recYds', 'anyTd'],
-}
-export const DVP_GROUPS = Object.keys(STATS)
+export const DVP_GROUPS = Object.keys(football.DVP_STATS)
 
 /**
  * logs: Map(playerId -> rows); players: Map(playerId -> { pos }).
  * Returns { byDef: { [defId]: { [group]: { [stat]: { perGame, rank, games } } } }, league, groups }.
  */
-export function buildDvp({ logs, players, season, minGames = 3, shrinkGames = 2 }) {
+export function buildDvp({ logs, players, season, minGames = 3, shrinkGames = 2, fam = football }) {
+  const STATS = fam.DVP_STATS
+  const GROUPS = Object.keys(STATS)
   // totals[def][event][group][stat]
   const totals = new Map()
   const useSeason = (rows) => {
@@ -23,7 +20,7 @@ export function buildDvp({ logs, players, season, minGames = 3, shrinkGames = 2 
   }
   for (const [pid, rows] of logs) {
     const p = players.get(pid)
-    const group = POS_GROUP(p?.pos)
+    const group = fam.posGroup(p?.pos)
     const stats = STATS[group]
     if (!stats) continue
     for (const r of useSeason(rows)) {
@@ -40,7 +37,7 @@ export function buildDvp({ logs, players, season, minGames = 3, shrinkGames = 2 
   const per = {}
   for (const [def, events] of totals) {
     per[def] = {}
-    for (const group of DVP_GROUPS) {
+    for (const group of GROUPS) {
       const evs = [...events.values()].filter((e) => e[group])
       if (!evs.length) continue
       per[def][group] = {}
@@ -52,7 +49,7 @@ export function buildDvp({ logs, players, season, minGames = 3, shrinkGames = 2 
   }
   // league averages, shrinkage, ranks
   const league = {}
-  for (const group of DVP_GROUPS) {
+  for (const group of GROUPS) {
     league[group] = {}
     for (const st of STATS[group]) {
       const rows = Object.values(per).map((d) => d[group]?.[st]).filter((x) => x && x.games)
@@ -84,9 +81,9 @@ export function ordinal(n) {
  * Matchup context for a prop: rank of the opposing defense for this group/stat and the nudge
  * it gives the projection (best matchups +, worst -). Returns null when there's no data.
  */
-export function matchupFor(dvp, defId, pos, market) {
-  const group = POS_GROUP(pos)
-  const statKey = market === 'passRushYds' ? 'passYds' : market === 'td2' ? 'anyTd' : market
+export function matchupFor(dvp, defId, pos, market, fam = football) {
+  const group = fam.posGroup(pos)
+  const statKey = fam.DVP_ALIAS?.[market] || market
   const cell = dvp?.byDef?.[defId]?.[group]?.[statKey]
   const avg = dvp?.league?.[group]?.[statKey]
   if (!cell || !avg) return null

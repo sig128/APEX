@@ -8,24 +8,34 @@ function clockSecs(clock) {
   return m ? Number(m[1]) * 60 + Number(m[2]) : null
 }
 
-/** Share of regulation played, 0..1. Overtime counts as done. */
-export function gameFraction(status) {
+/**
+ * Share of regulation played, 0..1. Overtime counts as done. clock: { periods, secs } for the
+ * sport (four 15-minute quarters by default); baseball has innings and no clock.
+ */
+export function gameFraction(status, clock = { periods: 4, secs: 900 }) {
   if (!status) return 0
   if (status.state === 'post') return 1
   if (status.state !== 'in') return 0
+  const periods = clock.periods || 4
   const period = Number(status.period) || 1
-  if (period > 4) return 1
+  if (period > periods) return 1
+  if (!clock.secs) {
+    // innings: "Top 5th", "Mid 5th", "Bot 5th", "End 5th"
+    const d = String(status.short || status.detail || '')
+    const half = /^(bot|mid)/i.test(d) ? 0.5 : /^end/i.test(d) ? 1 : 0
+    return clamp((period - 1 + half) / periods, 0, 1)
+  }
   if (status.halftime) return 0.5
   const left = clockSecs(status.clock)
-  const inPeriod = left == null ? 0.5 : clamp((900 - left) / 900, 0, 1)
-  return clamp((period - 1 + inPeriod) / 4, 0, 1)
+  const inPeriod = left == null ? 0.5 : clamp((clock.secs - left) / clock.secs, 0, 1)
+  return clamp((period - 1 + inPeriod) / periods, 0, 1)
 }
 
 /**
  * row: a prop row (pre-game analytics). game: the scoreboard game. summary: live summary.
  * Statuses: hit, miss, push (decided) and on_pace, behind, at_risk (still playing).
  */
-export function progressFor(row, game, summary) {
+export function progressFor(row, game, summary, clock) {
   if (!row || !game || game.status.state === 'pre') return null
   let cur = 0
   if (row.kind === 'team') {
@@ -38,7 +48,7 @@ export function progressFor(row, game, summary) {
     const p = summary?.players?.[row.playerId]
     cur = p ? mk.stat(p.stats || {}) : 0
   }
-  const elapsed = gameFraction(game.status)
+  const elapsed = gameFraction(game.status, clock)
   const final = game.status.state === 'post'
   const exp = Number.isFinite(row.proj) ? row.proj : row.line
   const projected = final ? cur : cur + exp * Math.max(0, 1 - elapsed)

@@ -7,6 +7,10 @@
 // latent normal built from those factors; its stat is drawn from a distribution centered so the
 // line hits exactly as often as APEX says, so the correlations change the parlay, never a leg.
 import { MARKETS } from '../markets.js'
+import * as football from '../../sports/football.js'
+import * as basketball from '../../sports/basketball.js'
+import * as hockey from '../../sports/hockey.js'
+import * as baseball from '../../sports/baseball.js'
 
 // ---- math -----------------------------------------------------------------------------------
 export function mulberry32(seed) {
@@ -91,34 +95,22 @@ function lambdaFor(k, target) {
 
 // ---- how legs move together ----------------------------------------------------------------
 // loadings on: G game pace, T team offense, P team pass tilt (+ pass, - run), U the player
-const GROUP = {
-  pass: { G: 0.25, T: 0.35, P: 0.45, U: 0.55 },
-  passInt: { G: 0.1, T: -0.2, P: 0.35, U: 0.5 },
-  rush: { G: 0.15, T: 0.3, P: -0.25, U: 0.55 },
-  rec: { G: 0.25, T: 0.3, P: 0.4, U: 0.55 },
-  rushRec: { G: 0.2, T: 0.35, P: 0.1, U: 0.55 },
-  td: { G: 0.25, T: 0.45, P: 0, U: 0.4 },
-  def: { G: 0.1, T: 0, P: 0, U: 0.55 },
-  kick: { G: 0.3, T: 0.35, P: 0, U: 0.5 },
-  team: { G: 0.5, T: 0.65, P: 0, U: 0 },
-}
-const GROUP_OF = {
-  passYds: 'pass', passAtt: 'pass', passCmp: 'pass', passTd: 'pass', longPass: 'pass', passRushYds: 'pass', passInt: 'passInt',
-  rushYds: 'rush', rushAtt: 'rush', longRush: 'rush',
-  rec: 'rec', recYds: 'rec', longRec: 'rec', rushRecYds: 'rushRec',
-  anyTd: 'td', td2: 'td',
-  tackles: 'def', tacklesAst: 'def', sacks: 'def',
-  fgMade: 'kick', kickPts: 'kick',
-  teamPts: 'team',
-}
+// factor loadings per market, from each sport family (pace G, team T, team style P, player U;
+// opp: the team factors are the opponent's, as for pitchers and goalies)
+const GROUPS = { ...football.SIM_GROUPS, ...basketball.SIM_GROUPS, ...hockey.SIM_GROUPS, ...baseball.SIM_GROUPS, teamPts: { G: 0.5, T: 0.65, P: 0, U: 0 } }
+const DEFAULT_GROUP = { G: 0.1, T: 0, P: 0, U: 0.55 }
+const loadings = (market) => GROUPS[market] || DEFAULT_GROUP
+const teamFor = (r, l) => (l.opp ? r.oppId || null : r.teamId)
 
 /** Correlation of two legs' stats under the factor model (for display and tests). */
 export function statCorrelation(a, b) {
-  const la = GROUP[GROUP_OF[a.market] || 'def']
-  const lb = GROUP[GROUP_OF[b.market] || 'def']
+  const la = loadings(a.market)
+  const lb = loadings(b.market)
   let c = 0
   if (a.gameId && a.gameId === b.gameId) c += la.G * lb.G
-  if (a.teamId && a.teamId === b.teamId) c += la.T * lb.T + la.P * lb.P
+  const ta = teamFor(a, la)
+  const tb = teamFor(b, lb)
+  if (ta && ta === tb) c += la.T * lb.T + la.P * lb.P
   if (a.playerId && a.playerId === b.playerId) c += la.U * lb.U
   return c
 }
@@ -165,12 +157,12 @@ export function simulateSlip(rows, { iterations = 10_000, seed = 7, price = null
   const rand = mulberry32(seed)
   const z = normals(rand)
   const games = [...new Set(rows.map((r) => r.gameId).filter(Boolean))]
-  const teams = [...new Set(rows.map((r) => r.teamId).filter(Boolean))]
+  const teams = [...new Set(rows.map((r) => teamFor(r, loadings(r.market))).filter(Boolean))]
   const players = [...new Set(rows.map((r) => r.playerId).filter(Boolean))]
   const legs = rows.map((r) => {
-    const l = GROUP[GROUP_OF[r.market] || 'def']
+    const l = loadings(r.market)
     const shared = l.G * l.G + l.T * l.T + l.P * l.P + (r.playerId ? l.U * l.U : 0)
-    return { r, l, g: games.indexOf(r.gameId), t: teams.indexOf(r.teamId), u: players.indexOf(r.playerId), own: Math.sqrt(Math.max(0.02, 1 - shared)), model: legModel(r), values: new Int32Array(N), hits: 0, pushes: 0 }
+    return { r, l, g: games.indexOf(r.gameId), t: teams.indexOf(teamFor(r, l)), u: players.indexOf(r.playerId), own: Math.sqrt(Math.max(0.02, 1 - shared)), model: legModel(r), values: new Int32Array(N), hits: 0, pushes: 0 }
   })
   const G = new Float64Array(games.length)
   const T = new Float64Array(teams.length)

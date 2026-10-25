@@ -6,7 +6,6 @@ import { americanToDecimal } from '../lib/odds.js'
 import { round } from '../lib/util.js'
 import { log, errText } from '../lib/log.js'
 
-const NS = 'locks'
 const HOUR = 3_600_000
 const keyOf = (season, week) => `${season}-w${String(week).padStart(2, '0')}`
 
@@ -46,6 +45,10 @@ export function settleLock(entry, results) {
 }
 
 export function createLedger({ engine, store, now = () => Date.now() }) {
+  // the NFL ledger keeps its original collection; other sports get their own
+  const key0 = engine.sport?.key || 'nfl'
+  const NS = key0 === 'nfl' ? 'locks' : `locks-${key0}`
+  const slateNow = () => (engine.slate ? engine.slate() : engine.wh.week)
   let ticking = null
   let lastTick = 0
 
@@ -86,7 +89,7 @@ export function createLedger({ engine, store, now = () => Date.now() }) {
       const e = await store.get(NS, k)
       if (!e || e.status === 'graded') continue
       if (!e.frozen) {
-        const pastWeek = e.season !== engine.wh.season || e.week !== engine.wh.week
+        const pastWeek = e.season !== engine.wh.season || e.week !== slateNow()
         const started = e.lock?.legs?.some((l) => l.kickoff && l.kickoff <= t)
         const weekDone = !e.lock && (pastWeek || [...engine.wh.games.values()].every((g) => g.status?.state !== 'pre'))
         if (started || weekDone || (pastWeek && e.lock)) {
@@ -140,7 +143,7 @@ export function createLedger({ engine, store, now = () => Date.now() }) {
   async function season(year = engine.wh.season) {
     if (!store) return { season: year, weeks: [], record: emptyRecord() }
     const keys = ((await store.get(NS, 'index')) || []).filter((k) => k.startsWith(`${year}-`))
-    const weeks = (await Promise.all(keys.map((k) => store.get(NS, k)))).filter(Boolean).sort((a, b) => b.week - a.week)
+    const weeks = (await Promise.all(keys.map((k) => store.get(NS, k)))).filter(Boolean).sort((a, b) => String(b.week).localeCompare(String(a.week), undefined, { numeric: true }))
     const r = emptyRecord()
     for (const w of weeks) {
       if (w.status === 'pass' && w.frozen) r.passes++
