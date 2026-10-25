@@ -206,6 +206,7 @@ export function createApexApp({
         const kind = req.body?.game ? 'analyses' : 'followups'
         const parsed = parseChatBody(req)
         if (!parsed.ok) throw new ApiError(parsed.status, 'bad_request', parsed.error)
+        req.apexParsed = parsed
         if (kind === 'followups') {
           if (!followupShapeOk(req.body?.messages)) throw new ApiError(400, 'bad_followup', 'Start with a game analysis, then ask follow-ups. Keep each question under 4,000 characters.')
           const v = await thread(user.uid, parsed.messagesForApi[0].content, false)
@@ -250,7 +251,7 @@ export function createApexApp({
       await refundIfEmpty(req, null)
       return res.status(503).json({ error: 'ANTHROPIC_API_KEY is not set on the server.' })
     }
-    const parsed = parseChatBody(req)
+    const parsed = req.apexParsed || parseChatBody(req)
     if (!parsed.ok) {
       await refundIfEmpty(req, null)
       return res.status(parsed.status).json({ error: parsed.error })

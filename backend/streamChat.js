@@ -215,7 +215,8 @@ export async function handleChatStream(req, res, apiKey) {
     return { ok: false, produced: false }
   }
 
-  const parsed = parseChatBody(req)
+  // the gate may have parsed it already (and fingerprinted that exact prompt): use the same one
+  const parsed = req.apexParsed || parseChatBody(req)
   if (!parsed.ok) {
     res.status(parsed.status).json({ error: parsed.error })
     return { ok: false, produced: false }
