@@ -4,8 +4,9 @@ import { ApiError } from '../lib/router.js'
 import { publicBillingConfig } from './config.js'
 import { createLimiter } from '../security/rateLimit.js'
 import { log, errText } from '../lib/log.js'
+import { redeemInvite } from './invites.js'
 
-export function billingRoutes({ billing, access }) {
+export function billingRoutes({ billing, access, getDb = null, now = Date.now }) {
   const r = express.Router()
   const confirmLimit = createLimiter({ burst: 20, perSec: 1 / 3 })
   const scanLimit = createLimiter({ burst: 4, perSec: 1 / 15 })
@@ -42,6 +43,18 @@ export function billingRoutes({ billing, access }) {
   }
 
   r.get('/config', wrap(async () => publicBillingConfig()))
+  // invite and plan codes (the same rules as the Firebase callable, which uses this too)
+  r.post(
+    '/redeem',
+    wrap(async (req) => {
+      const u = await who(req)
+      const db = getDb ? getDb() : null
+      if (!db) throw new ApiError(503, 'no_database', 'Codes can’t be redeemed on this server yet.')
+      const out = await redeemInvite(db, u, req.body?.code, { now })
+      billing.changed(u.uid)
+      return out
+    }),
+  )
   r.get('/me', wrap(async (req) => billing.me(await who(req))))
   r.post(
     '/invoice',

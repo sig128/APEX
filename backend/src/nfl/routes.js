@@ -124,7 +124,9 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
         }
         return null
       },
-      maxDurationMs: 30 * 60_000,
+      // a stream ends a little before the platform would cut it (Vercel: 300 s), and the
+      // browser reconnects on its own
+      maxDurationMs: envInt('APEX_STREAM_MAX_SECONDS', process.env.VERCEL ? 280 : 1800, { min: 30, max: 7200 }) * 1000,
     })
     if (!client) throw new ApiError(429, 'streams', 'Too many live connections right now. Updates will keep coming every few seconds instead.', { retryAfter: 60 })
     engine.onSubscribersChanged?.(hub.stats().clients)

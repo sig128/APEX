@@ -71,3 +71,28 @@ test('route: /u/:handle serves the app with its own card when the build is prese
     }
   }
 })
+
+test('route: with no copy of the site to hand out, /u/:handle sends the browser to the app', async () => {
+  const saved = { idx: process.env.APEX_WEB_INDEX, proj: process.env.GCLOUD_PROJECT, site: process.env.APEX_PUBLIC_SITE_URL }
+  process.env.APEX_WEB_INDEX = path.join(os.tmpdir(), 'apex-no-such-dir', 'index.html')
+  delete process.env.GCLOUD_PROJECT
+  delete process.env.APEX_PUBLIC_SITE_URL
+  const { createApexApp } = await import(`../app.js?og-missing=${Date.now()}`)
+  const { createStore } = await import('../src/lib/store.js')
+  const { fixtureHttp } = await import('./helpers.js')
+  const { serve, clock } = await import('./support.js')
+  const made = createApexApp({ engineMode: 'lazy', http: fixtureHttp().http, store: createStore({ driver: 'memory' }), now: clock() })
+  const api = await serve(made.app)
+  try {
+    const r = await fetch(`${api.base}/u/Pat_Picks`, { redirect: 'manual' })
+    assert.equal(r.status, 302)
+    assert.equal(r.headers.get('location'), '/?to=%2Fu%2Fpat_picks')
+  } finally {
+    await api.close()
+    made.engine.stop()
+    for (const [k, v] of [['APEX_WEB_INDEX', saved.idx], ['GCLOUD_PROJECT', saved.proj], ['APEX_PUBLIC_SITE_URL', saved.site]]) {
+      if (v === undefined) delete process.env[k]
+      else process.env[k] = v
+    }
+  }
+})

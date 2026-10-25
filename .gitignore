@@ -46,3 +46,6 @@ pids
 claudeapi.txt
 
 .DS_Store
+
+# Vercel CLI
+.vercel/

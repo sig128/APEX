@@ -126,7 +126,9 @@ export function createApexApp({
 
   const http = httpIn || createHttp({})
   const engineStore = storeIn || createStore({ getFirestore })
-  const hub = createHub({ maxClients: envInt('APEX_MAX_STREAMS', process.env.K_SERVICE ? 180 : 2000, { min: 1, max: 100_000 }), maxPerOwner: envInt('APEX_MAX_STREAMS_PER_IP', 6, { min: 1, max: 1000 }) })
+  // streams per instance: room left for ordinary requests on Cloud Functions (250 slots) and
+  // under Vercel's 1,024 open files per instance
+  const hub = createHub({ maxClients: envInt('APEX_MAX_STREAMS', process.env.K_SERVICE ? 180 : process.env.VERCEL ? 400 : 2000, { min: 1, max: 100_000 }), maxPerOwner: envInt('APEX_MAX_STREAMS_PER_IP', 6, { min: 1, max: 1000 }) })
   let oddsApiKey = null
   try {
     oddsApiKey = oddsKey() || null
@@ -146,7 +148,7 @@ export function createApexApp({
   app.use('/api/nfl', (req, res, next) => {
     nfl.handle(req, res, next).catch(next)
   })
-  app.use('/api/billing', billingRoutes({ billing, access }))
+  app.use('/api/billing', billingRoutes({ billing, access, getDb: () => (typeof getFirestore === 'function' ? getFirestore() || null : null), now: now || Date.now }))
   app.use('/api/picks', picksRoutes({ picks, access }))
 
   // ---- the AI analyzer (chat) ---------------------------------------------------------------
@@ -351,6 +353,12 @@ export function createApexApp({
   // card at someone else's site.
   function publicSite(req) {
     if (process.env.APEX_PUBLIC_SITE_URL) return process.env.APEX_PUBLIC_SITE_URL.replace(/\/$/, '')
+    // Vercel only routes a host here if it's one of this project's domains
+    if (process.env.VERCEL) {
+      const h = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase()
+      if (/^[a-z0-9.-]+(:\d+)?$/.test(h)) return `https://${h}`
+      if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    }
     const project = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || ''
     const known = new Set(String(process.env.APEX_ALLOWED_ORIGINS || '').split(',').map((o) => o.trim().replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase()).filter(Boolean))
     if (project) {
@@ -382,7 +390,11 @@ export function createApexApp({
   const previewLimit = createLimiter({ burst: 60, perSec: 2 })
   app.get('/u/:handle', async (req, res, next) => {
     const html = await siteIndex(req)
-    if (!html) return next()
+    // no copy of the site to hand out: send the browser to the app, which opens the page itself
+    if (!html) {
+      const h = String(req.params.handle || '').toLowerCase()
+      return /^[a-z0-9_]{3,20}$/.test(h) ? res.redirect(302, `/?to=${encodeURIComponent(`/u/${h}`)}`) : next()
+    }
     let out = html
     // past the limit the page still loads, just without its own card (no database reads)
     if (previewLimit.take(clientIp(req)).ok) {
@@ -405,6 +417,7 @@ export function createApexApp({
       // the address rate limits see for you: after deploying it should be your own public IP,
       // through the site and through the function URL alike (see APEX_TRUSTED_PROXIES)
       you: clientIp(req),
+      database: process.env.APEX_EPHEMERAL !== '1',
       engine: { mode: s.mode, week: s.week, games: s.games, live: s.live, props: s.props, logs: s.logs, at: s.at },
       billing: { paywall: cfg.paywall, network: cfg.network, treasury: Boolean(cfg.treasury), docs: billing.docsKind },
       auth: authMode(),

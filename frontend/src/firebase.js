@@ -1,7 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
-import { getFunctions, httpsCallable } from 'firebase/functions'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -28,11 +27,3 @@ export const app = firebaseConfigured ? getOrCreateApp() : null
 export const auth = firebaseConfigured ? getAuth(app) : null
 export const googleProvider = new GoogleAuthProvider()
 export const db = firebaseConfigured ? getFirestore(app) : null
-
-/** Region must match `functions/inviteRedeem.js` and deployed `redeemInvite`. */
-const FUNCTIONS_REGION = 'us-central1'
-
-export function getRedeemInviteCallable() {
-  if (!app) return null
-  return httpsCallable(getFunctions(app, FUNCTIONS_REGION), 'redeemInvite')
-}

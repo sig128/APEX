@@ -165,8 +165,8 @@ function Redeem({ redeem, after, verified, paywall }) {
       setCode('')
       after()
     } catch (err) {
-      const c = err?.code || ''
-      setMsg({ ok: false, text: c.includes('not-found') ? 'That code is not valid.' : c.includes('already-exists') ? 'You already used this code.' : c.includes('resource-exhausted') ? 'That code has no uses left.' : c.includes('failed-precondition') ? err.message.replace(/^.*?: /, '') : err.message || 'That code did not work.' })
+      // the API's messages are written for people (a miss, a code already used, too many tries)
+      setMsg({ ok: false, text: err?.message || 'That code did not work.' })
     } finally {
       setBusy(false)
     }
@@ -175,7 +175,7 @@ function Redeem({ redeem, after, verified, paywall }) {
     <section className="acct-list">
       <p className="acct-plan__k">{paywall ? 'Have a code?' : 'Invite code'}</p>
       <form className="row" onSubmit={submit}>
-        <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="APEX-XXXXXXXX" aria-label="Code" autoCapitalize="characters" spellCheck="false" />
+        <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="APEX-XXXX-XXXX-XXXX-XXXX" aria-label="Code" autoCapitalize="characters" spellCheck="false" />
         <button type="submit" className="btn btn--quiet" disabled={busy || code.trim().length < 4}>
           {busy ? 'Checking' : 'Redeem'}
         </button>

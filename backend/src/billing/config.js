@@ -38,7 +38,10 @@ export function billingConfig() {
   const raw = String(process.env.APEX_TREASURY_ADDRESS || '').trim().toLowerCase()
   const treasury = isAddress(raw) && raw !== net.usdc ? raw : null
   const mode = String(process.env.APEX_PAYWALL || 'auto').trim().toLowerCase()
-  const paywall = mode === 'off' ? false : Boolean(treasury)
+  // Passes need somewhere durable to live: with no database (a Vercel deploy without a
+  // service account) the paywall stays off even with a treasury set.
+  const durable = process.env.APEX_EPHEMERAL !== '1'
+  const paywall = mode === 'off' || !durable ? false : Boolean(treasury)
   const pro = envNum('APEX_PRICE_PRO_USD', 29, { min: 1, max: 10_000 })
   const elite = envNum('APEX_PRICE_ELITE_USD', 79, { min: 1, max: 10_000 })
   return {

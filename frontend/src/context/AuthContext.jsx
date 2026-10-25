@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { auth, db, firebaseConfigured, getRedeemInviteCallable, googleProvider } from '../firebase.js'
-import { setTokenGetter } from '../lib/api.js'
+import { auth, db, firebaseConfigured, googleProvider } from '../firebase.js'
+import { api, setTokenGetter } from '../lib/api.js'
 import { invalidate } from '../lib/useApi.js'
 
 // Requests made while Firebase is still restoring a saved session wait for it (briefly), so a
@@ -63,9 +63,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const redeemInviteCode = useCallback(async (code) => {
-    const fn = getRedeemInviteCallable()
-    if (!fn) throw new Error('Sign-in is not set up on this site yet.')
-    return (await fn({ code })).data
+    if (!auth) throw new Error('Sign-in is not set up on this site yet.')
+    return api('/api/billing/redeem', { method: 'POST', body: { code } })
   }, [])
 
   const value = useMemo(

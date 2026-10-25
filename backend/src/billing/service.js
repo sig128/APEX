@@ -452,6 +452,8 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     payments,
     subscriptions,
     forget: (uid) => subCache.delete(uid),
+    /** Someone's plan changed outside this service (a redeemed plan code): drop caches, tell listeners. */
+    changed,
     invoiceView,
   }
 }

@@ -8,6 +8,12 @@ import { mutate } from './lib/useApi.js'
 import './styles/tokens.css'
 import './styles/app.css'
 
+// A picks page the server couldn't render itself arrives as /?to=/u/handle: open it in place.
+{
+  const to = new URLSearchParams(window.location.search).get('to')
+  if (to && /^\/u\/[a-z0-9_]{3,20}$/i.test(to)) window.history.replaceState(null, '', to)
+}
+
 // The intro plays over the first paint at most every few hours, with this week's real numbers.
 // The same request warms the home page's data, so the board is there when the curtain lifts.
 const home = api('/api/nfl/home', { auth: false }).then(

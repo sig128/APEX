@@ -1,21 +1,14 @@
+import fs from 'node:fs'
 import path from 'node:path'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
 /** Always treat `frontend/` as the project root (fixes `react` resolve if Vite is started from repo root). */
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const require = createRequire(import.meta.url)
 
-function installed(pkg) {
-  try {
-    require.resolve(`${pkg}/package.json`, { paths: [__dirname] })
-    return true
-  } catch {
-    return false
-  }
-}
+// A package's folder is the reliable test: some packages don't export their package.json.
+const installed = (pkg) => fs.existsSync(path.join(__dirname, 'node_modules', ...pkg.split('/'), 'package.json'))
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')

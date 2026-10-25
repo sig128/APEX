@@ -79,7 +79,8 @@ function isTrustedProxy(ip) {
 }
 
 /**
- * The caller's IP. On Cloud Functions (or with APEX_TRUST_PROXY=1) Google's front end appends
+ * The caller's IP. On Vercel it's the address Vercel's edge saw. On Cloud Functions (or with
+ * APEX_TRUST_PROXY=1) Google's front end appends
  * the address that connected to it to X-Forwarded-For, so the last entry is real. We step left
  * only past addresses that belong to trusted proxies (Firebase Hosting's CDN by default;
  * APEX_TRUSTED_PROXIES to change), so whatever a client writes into the header itself is never
@@ -87,6 +88,8 @@ function isTrustedProxy(ip) {
  */
 export function clientIp(req) {
   const peer = bareIp(req.socket?.remoteAddress || req.ip) || 'unknown'
+  // Vercel replaces X-Forwarded-For with the address it saw (clients can't add to it)
+  if (process.env.VERCEL) return bareIp(String(req.headers?.['x-real-ip'] || req.headers?.['x-forwarded-for'] || '').split(',')[0]) || peer
   const trust = Boolean(process.env.K_SERVICE) || process.env.APEX_TRUST_PROXY === '1'
   if (!trust) return peer
   const parts = String(req.headers?.['x-forwarded-for'] || '')

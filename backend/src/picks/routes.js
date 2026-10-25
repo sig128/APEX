@@ -36,6 +36,10 @@ export function picksRoutes({ picks, access }) {
     if (!u) throw new ApiError(401, 'signin', 'Sign in first.')
     return u
   }
+  // without a database (a Vercel deploy with no service account) pages and picks can't be kept
+  const needDb = () => {
+    if (process.env.APEX_EPHEMERAL === '1') throw new ApiError(503, 'no_database', 'Picks pages aren’t switched on yet. Check back soon.')
+  }
   const throttle = (lim, key, cost = 1) => {
     const t = lim.take(key, cost)
     if (!t.ok) throw new ApiError(429, 'slow_down', 'Slow down a little.', { retryAfter: t.retryAfter })
@@ -64,11 +68,13 @@ export function picksRoutes({ picks, access }) {
 
   r.get('/me', wrap(async (req) => picks.me(await signedIn(req))))
   r.put('/me', wrap(async (req) => {
+    needDb()
     const u = await signedIn(req)
     throttle(writeLimit, u.uid)
     return picks.saveProfile(u, req.body || {})
   }))
   r.post('/', wrap(async (req) => {
+    needDb()
     const u = await signedIn(req)
     throttle(writeLimit, u.uid)
     return picks.post(u, req.body || {})

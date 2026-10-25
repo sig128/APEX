@@ -2,6 +2,9 @@
   "name": "apex-frontend",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "vite",
     "prebuild": "cp src/assets/logo.png public/logo.png",

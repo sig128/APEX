@@ -1,6 +1,10 @@
 {
   "name": "apex",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "setup": "npm install && npm install --prefix backend && npm install --prefix frontend && npm install --prefix functions",
     "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
