@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useApi } from '../lib/useApi.js'
-import { useTitle } from '../lib/hooks.js'
+import { useTitle, useMedia } from '../lib/hooks.js'
 import { PropRow } from '../ui/PropRow.jsx'
 import { Pills, Skeleton, ErrorBox, Empty } from '../ui/Bits.jsx'
 
@@ -57,6 +57,10 @@ export function PropsPage() {
   useTitle('NFL prop explorer')
   const facets = data?.facets
   const markets = useMemo(() => [{ key: 'core', label: 'Main markets' }, { key: 'all', label: 'Every market' }, ...(facets?.markets || []).map((m) => ({ key: m.key, label: m.label }))], [facets])
+  // on phones the filters fold away behind one button so the props are on the first screen
+  const phone = useMedia('(max-width: 759px)')
+  const [showFilters, setShowFilters] = useState(false)
+  const active = ['side', 'minHit', 'game', 'q', 'pos'].filter((k) => get(k)).length + (market !== 'core' ? 1 : 0) + (win !== 'L10' ? 1 : 0)
 
   return (
     <div className="container page">
@@ -64,6 +68,12 @@ export function PropsPage() {
         <h1 className="page-title">Props</h1>
         <p className="page-sub">{data ? `${data.total.toLocaleString()} props match` : 'Every player prop on the slate'}</p>
       </header>
+      {phone && (
+        <button type="button" className="btn btn--quiet btn--block filters-toggle" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
+          {showFilters ? 'Hide filters' : `Filters and sorting${active ? ` (${active} on)` : ''}`}
+        </button>
+      )}
+      {(!phone || showFilters) && (
       <div className="filters">
         <label className="field field--inline">
           <span>Market</span>
@@ -114,6 +124,7 @@ export function PropsPage() {
           <Pills label="Sort" options={SORTS} value={get('sort', 'score')} onChange={(v) => set('sort', v || 'score')} />
         </div>
       </div>
+      )}
       <ErrorBox error={error} onRetry={refresh} />
       {loading ? (
         <Skeleton rows={10} />

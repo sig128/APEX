@@ -3224,3 +3224,7 @@ code {
     flex: none;
   }
 }
+
+.filters-toggle {
+  margin-bottom: 12px;
+}
