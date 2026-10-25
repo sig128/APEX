@@ -1714,24 +1714,16 @@ function createIntro(opts) {
       ctx.font = F_UI(600, L.liveSize)
       ctx.textBaseline = 'middle'
       const sp = L.liveSize * 0.12
-      const dotR = L.liveSize * 0.28
       const widths = segs.map(([s]) => spacedWidth(ctx, s, sp))
-      const total = dotR * 2 + L.liveSize * 0.6 + widths.reduce((s, w) => s + w, 0)
+      const total = widths.reduce((s, w) => s + w, 0) + sp * (segs.length - 1)
       let x = (c.width / sc - total) / 2
       const y = (c.height / sc) / 2
-      const pulse = 0.55 + 0.45 * Math.sin(tt * 7)
-      ctx.fillStyle = `rgba(255,77,77,${pulse})`
-      ctx.beginPath()
-      ctx.arc(x + dotR, y, dotR, 0, Math.PI * 2)
-      ctx.fill()
-      x += dotR * 2 + L.liveSize * 0.6
-      segs.forEach(([s, tone], i) => {
+      segs.forEach(([s, tone]) => {
         ctx.fillStyle = tone === 'num' ? '#fcd800' : 'rgba(232,237,245,0.66)'
-        for (const ch of s) {
-          ctx.fillText(ch, x, y)
-          x += ctx.measureText(ch).width + sp
+        for (const glyph of s) {
+          ctx.fillText(glyph, x, y)
+          x += ctx.measureText(glyph).width + sp
         }
-        x += i < segs.length - 1 ? 0 : 0
       })
       updateTexture(gl, tex.live, c)
       const cw = c.width / sc
@@ -1747,13 +1739,10 @@ function createIntro(opts) {
     const s = stats
     const n = (v) => Math.round(v * k).toLocaleString('en-US')
     if (!s || (s.games == null && s.props == null)) {
-      return [['LIVE NFL PROPS', 'txt'], ['   ·   ', 'txt'], ['MATCHUPS', 'txt'], ['   ·   ', 'txt'], ['AI PICKS', 'txt']]
+      return [['NFL PROPS', 'txt'], ['   ·   ', 'txt'], ['MATCHUPS', 'txt'], ['   ·   ', 'txt'], ['PICKS', 'txt']]
     }
     const out = []
     const sep = () => out.length && out.push(['   ·   ', 'txt'])
-    if (s.live) {
-      out.push([n(s.live), 'num'], [' LIVE NOW', 'txt'])
-    }
     if (s.week != null) {
       sep()
       out.push(['WEEK ', 'txt'], [String(s.week), 'num'])
