@@ -28,6 +28,9 @@ test('link preview: name, record and links, escaped, generic tags replaced', () 
   assert.ok(out.includes('<link rel="icon"'), 'other head tags stay')
   const fresh = renderUserHead(HTML, view({ record: null, bio: '' }), 'https://apex.web.app')
   assert.match(fresh, /Every pick posted before kickoff/)
+  assert.match(fresh, /og:image" content="https:\/\/apex.web.app\/logo.png"/, 'the logo without a picture')
+  const pic = renderUserHead(HTML, view({ avatar: 'https://lh3.googleusercontent.com/a/abcdefghijklmnop=s96-c' }), 'https://apex.web.app')
+  assert.match(pic, /og:image" content="https:\/\/lh3.googleusercontent.com\/a\/abcdefghijklmnop=s400-c"/, 'their own picture, card sized')
 })
 
 test('route: /u/:handle serves the app with its own card when the build is present', async () => {

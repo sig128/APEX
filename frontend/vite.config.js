@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const site = (env.VITE_PUBLIC_SITE_URL || '').trim().replace(/\/$/, '')
   /** Absolute URL for og:image / twitter:image when sharing links (set VITE_PUBLIC_SITE_URL in .env.production). */
-  const socialImage = site ? `${site}/logo.png` : '/logo.png'
+  const socialImage = site ? `${site}/og.png` : '/og.png'
   // Privy (wallet sign-in for payments) only goes into the build when it's configured and installed.
   const privy = Boolean((env.VITE_PRIVY_APP_ID || '').trim()) && installed('@privy-io/react-auth')
 
