@@ -1,4 +1,5 @@
-/* Picked schedule matchup — logos + title beside Analyze (see ApexStaticBody #apex-picked-game) */
+/* Scoped under .apex-analyzer so the analyzer's styles stay inside it. */
+
 
 .apex-html-root.apex-ios .apex-picked-game {
   box-sizing: border-box;

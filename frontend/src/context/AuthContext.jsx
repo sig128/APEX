@@ -1,122 +1,89 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { auth, db, firebaseConfigured, getRedeemInviteCallable, googleProvider } from '../firebase.js'
+import { setTokenGetter } from '../lib/api.js'
+import { invalidate } from '../lib/useApi.js'
 
-const ADMIN_DEV_KEY = 'apex_admin_dev'
+// Requests made while Firebase is still restoring a saved session wait for it (briefly), so a
+// signed-in visitor's first requests already carry their token.
+const ready = auth?.authStateReady ? Promise.race([auth.authStateReady(), new Promise((r) => setTimeout(r, 2500))]) : Promise.resolve()
+setTokenGetter(async (force) => {
+  await ready
+  return auth?.currentUser ? auth.currentUser.getIdToken(force) : null
+})
 
 const AuthContext = createContext(null)
 
+// Google sign-in through Firebase. Who is an admin, and what plan someone has, is decided by
+// the API from the signed-in token, never by the browser.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  /** Local dev bypass: password checked against VITE_ADMIN_DEV_PASSWORD (see .env). */
-  const [adminDevSession, setAdminDevSession] = useState(
-    () => typeof sessionStorage !== 'undefined' && sessionStorage.getItem(ADMIN_DEV_KEY) === '1',
-  )
-  /** `null` while resolving Firestore for the signed-in user; then true or false. */
+  const [loading, setLoading] = useState(Boolean(auth))
+  /** null while loading the user's invite status (the legacy gate), then true/false. */
   const [inviteAccess, setInviteAccess] = useState(false)
 
   useEffect(() => {
-    if (!auth) {
-      setLoading(false)
-      return
-    }
-    const unsub = onAuthStateChanged(auth, (u) => {
+    if (!auth) return undefined
+    let first = true
+    let lastUid = null
+    return onAuthStateChanged(auth, (u) => {
+      // signing in or out changes what some pages show (owner views, plans): refetch them
+      if (!first && (u?.uid || null) !== lastUid) invalidate('/api/')
+      first = false
+      lastUid = u?.uid || null
       setUser(u)
-      if (u) setInviteAccess(null)
-      else setInviteAccess(false)
+      setInviteAccess(u ? null : false)
       setLoading(false)
     })
-    return () => unsub()
   }, [])
 
   useEffect(() => {
-    if (!user || !db) {
-      return
-    }
-    const ref = doc(db, 'users', user.uid)
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        setInviteAccess(!!snap.data()?.inviteVerifiedAt)
-      },
-      () => {
-        setInviteAccess(false)
-      },
+    if (!user || !db) return undefined
+    return onSnapshot(
+      doc(db, 'users', user.uid),
+      (snap) => setInviteAccess(Boolean(snap.data()?.inviteVerifiedAt)),
+      () => setInviteAccess(false),
     )
-    return () => unsub()
   }, [user?.uid])
 
-  async function signInGoogle() {
-    if (!auth) {
-      throw new Error('Firebase Auth is not configured (missing VITE_FIREBASE_* in .env).')
-    }
-    await signInWithPopup(auth, googleProvider)
-  }
-
-  function clearAdminDevSession() {
-    setAdminDevSession(false)
+  const signInGoogle = useCallback(async () => {
+    if (!auth) throw new Error('Sign-in is not set up on this site yet (Firebase config missing).')
     try {
-      sessionStorage.removeItem(ADMIN_DEV_KEY)
-    } catch {
-      /* ignore */
+      await signInWithPopup(auth, googleProvider)
+    } catch (e) {
+      // Popups are blocked in some in-app browsers (Instagram, X): fall back to a redirect.
+      if (e?.code === 'auth/popup-blocked' || e?.code === 'auth/operation-not-supported-in-this-environment') await signInWithRedirect(auth, googleProvider)
+      else if (e?.code !== 'auth/popup-closed-by-user' && e?.code !== 'auth/cancelled-popup-request') throw e
     }
-  }
+  }, [])
 
-  function signInAdminDev(password) {
-    const expected = import.meta.env.VITE_ADMIN_DEV_PASSWORD
-    if (!expected || typeof expected !== 'string' || expected.length === 0) {
-      throw new Error('Admin dev login is not configured (set VITE_ADMIN_DEV_PASSWORD in frontend/.env).')
-    }
-    if (password !== expected) {
-      throw new Error('Incorrect password.')
-    }
-    try {
-      sessionStorage.setItem(ADMIN_DEV_KEY, '1')
-    } catch {
-      /* ignore */
-    }
-    setAdminDevSession(true)
-    return Promise.resolve()
-  }
+  const signOutUser = useCallback(async () => {
+    if (auth) await signOut(auth)
+  }, [])
 
-  async function signOutUser() {
-    clearAdminDevSession()
-    if (!auth) return
-    await signOut(auth)
-  }
-
-  async function redeemInviteCode(code) {
+  const redeemInviteCode = useCallback(async (code) => {
     const fn = getRedeemInviteCallable()
-    if (!fn) {
-      throw new Error('Firebase is not configured.')
-    }
-    const result = await fn({ code })
-    return result.data
-  }
+    if (!fn) throw new Error('Sign-in is not set up on this site yet.')
+    return (await fn({ code })).data
+  }, [])
 
-  const inviteLoading = Boolean(user) && inviteAccess === null && !adminDevSession
-  const hasInviteAccess = inviteAccess === true || adminDevSession
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        firebaseConfigured,
-        signInGoogle,
-        signInAdminDev,
-        signOutUser,
-        redeemInviteCode,
-        inviteLoading,
-        hasInviteAccess,
-        adminDevSession,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      firebaseConfigured,
+      signInGoogle,
+      signOutUser,
+      redeemInviteCode,
+      inviteLoading: Boolean(user) && inviteAccess === null,
+      hasInviteAccess: inviteAccess === true,
+      // kept for the analyzer's older code paths; there is no client-side admin login any more
+      adminDevSession: false,
+    }),
+    [user, loading, inviteAccess, signInGoogle, signOutUser, redeemInviteCode],
   )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

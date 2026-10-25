@@ -1,4 +1,5 @@
-/* Player props row — matches quick-games ticker: gradient shell stripped via --ticker viewport, edge mask, MLB ticker cards */
+/* Scoped under .apex-analyzer so the analyzer's styles stay inside it. */
+
 
 .apex-html-root.apex-ios .apex-player-props-carousel-section {
   margin-top: 14px;
@@ -67,7 +68,7 @@
   outline-offset: 2px;
 }
 
-/* Slide widths + duration come from PlayerPropsCarousel.js (same cell math as quick-games ticker). */
+
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-track {
   padding-block: 2px 6px;
 }
@@ -117,7 +118,7 @@
   object-fit: cover;
   object-position: center top;
   display: block;
-  /* Silo headshots are often under-exposed on dark UI — lift slightly */
+  
   filter: brightness(1.12) contrast(1.06) saturate(1.06);
 }
 
@@ -193,7 +194,7 @@
   color: var(--text3);
 }
 
-/* Right rail: side (Over/Under) + American odds line */
+
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-odds {
   flex: 0 0 auto;
   display: flex;
@@ -231,12 +232,12 @@
   color: #0a6b4d;
 }
 
-/* Not pickable like games — no pointer / focus ring from game carousel */
+
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-qg-slide.apex-ppc-slide:focus-visible {
   outline: none;
 }
 
-/* —— Multi-line pitcher K (O/U ladder) — same headshot + market title + 2-col O|U rows —— */
+
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-slide--ladder {
   min-height: 0;
 }
@@ -359,7 +360,7 @@
   box-shadow: 0 0 0 1px rgba(10, 107, 77, 0.1);
 }
 
-/* Implied line label + highlight: only during fullscreen game analysis (.apex-ppc-implied-on on root). */
+
 .apex-html-root.apex-ios:not(.apex-ppc-implied-on) .apex-player-props-carousel-section .apex-ppc-implied-bar {
   display: none;
 }

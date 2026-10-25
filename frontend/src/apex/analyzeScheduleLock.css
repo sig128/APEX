@@ -1,4 +1,5 @@
-/* Countdown next to Analyze — time until Odds API commence_time */
+/* Scoped under .apex-analyzer so the analyzer's styles stay inside it. */
+
 
 .apex-html-root.apex-ios .apex-analyze-btn-and-timer {
   display: flex;

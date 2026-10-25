@@ -1,4 +1,5 @@
-/* Analyze page — live prop O/U ladder (separate panel under bet cards) */
+/* Scoped under .apex-analyzer so the analyzer's styles stay inside it. */
+
 
 .apex-html-root.apex-ios .apex-analyze-prop-ladder {
   margin: 12px 0 0;

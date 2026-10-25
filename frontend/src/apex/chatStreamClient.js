@@ -1,4 +1,5 @@
 import { getChatStreamUrl } from './apiConfig.js'
+import { authHeaders } from '../lib/api.js'
 import { formatUserFacingError } from './humanReadableError.js'
 
 /**
@@ -13,7 +14,7 @@ export async function postChatStream(body, handlers) {
   try {
     res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify(body),
       cache: 'no-store',
     })

@@ -159,7 +159,13 @@ export function createViews(engine) {
         moves: diverse(roles.filter((r) => r.move && r.line >= 2 && Math.abs(r.move.delta) >= Math.max(1, r.line * 0.04)), { limit: 15, perPlayer: 1, perGame: 5, key: (r) => (Math.abs(r.move.delta) / Math.max(1, r.line)) * 1000 + r.rank }).map(card),
         tds: diverse(players.filter((r) => r.market === 'anyTd'), { limit: 15, perPlayer: 1, perGame: 6, key: (r) => r.prob * 1000 }).map(card),
       }
-      const sheets = cheatsheets(upcoming).map((s) => ({ ...s, rows: s.rows.map(card) }))
+      // each cheatsheet row carries the window that earned it its place (e.g. 4/4 vs this team)
+      const sheetWin = (key, r) => {
+        const w = (k) => r.windows.find((x) => x.key === k)
+        if (key === 'form') return w('L10')?.n >= 6 && w('L10').hits === w('L10').n ? w('L10') : w('L5')
+        return w(key) || null
+      }
+      const sheets = cheatsheets(upcoming).map((s) => ({ ...s, rows: s.rows.map((r) => ({ ...card(r), win: sheetWin(s.key, r) })) }))
       const live = [...wh.games.values()].filter((g) => g.status.state === 'in').length
       return {
         season: wh.season,

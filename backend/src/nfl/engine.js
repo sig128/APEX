@@ -72,7 +72,8 @@ export function createEngine({ mode = 'daemon', http, store, hub, oddsApiKey = p
       try {
         const s = await espn.summary(g.id, { priority })
         wh.setSummary(g.id, s, now())
-        if (g.status.state === 'in' || s.status.state === 'in') {
+        // live box scores, and the final one when a game ends
+        if (g.status.state !== 'pre' || s.status?.state !== 'pre') {
           publish(`game:${g.id}`, 'update', views.liveGame(g.id))
         }
       } catch (e) {

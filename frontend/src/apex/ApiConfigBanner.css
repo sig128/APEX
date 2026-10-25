@@ -1,3 +1,4 @@
+/* Scoped under .apex-analyzer so the analyzer's styles stay inside it. */
 .apex-api-banner {
   position: relative;
   z-index: 50;
