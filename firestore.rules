@@ -1,7 +1,9 @@
 rules_version = '2';
 
-// Invite codes are written only by Cloud Functions (Admin SDK) or the Firebase Console.
-// Users can read their own profile to see invite status.
+// The browser talks to Firestore for exactly three things: the user's own invite status, the
+// public sport toggles, and saved analyses. Everything else (passes, payments, picks, user
+// pages, the live data snapshot) is read and written only by the API with the Admin SDK, which
+// these rules don't apply to. Anything not matched below is denied.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /inviteCodes/{code} {
@@ -13,18 +15,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Audit log — one doc per invite code (doc id = code). Written only by Cloud Functions.
+    // Audit log, one doc per invite code. Written only by Cloud Functions.
     match /used_invites/{code} {
       allow read, write: if false;
     }
 
-    // Saved ANALYZE sessions (per user). Client writes only own docs; userId must match auth.
-    // App config (sport toggles) — read by clients; writes only via Cloud Function + Admin SDK.
+    // App config (sport toggles): readable by everyone, written only by the API.
     match /apexConfig/{docId} {
       allow read: if true;
       allow write: if false;
     }
 
+    // Saved ANALYZE sessions (per user). Client writes only its own docs.
     match /pastGames/{gameId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
@@ -33,5 +35,20 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid;
       allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
+
+    // API only (listed so nobody adds a client rule for them by accident).
+    match /subscriptions/{id} { allow read, write: if false; }
+    match /billingUsers/{id} { allow read, write: if false; }
+    match /billingInvoices/{id} { allow read, write: if false; }
+    match /billingAmounts/{id} { allow read, write: if false; }
+    match /billingTx/{id} { allow read, write: if false; }
+    match /billingPayments/{id} { allow read, write: if false; }
+    match /billingUsage/{id} { allow read, write: if false; }
+    match /profiles/{id} { allow read, write: if false; }
+    match /profileHandles/{id} { allow read, write: if false; }
+    match /picks/{id} { allow read, write: if false; }
+    match /pickUsage/{id} { allow read, write: if false; }
+    match /inviteRedemptions/{id} { allow read, write: if false; }
+    match /apexStore/{id} { allow read, write: if false; }
   }
 }

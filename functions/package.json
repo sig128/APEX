@@ -1,13 +1,14 @@
 {
   "name": "apex-functions",
-  "description": "Firebase Cloud Functions — APEX Claude chat API",
+  "description": "Firebase Cloud Functions: the APEX API (synced from backend/) and invite codes",
   "type": "module",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "index.js",
   "scripts": {
-    "serve": "firebase emulators:start --only functions",
+    "sync": "node ../scripts/sync-functions.mjs",
+    "serve": "node ../scripts/sync-functions.mjs && firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
     "seed-invites": "node seed-invite-codes.mjs"
   },

@@ -2,11 +2,15 @@
   "name": "apex",
   "private": true,
   "scripts": {
+    "setup": "npm install && npm install --prefix backend && npm install --prefix frontend && npm install --prefix functions",
     "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "test": "npm test --prefix backend",
     "build": "npm run build --prefix frontend",
+    "sync:functions": "node scripts/sync-functions.mjs",
     "deploy": "npm run build && firebase deploy",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
-    "deploy:functions": "firebase deploy --only functions"
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only firestore"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

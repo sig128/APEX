@@ -7,6 +7,7 @@
     {
       "source": "functions",
       "codebase": "default",
+      "runtime": "nodejs22",
       "ignore": [
         "node_modules",
         ".git",
@@ -15,22 +16,7 @@
         "*.local"
       ],
       "predeploy": [
-        "cp backend/prompts/apexSystemPrompt.js functions/prompts/apexSystemPrompt.js",
-        "cp backend/prompts/apexSystemPromptCompact.js functions/prompts/apexSystemPromptCompact.js",
-        "cp backend/prompts/apexSystemPromptMlbMid.js functions/prompts/apexSystemPromptMlbMid.js",
-        "cp backend/prompts/apexSystemPromptMlbPlayerProp.js functions/prompts/apexSystemPromptMlbPlayerProp.js",
-        "cp backend/prompts/apexSystemPromptNhl.js functions/prompts/apexSystemPromptNhl.js",
-        "cp backend/prompts/apexSystemPromptNhlCompact.js functions/prompts/apexSystemPromptNhlCompact.js",
-        "cp backend/prompts/apexSystemPromptNba.js functions/prompts/apexSystemPromptNba.js",
-        "cp backend/prompts/apexSystemPromptNbaCompact.js functions/prompts/apexSystemPromptNbaCompact.js",
-        "cp backend/prompts/apexSystemPromptNfl.js functions/prompts/apexSystemPromptNfl.js",
-        "cp backend/prompts/apexSystemPromptNflCompact.js functions/prompts/apexSystemPromptNflCompact.js",
-        "cp backend/prompts/resolveApexSystemPrompt.js functions/prompts/resolveApexSystemPrompt.js",
-        "cp backend/anthropicWebTools.js functions/anthropicWebTools.js",
-        "cp backend/streamChat.js functions/streamChat.js",
-        "cp backend/oddsEvents.js functions/oddsEvents.js",
-        "cp backend/sportsConfig.js functions/sportsConfig.js",
-        "cp backend/adminSportsRoutes.js functions/adminSportsRoutes.js",
+        "node \"$PROJECT_DIR/scripts/sync-functions.mjs\"",
         "npm --prefix \"$RESOURCE_DIR\" ci"
       ]
     }
@@ -44,45 +30,89 @@
     ],
     "rewrites": [
       {
-        "source": "/api/chat/stream",
-        "function": "chat"
-      },
-      {
-        "source": "/api/chat",
-        "function": "chat"
-      },
-      {
-        "source": "/api/odds/events",
-        "function": "chat"
-      },
-      {
-        "source": "/api/odds/upcoming",
-        "function": "chat"
-      },
-      {
-        "source": "/api/odds/mlb-player-props-showcase",
-        "function": "chat"
-      },
-      {
-        "source": "/api/odds/mlb-prop-ladder",
-        "function": "chat"
-      },
-      {
-        "source": "/api/odds/mlb-player-props-board",
-        "function": "chat"
-      },
-      {
-        "source": "/api/config/sports",
-        "function": "chat"
-      },
-      {
-        "source": "/api/admin/sports",
-        "function": "chat"
+        "source": "/api/**",
+        "function": {
+          "functionId": "chat",
+          "region": "us-central1"
+        }
       },
       {
         "source": "**",
         "destination": "/index.html"
       }
+    ],
+    "headers": [
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "/fonts/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          },
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(png|jpg|jpeg|svg|webp|ico)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(), microphone=(), geolocation=()"
+          }
+        ]
+      }
     ]
+  },
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "ui": {
+      "enabled": true
+    }
   }
 }

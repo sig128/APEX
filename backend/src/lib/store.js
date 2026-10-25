@@ -107,41 +107,76 @@ function diskDriver(dir) {
   }
 }
 
+// Firestore caps a document at 1 MiB. Big values (the week's lines and box scores can pass that
+// on a busy Sunday) are split across part documents written before the head that points at
+// them, so a reader sees either the old value or the new one, never half of each.
+const PART_CHARS = 700_000
+
 function firestoreDriver(getDb, collection = 'apexStore') {
-  const ref = (n, k) => getDb().collection(collection).doc(`${safeName(n)}__${safeName(k)}`.slice(0, 1400))
-  const decode = (snap) => {
-    if (!snap.exists) return undefined
-    const d = snap.data()
+  const docId = (n, k) => `${safeName(n)}__${safeName(k)}`.slice(0, 1400)
+  const col = () => getDb().collection(collection)
+  const ref = (n, k) => col().doc(docId(n, k))
+  const partRef = (n, k, rev, i) => col().doc(`${docId(n, k).slice(0, 1300)}__p${rev}_${i}`)
+  const parse = (json) => {
     try {
-      return JSON.parse(d.json)
+      return JSON.parse(json)
     } catch {
       return undefined
     }
   }
+  async function decode(n, k, snap) {
+    if (!snap.exists) return undefined
+    const d = snap.data()
+    if (!d.parts) return parse(d.json)
+    const snaps = await Promise.all(Array.from({ length: d.parts }, (_, i) => partRef(n, k, d.rev, i).get()))
+    if (snaps.some((x) => !x.exists)) return undefined // replaced while we read it
+    return parse(snaps.map((x) => x.data().json).join(''))
+  }
+  const rev = () => Math.random().toString(36).slice(2, 10)
   return {
     kind: 'firestore',
     async get(n, k) {
-      return decode(await ref(n, k).get())
+      return decode(n, k, await ref(n, k).get())
     },
     async set(n, k, v) {
-      await ref(n, k).set({ ns: n, key: String(k), json: JSON.stringify(v), updatedAt: Date.now() })
+      const json = JSON.stringify(v)
+      const head = ref(n, k)
+      const prev = await head.get().catch(() => null)
+      const old = prev?.exists ? prev.data() : null
+      if (json.length <= PART_CHARS) {
+        await head.set({ ns: n, key: String(k), json, updatedAt: Date.now() })
+      } else {
+        const r = rev()
+        const parts = Math.ceil(json.length / PART_CHARS)
+        for (let i = 0; i < parts; i++) await partRef(n, k, r, i).set({ part: true, json: json.slice(i * PART_CHARS, (i + 1) * PART_CHARS) })
+        await head.set({ ns: n, key: String(k), parts, rev: r, updatedAt: Date.now() })
+      }
+      if (old?.parts) await Promise.all(Array.from({ length: old.parts }, (_, i) => partRef(n, k, old.rev, i).delete().catch(() => {})))
     },
     async del(n, k) {
+      const snap = await ref(n, k).get()
+      const d = snap.exists ? snap.data() : null
       await ref(n, k).delete()
+      if (d?.parts) await Promise.all(Array.from({ length: d.parts }, (_, i) => partRef(n, k, d.rev, i).delete().catch(() => {})))
     },
     async keys(n) {
-      const snap = await getDb().collection(collection).where('ns', '==', n).select('key').limit(5000).get()
+      const snap = await col().where('ns', '==', n).select('key').limit(5000).get()
       return snap.docs.map((d) => d.get('key'))
     },
+    /** Small values only (counters, spend tracking): one document, one transaction. */
     async update(n, k, fn) {
       const db = getDb()
       const r = ref(n, k)
       return db.runTransaction(async (tx) => {
         const snap = await tx.get(r)
-        const cur = decode(snap)
+        const d = snap.exists ? snap.data() : null
+        if (d?.parts) throw new Error(`store.update on a split value ${n}/${k}`)
+        const cur = d ? parse(d.json) : undefined
         const next = await fn(cur)
         if (next === undefined) return cur
-        tx.set(r, { ns: n, key: String(k), json: JSON.stringify(next), updatedAt: Date.now() })
+        const json = JSON.stringify(next)
+        if (json.length > PART_CHARS) throw new Error(`store.update value too big for ${n}/${k}`)
+        tx.set(r, { ns: n, key: String(k), json, updatedAt: Date.now() })
         return next
       })
     },
