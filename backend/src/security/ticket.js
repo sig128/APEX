@@ -6,7 +6,7 @@ function secret() {
   const s = process.env.APEX_STREAM_SECRET
   if (s && s.length >= 16) return s
   const admin = process.env.ADMIN_SPORTS_KEY
-  if (admin && admin.length >= 12) return crypto.createHash('sha256').update(`apex-stream:${admin}`).digest('hex')
+  if (admin && admin.length >= 24) return crypto.createHash('sha256').update(`apex-stream:${admin}`).digest('hex')
   // No configured secret: a per-process key (tickets then only work on the instance that issued them).
   if (!secret.local) secret.local = crypto.randomBytes(32).toString('hex')
   return secret.local

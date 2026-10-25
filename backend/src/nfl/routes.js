@@ -113,8 +113,9 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     }
     const hub = engine.hub
     if (!hub) throw new ApiError(503, 'no_stream', 'Live updates are off on this server.')
-    hub.stream(req, res, {
+    const client = hub.stream(req, res, {
       list,
+      owner: clientIp(req),
       initial: (topic) => {
         if (topic === 'scoreboard') return views.strip()
         if (topic.startsWith('game:')) {
@@ -125,6 +126,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
       },
       maxDurationMs: 30 * 60_000,
     })
+    if (!client) throw new ApiError(429, 'streams', 'Too many live connections right now. Updates will keep coming every few seconds instead.', { retryAfter: 60 })
     engine.onSubscribersChanged?.(hub.stats().clients)
     req.on('close', () => engine.onSubscribersChanged?.(hub.stats().clients))
     return RAW

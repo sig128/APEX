@@ -1,10 +1,12 @@
 // Server-Sent Events hub. Topics: scoreboard, tracker, status, game:<id>, props:<id>.
 import { log } from './log.js'
 
-export function createHub({ maxBuffer = 1 << 20, heartbeatMs = 20_000 } = {}) {
+export function createHub({ maxBuffer = 1 << 20, heartbeatMs = 20_000, maxClients = 300, maxPerOwner = 6 } = {}) {
   const topics = new Map() // topic -> Set<client>
+  const clients = new Set()
+  const owners = new Map() // owner (caller address) -> open streams
   let nextId = 1
-  const counters = { connects: 0, drops: 0, frames: 0 }
+  const counters = { connects: 0, drops: 0, frames: 0, refused: 0 }
 
   function subscribe(client, list) {
     for (const t of list) {
@@ -59,11 +61,26 @@ export function createHub({ maxBuffer = 1 << 20, heartbeatMs = 20_000 } = {}) {
    * Express-style handler. list: topics to subscribe. initial(topic) may return data to send
    * right away so a fresh tab doesn't wait for the next change.
    */
-  function stream(req, res, { list, initial, maxDurationMs = 30 * 60_000 } = {}) {
-    const client = { id: nextId++, res, topics: list, closed: false, timers: [] }
+  function stream(req, res, { list, initial, maxDurationMs = 30 * 60_000, owner = null } = {}) {
+    // Streams hold a connection for up to half an hour, so they're capped: per caller (a few
+    // tabs) and per instance (room left for ordinary requests). Callers past a cap get null and
+    // fall back to polling.
+    if (clients.size >= maxClients || (owner && (owners.get(owner) || 0) >= maxPerOwner)) {
+      counters.refused++
+      return null
+    }
+    const client = { id: nextId++, res, topics: list, closed: false, timers: [], owner }
+    clients.add(client)
+    if (owner) owners.set(owner, (owners.get(owner) || 0) + 1)
     client.close = (reason) => {
       if (client.closed) return
       client.closed = true
+      clients.delete(client)
+      if (owner) {
+        const n = (owners.get(owner) || 1) - 1
+        if (n > 0) owners.set(owner, n)
+        else owners.delete(owner)
+      }
       client.timers.forEach((t) => clearInterval(t))
       unsubscribe(client)
       try {
@@ -108,7 +125,7 @@ export function createHub({ maxBuffer = 1 << 20, heartbeatMs = 20_000 } = {}) {
     publish,
     stream,
     hasSubscribers,
-    stats: () => ({ ...counters, clients: new Set([...topics.values()].flatMap((s) => [...s])).size, topics: topics.size }),
+    stats: () => ({ ...counters, clients: clients.size, owners: owners.size, topics: topics.size }),
     topics: () => [...topics.keys()],
   }
 }

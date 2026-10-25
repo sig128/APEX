@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // The browser talks to Firestore for exactly three things: the user's own invite status, the
-// public sport toggles, and saved analyses. Everything else (passes, payments, picks, user
+// public sport toggles, and saved analyses (plus their daily counter). Everything else (passes, payments, picks, user
 // pages, the live data snapshot) is read and written only by the API with the Admin SDK, which
 // these rules don't apply to. Anything not matched below is denied.
 service cloud.firestore {
@@ -26,14 +26,76 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Saved ANALYZE sessions (per user). Client writes only its own docs.
+    // Saved ANALYZE sessions (per user). Client writes only its own docs, in the shape the
+    // analyzer writes, at most 60 a day (each save bumps pastGamesQuota in the same batch).
+    function str(v, n) {
+      return v is string && v.size() <= n;
+    }
+    function optStr(m, k, n) {
+      return !(k in m) || str(m[k], n);
+    }
+    function strList(l, most, n) {
+      return l is list && l.size() <= most
+        && (l.size() < 1 || str(l[0], n))
+        && (l.size() < 2 || str(l[1], n))
+        && (l.size() < 3 || str(l[2], n));
+    }
+    function gameOk(g) {
+      return g is map
+        && g.keys().hasOnly(['homeTeam', 'awayTeam', 'date', 'gameTime', 'stadium', 'homeStarter', 'awayStarter', 'bankroll', 'mlOdds', 'totalOu', 'context', 'sportKey', 'oddsEventId', 'commenceTimeIso'])
+        && optStr(g, 'homeTeam', 80) && optStr(g, 'awayTeam', 80) && optStr(g, 'date', 40) && optStr(g, 'gameTime', 40)
+        && optStr(g, 'stadium', 120) && optStr(g, 'homeStarter', 80) && optStr(g, 'awayStarter', 80) && optStr(g, 'bankroll', 40)
+        && optStr(g, 'mlOdds', 80) && optStr(g, 'totalOu', 80) && optStr(g, 'context', 4000) && optStr(g, 'sportKey', 60)
+        && optStr(g, 'oddsEventId', 64) && optStr(g, 'commenceTimeIso', 40);
+    }
+    function cardsOk(b) {
+      return b == null || (b is map
+        && b.keys().hasOnly(['singleLegLock', 'twoLegParlay', 'threeLegParlay', 'quickReasoning', 'lineSource'])
+        && optStr(b, 'singleLegLock', 600) && optStr(b, 'lineSource', 200)
+        && (!('twoLegParlay' in b) || strList(b.twoLegParlay, 2, 600))
+        && (!('threeLegParlay' in b) || strList(b.threeLegParlay, 3, 600))
+        && (!('quickReasoning' in b) || (b.quickReasoning is map
+          && b.quickReasoning.keys().hasOnly(['singleLegLock', 'twoLegParlay', 'threeLegParlay'])
+          && optStr(b.quickReasoning, 'singleLegLock', 2000) && optStr(b.quickReasoning, 'twoLegParlay', 2000) && optStr(b.quickReasoning, 'threeLegParlay', 2000))));
+    }
+    function pastGameOk(d) {
+      return d.keys().hasOnly(['userId', 'homeTeam', 'awayTeam', 'gameDate', 'gameTime', 'game', 'betCards', 'analyzedAt', 'updatedAt'])
+        && d.userId == request.auth.uid
+        && str(d.homeTeam, 80) && str(d.awayTeam, 80) && str(d.gameDate, 40) && str(d.gameTime, 40)
+        && gameOk(d.game) && cardsOk(d.betCards)
+        && d.updatedAt == request.time;
+    }
+    function quotaBumped() {
+      let q = /databases/$(database)/documents/pastGamesQuota/$(request.auth.uid);
+      return existsAfter(q) && (getAfter(q).data.windowStart == request.time
+        || (exists(q) && getAfter(q).data.n == get(q).data.n + 1));
+    }
+
     match /pastGames/{gameId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && pastGameOk(request.resource.data)
+        && request.resource.data.analyzedAt == request.time
+        && quotaBumped();
       allow update: if request.auth != null
         && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == request.auth.uid;
+        && pastGameOk(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['betCards', 'updatedAt']);
       allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // One counter per user: a new day-long window starting now with one save, or one more save
+    // in the current window, up to 60.
+    match /pastGamesQuota/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['windowStart', 'n'])
+        && request.resource.data.n is int
+        && (
+          (request.resource.data.windowStart == request.time && request.resource.data.n == 1
+            && (resource == null || request.time > resource.data.windowStart + duration.value(1, 'd')))
+          || (resource != null && request.resource.data.windowStart == resource.data.windowStart
+            && request.resource.data.n == resource.data.n + 1 && request.resource.data.n <= 60)
+        );
     }
 
     // API only (listed so nobody adds a client rule for them by accident).
@@ -49,6 +111,7 @@ service cloud.firestore {
     match /picks/{id} { allow read, write: if false; }
     match /pickUsage/{id} { allow read, write: if false; }
     match /inviteRedemptions/{id} { allow read, write: if false; }
+    match /inviteAttempts/{id} { allow read, write: if false; }
     match /apexStore/{id} { allow read, write: if false; }
   }
 }

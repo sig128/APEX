@@ -294,14 +294,22 @@ function PostPick({ open, onClose, legs, mode }) {
   const [separate, setSeparate] = useState(mode === 'singles')
   const [state, setState] = useState({ busy: false, err: null, done: null })
   const nav = useNavigate()
+  const [checked, setChecked] = useState([])
   useEffect(() => {
-    if (open) {
-      setSeparate(mode === 'singles')
-      setState({ busy: false, err: null, done: null })
-    }
+    if (!open) return undefined
+    setSeparate(mode === 'singles')
+    setState({ busy: false, err: null, done: null })
+    setChecked([])
+    // ask up front which legs can go on a record, so nobody fills in the form for nothing
+    const ac = new AbortController()
+    api('/api/picks/check', { method: 'POST', body: { legs: legs.map((l) => l.id) }, signal: ac.signal })
+      .then((r) => setChecked(r.legs || []))
+      .catch(() => {})
+    return () => ac.abort()
   }, [open, mode])
-  // legs the server turned down that are still on the slip
-  const bad = (state.err?.body?.legs || []).filter((b) => legs.some((l) => l.id === b.id))
+  // legs that can't go on a record and are still on the slip (from the check or from a post)
+  const onSlip = (b) => legs.some((l) => l.id === b.id)
+  const bad = [...new Map([...checked, ...(state.err?.body?.legs || [])].filter(onSlip).map((b) => [b.id, b])).values()]
   const blocked = bad.length > 0
   useEffect(() => {
     if (state.err?.body?.legs?.length && !bad.length) setState((x) => ({ ...x, err: null }))

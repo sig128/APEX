@@ -26,6 +26,23 @@ function parseOddsApiErrorMessage(text, httpStatus) {
   return raw ? raw.slice(0, 200) : `HTTP ${httpStatus || 'error'}`
 }
 
+// ---- spend guards ---------------------------------------------------------------------------
+/** Odds API event ids are 32 hex characters. */
+const EVENT_ID_RE = /^[a-f0-9]{32}$/
+const EVENT_ODDS_TTL_MS = 10 * 60 * 1000
+const SCHEDULE_TTL_MS = 60 * 1000
+const eventOddsCache = new Map() // eventId -> { at, promise }
+const scheduleCache = new Map() // sportKey -> { at, promise }
+/** async (credits) => boolean. Set by the app to draw from the shared daily budget. */
+let oddsBudget = null
+export function setOddsBudget(fn) {
+  oddsBudget = typeof fn === 'function' ? fn : null
+}
+export function _resetOddsCaches() {
+  eventOddsCache.clear()
+  scheduleCache.clear()
+}
+
 export const BIG4_KEYS = {
   nfl: 'americanfootball_nfl',
   nba: 'basketball_nba',
@@ -55,21 +72,31 @@ export async function fetchOddsEventsSafe(apiKey, sportKeys) {
   const oddsKey = typeof apiKey === 'string' ? apiKey.trim() : ''
   const errors = []
   const settled = await Promise.allSettled(
-    sportKeys.map(async (sportKey) => {
-      const url = new URL(`${ODDS_BASE}/sports/${encodeURIComponent(sportKey)}/events`)
-      url.searchParams.set('apiKey', oddsKey)
-      url.searchParams.set('dateFormat', 'iso')
-      const res = await fetch(url, { headers: { Accept: 'application/json' } })
-      const text = await res.text()
-      if (!res.ok) {
-        throw new Error(parseOddsApiErrorMessage(text, res.status))
-      }
-      try {
-        const data = JSON.parse(text)
-        return Array.isArray(data) ? data : []
-      } catch {
-        throw new Error('Invalid JSON from Odds API')
-      }
+    sportKeys.map((sportKey) => {
+      // listing events costs no credits, but there's no reason to ask more than once a minute
+      const hit = scheduleCache.get(sportKey)
+      if (hit && Date.now() - hit.at < SCHEDULE_TTL_MS) return hit.promise
+      const p = (async () => {
+        const url = new URL(`${ODDS_BASE}/sports/${encodeURIComponent(sportKey)}/events`)
+        url.searchParams.set('apiKey', oddsKey)
+        url.searchParams.set('dateFormat', 'iso')
+        const res = await fetch(url, { headers: { Accept: 'application/json' } })
+        const text = await res.text()
+        if (!res.ok) {
+          throw new Error(parseOddsApiErrorMessage(text, res.status))
+        }
+        try {
+          const data = JSON.parse(text)
+          return Array.isArray(data) ? data : []
+        } catch {
+          throw new Error('Invalid JSON from Odds API')
+        }
+      })()
+      scheduleCache.set(sportKey, { at: Date.now(), promise: p })
+      p.catch(() => {
+        if (scheduleCache.get(sportKey)?.promise === p) scheduleCache.delete(sportKey)
+      })
+      return p
     }),
   )
 
@@ -426,7 +453,7 @@ const MLB_SHOWCASE_TTL_MS = 6 * 60 * 60 * 1000
  * Odds API event-odds calls are one per game; try several upcoming games because the
  * nearest scheduled game may not have player props posted yet for the showcase books.
  */
-const MLB_SHOWCASE_MAX_EVENT_ATTEMPTS = 8
+const MLB_SHOWCASE_MAX_EVENT_ATTEMPTS = 3
 /** Empty / no lines — retry sooner without hammering the API. */
 const MLB_SHOWCASE_EMPTY_TTL_MS = 30 * 60 * 1000
 /** Bump when headshot IDs / payload shape changes so in-memory cache refreshes. */
@@ -626,21 +653,40 @@ function formatAmericanOddsWithImpliedPercent(price) {
  * @param {string} eventId
  */
 async function fetchMlbEventPlayerPropsOdds(apiKey, eventId) {
-  const url = new URL(`${ODDS_BASE}/sports/baseball_mlb/events/${encodeURIComponent(eventId)}/odds`)
-  url.searchParams.set('apiKey', apiKey)
-  url.searchParams.set('regions', 'us')
-  url.searchParams.set('oddsFormat', 'american')
-  url.searchParams.set('markets', mlbEventOddsMarketKeysForFetch().join(','))
-  const res = await fetch(url, { headers: { Accept: 'application/json' } })
-  const text = await res.text()
-  if (!res.ok) {
-    throw new Error(parseOddsApiErrorMessage(text, res.status))
-  }
-  try {
-    return JSON.parse(text)
-  } catch {
-    throw new Error('Invalid JSON from Odds API (event odds)')
-  }
+  const id = String(eventId || '')
+  if (!EVENT_ID_RE.test(id)) throw Object.assign(new Error('That event id is not valid.'), { status: 400 })
+  // One upstream call per event per 10 minutes, whatever players, books or markets callers
+  // ask about; every call is paid for out of the analyzer's daily credit budget.
+  const hit = eventOddsCache.get(id)
+  if (hit && Date.now() - hit.at < EVENT_ODDS_TTL_MS) return hit.promise
+  const markets = mlbEventOddsMarketKeysForFetch()
+  const p = (async () => {
+    if (oddsBudget && !(await oddsBudget(markets.length))) {
+      throw Object.assign(new Error('Live odds are paused until tomorrow: today’s Odds API budget is used up.'), { status: 503, code: 'odds_budget' })
+    }
+    const url = new URL(`${ODDS_BASE}/sports/baseball_mlb/events/${encodeURIComponent(id)}/odds`)
+    url.searchParams.set('apiKey', apiKey)
+    url.searchParams.set('regions', 'us')
+    url.searchParams.set('oddsFormat', 'american')
+    url.searchParams.set('markets', markets.join(','))
+    const res = await fetch(url, { headers: { Accept: 'application/json' } })
+    const text = await res.text()
+    if (!res.ok) {
+      throw new Error(parseOddsApiErrorMessage(text, res.status))
+    }
+    try {
+      return JSON.parse(text)
+    } catch {
+      throw new Error('Invalid JSON from Odds API (event odds)')
+    }
+  })()
+  eventOddsCache.set(id, { at: Date.now(), promise: p })
+  if (eventOddsCache.size > 300) eventOddsCache.delete(eventOddsCache.keys().next().value)
+  // failures aren't cached (a budget refusal or an upstream error can clear up)
+  p.catch(() => {
+    if (eventOddsCache.get(id)?.promise === p) eventOddsCache.delete(id)
+  })
+  return p
 }
 
 /** Showcase dropdown: five popular US books (API `bookmaker.key`). */
@@ -1040,7 +1086,7 @@ export async function handleMlbPlayerPropsBoardRequest(req, res, apiKey) {
     res.set('Cache-Control', 'public, max-age=3600')
     res.json(okPayload)
   } catch (e) {
-    res.status(502).json({ error: e?.message || String(e) })
+    res.status(e?.status || 502).json({ error: e?.message || String(e), ...(e?.code ? { code: e.code } : {}) })
   }
 }
 
@@ -1156,7 +1202,7 @@ export async function handleMlbPropLadderRequest(req, res, apiKey) {
     res.set('Cache-Control', 'public, max-age=3600')
     res.json(okPayload)
   } catch (e) {
-    res.status(502).json({ error: e?.message || String(e) })
+    res.status(e?.status || 502).json({ error: e?.message || String(e), ...(e?.code ? { code: e.code } : {}) })
   }
 }
 
@@ -1361,6 +1407,7 @@ export async function handleMlbPlayerPropsShowcaseRequest(req, res, apiKey) {
         }
       } catch (e) {
         lastErr = e
+        if (e?.code === 'odds_budget') break
       }
     }
 

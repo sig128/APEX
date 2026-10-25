@@ -178,9 +178,27 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     if (memo.size > 500) memo.delete(memo.keys().next().value)
     return value
   }
-  const bust = () => memo.clear()
+  // Profiles read by public pages and the feed, kept briefly so a page of 120 picks by the
+  // same handful of cappers costs a handful of reads.
+  const profMemo = new Map()
+  const bust = () => {
+    memo.clear()
+    profMemo.clear()
+  }
+  async function profileCached(uid) {
+    const hit = profMemo.get(uid)
+    if (hit && hit.until > now()) return hit.value
+    const value = await profileOf(uid)
+    profMemo.set(uid, { value, until: now() + 30_000 })
+    if (profMemo.size > 3000) profMemo.delete(profMemo.keys().next().value)
+    return value
+  }
+  /** A page cursor is the createdAt of the last pick on the previous page; junk starts at the top. */
+  const cursor = (v) => {
+    const n = Number(v)
+    return Number.isFinite(n) && n > 1_600_000_000_000 && n <= now() + 60_000 ? Math.floor(n) : undefined
+  }
 
-  /** Until when this user gets Elite showcase features. */
   /** How long the plan the user actually holds keeps the showcase (stored on the page). */
   function eliteUntilFor(user, ent) {
     if (user?.admin || ent.status === 'admin') return LIFETIME
@@ -353,14 +371,8 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     }
   }
 
-  async function post(user, body = {}) {
-    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in to post picks.')
-    const prof = await refreshElite(user, await profileOf(user.uid))
-    if (!prof) throw new ApiError(409, 'no_profile', 'Make your page first.')
-    const ids = Array.isArray(body.legs) ? body.legs.map(String) : []
-    if (!ids.length || ids.length > MAX_LEGS) throw new ApiError(400, 'bad_legs', `Pick 1 to ${MAX_LEGS} props.`)
-    if (new Set(ids).size !== ids.length) throw new ApiError(400, 'dup_legs', 'The same prop is in there twice.')
-    // check every leg so the slip can show all the problems at once
+  /** Every leg checked, so the slip can show all the problems at once. */
+  function legsFrom(ids) {
     const legs = []
     const problems = []
     for (const id of ids) {
@@ -371,6 +383,24 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
         problems.push({ id, code: e.code, error: e.message, status: e.status })
       }
     }
+    return { legs, problems }
+  }
+
+  /** Which of these legs could go on a record right now (the post dialog asks before posting). */
+  function check(body = {}) {
+    const ids = Array.isArray(body.legs) ? [...new Set(body.legs.map(String))].slice(0, MAX_LEGS) : []
+    const { problems } = legsFrom(ids)
+    return { ok: problems.length === 0, legs: problems.map(({ id, code, error }) => ({ id, code, error })) }
+  }
+
+  async function post(user, body = {}) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in to post picks.')
+    const prof = await refreshElite(user, await profileOf(user.uid))
+    if (!prof) throw new ApiError(409, 'no_profile', 'Make your page first.')
+    const ids = Array.isArray(body.legs) ? body.legs.map(String) : []
+    if (!ids.length || ids.length > MAX_LEGS) throw new ApiError(400, 'bad_legs', `Pick 1 to ${MAX_LEGS} props.`)
+    if (new Set(ids).size !== ids.length) throw new ApiError(400, 'dup_legs', 'The same prop is in there twice.')
+    const { legs, problems } = legsFrom(ids)
     if (problems.length) {
       const [first] = problems
       const msg = problems.length === 1 ? first.error : `${problems.length} of these legs can’t go on a record. ${first.error}`
@@ -437,26 +467,34 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
   async function page(handle, { before, viewer } = {}) {
     const h = String(handle || '').toLowerCase()
     if (!HANDLE_RE.test(h)) throw new ApiError(404, 'not_found', 'No page with that handle.')
+    const b = cursor(before)
+    // everyone but the owner (and admins) sees the same page: share it for a few seconds
+    if (!viewer) return cached(`page:${h}:${b ?? ''}`, 15_000, () => loadPage(h, b, null))
+    return loadPage(h, b, viewer)
+  }
+
+  async function loadPage(h, before, viewer) {
     const owner = await d.get('profileHandles', h)
     if (!owner) throw new ApiError(404, 'not_found', 'No page with that handle.')
     const prof = await profileOf(owner.uid)
     if (!prof) throw new ApiError(404, 'not_found', 'No page with that handle.')
     const isOwner = viewer?.uid === owner.uid
     if (prof.hidden && !isOwner && !viewer?.admin) throw new ApiError(404, 'not_found', 'No page with that handle.')
-    const list = await picksOf(owner.uid, { limit: 30, before: before ? Number(before) : undefined })
+    const list = await picksOf(owner.uid, { limit: 30, before })
     const open = list.filter((p) => p.status === 'open')
     const history = list.filter((p) => p.status === 'graded')
     return { profile: publicProfile(prof), owner: isOwner, open: open.map(publicPick), history: history.map(publicPick), next: list.length === 30 ? list[list.length - 1].createdAt : null }
   }
 
   async function feed({ before } = {}) {
-    return cached(`feed:${before || ''}`, 20_000, async () => {
+    const b = cursor(before)
+    return cached(`feed:${b ?? ''}`, 20_000, async () => {
       const t = now()
-      const rows = await d.recent('picks', { field: 'createdAt', limit: 120, before: before ? Number(before) : undefined })
+      const rows = await d.recent('picks', { field: 'createdAt', limit: 120, before: b })
       const profiles = new Map()
       const out = []
       for (const p of rows) {
-        if (!profiles.has(p.uid)) profiles.set(p.uid, await profileOf(p.uid))
+        if (!profiles.has(p.uid)) profiles.set(p.uid, await profileCached(p.uid))
         const prof = profiles.get(p.uid)
         if (!prof || prof.hidden || !isElite(prof, t)) continue
         out.push({ ...publicPick(p), profile: publicProfile(prof, t) })
@@ -602,5 +640,5 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     return { ok: true, handle, hidden: Boolean(hidden) }
   }
 
-  return { me, saveProfile, post, remove, page, feed, leaderboard, gradeOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, _atLeast: atLeast }
+  return { me, saveProfile, post, check, remove, page, feed, leaderboard, gradeOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, _atLeast: atLeast }
 }

@@ -69,7 +69,7 @@ export function PricingPage() {
           <dt>How do I pay?</dt>
           <dd>Each payment request has an exact USDC amount, down to the last digit, so it can only match your payment. Send it from any wallet or exchange on Base, or connect a wallet and approve it there. APEX confirms it on-chain, usually within a minute.</dd>
           <dt>What happens when 30 days are up?</dt>
-          <dd>You get 7 days of grace with everything still on. After that, AI reads and Kelly tools lock (and Elite showcase features hide) until you renew. Stats, your picks and your record stay.</dd>
+          <dd>You get 7 days of grace with everything still on. Renew during those days and the new 30 start where your pass ended. After that, AI reads and Kelly tools lock (and Elite showcase features hide) until you renew. Stats, your picks and your record stay.</dd>
           <dt>Can I renew early or switch plans?</dt>
           <dd>Renewing adds 30 days to the end of your current pass. Switching from Pro to Elite converts your unused Pro days into Elite days at the price ratio.</dd>
           <dt>Does APEX take bets?</dt>

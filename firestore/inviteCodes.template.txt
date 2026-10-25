@@ -9,6 +9,8 @@
 #   INVITE_CODE_COUNT=1 INVITE_USES=100 INVITE_PLAN=pro INVITE_DAYS=7 INVITE_EXPIRES_DAYS=14 ... npm run seed-invites
 #
 # Option B: Firebase Console > Firestore > inviteCodes > Add document (ID = the code people type)
+#   Make the ID long and random (16+ characters, like APEX-K7QM-2XWD-9RTH-B4NP). Short or
+#   guessable codes can be found by trial and error, and plan codes grant paid passes.
 #   active        boolean  true
 #   usesRemaining number   1          (leave it out for unlimited)
 #   plan          string   pro|elite  (leave it out for a plain invite)

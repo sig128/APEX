@@ -15,8 +15,9 @@ score. Stats are free. Two passes, paid in USDC on Base:
 | X and Instagram links on your page, Elite badge, the picks feed, the leaderboard | | | yes |
 
 A pass runs 30 days. When it ends there are 7 days of grace with everything still on, then the
-paid features lock until it's renewed. Renewing early stacks; switching plans converts unused
-days at the price ratio. APEX never holds money: people send USDC straight to your wallet, and
+paid features lock until it's renewed. Renewing early stacks, and renewing during the grace week
+starts the new 30 days where the old pass ended; switching plans converts unused days at the
+price ratio. APEX never holds money: people send USDC straight to your wallet, and
 the API checks the transfer on-chain.
 
 ## What's where
@@ -69,7 +70,7 @@ npm test --prefix frontend          # slip, Kelly and wallet math
 2. **Secrets** (never in files):
    ```bash
    firebase functions:secrets:set ANTHROPIC_API_KEY
-   firebase functions:secrets:set ADMIN_SPORTS_KEY     # 12+ random characters
+   firebase functions:secrets:set ADMIN_SPORTS_KEY     # 24+ random characters (openssl rand -hex 24)
    firebase functions:secrets:set THE_ODDS_API_KEY     # optional, adds sportsbook prices
    ```
 3. **Settings.** `cp functions/.env.example functions/.env`, then set at least
@@ -117,12 +118,15 @@ A transaction can only ever pay one request.
 - **Codes:** invite codes and plan codes (e.g. 30 days of Elite) are explained in
   `firestore/inviteCodes.template.txt`; create them with `npm run seed-invites` in functions/.
 - **Picks:** posts lock at kickoff and grade themselves from the final box score (a player who
-  didn't play is voided after 18 hours). Records use the market price when posted, or -110
-  when no price is listed. The leaderboard needs 5 graded picks.
+  didn't play is voided after 18 hours). Only lines a sportsbook posted can go on a record,
+  graded at the price posted when the pick was made; main lines with no listed price grade at
+  -110. Alternate lines and anytime-TD props need a real price, which comes with
+  `THE_ODDS_API_KEY`. The leaderboard needs 5 graded picks.
 - **Data:** ESPN's public endpoints (scoreboard, summaries, rosters, game logs, prop lines).
   They are unofficial and can change; the API caches everything in Firestore and keeps
   serving the last good copy if ESPN has a bad minute. Prices come from The Odds API when its
-  key is set (it spends at most `APEX_ODDS_DAILY_CREDITS` a day).
+  key is set. It spends at most `APEX_ODDS_DAILY_CREDITS` a day on NFL prices and
+  `APEX_ODDS_ANALYZER_DAILY_CREDITS` on the analyzer's odds pages; set them from your plan.
 - **Scale:** Cloud Functions scales down to nothing when the site is quiet, so the first visitor
   after a lull waits a few seconds while the data loads; set `APEX_MIN_INSTANCES=1` in
   functions/.env on game days to keep one instance warm. Each open tab holds one live stream
@@ -136,6 +140,11 @@ A transaction can only ever pay one request.
 - Who is an admin and what plan someone has is decided by the API from their verified Google
   sign-in. Firestore rules block the browser from every billing, picks and data collection.
 - Keep `.env` files and service-account JSON out of git (the .gitignore already does).
+- Rate limits key on the caller's address, which only Firebase Hosting's CDN and Google's own
+  proxies can vouch for (`APEX_TRUSTED_PROXIES`); a header a client writes itself is ignored.
+  AI follow-ups have to continue an analysis the same account ran. Plan codes from
+  `npm run seed-invites` carry 80 random bits and each account gets 8 wrong tries an hour;
+  if you type codes by hand in the console, make them just as long.
 
 ## Before you rely on it
 

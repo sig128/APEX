@@ -1,5 +1,6 @@
 // A small route table for the JSON API: pattern matching, ETags, cache headers, and errors that
 // never crash the process.
+import net from 'node:net'
 import { hash } from './util.js'
 import { log, errText } from './log.js'
 
@@ -29,21 +30,73 @@ function compile(pattern) {
   return { re: new RegExp(`^${re}/?$`), keys }
 }
 
+// Proxies allowed to speak for a client in X-Forwarded-For. Firebase Hosting's CDN (Fastly,
+// https://api.fastly.com/public-ip-list) and Google's load balancer proxy ranges. Nobody can
+// send traffic from these themselves (short of running their own Fastly service), so an
+// address they appended is the real client.
+const PROXY_SETS = {
+  fastly: ['23.235.32.0/20', '43.249.72.0/22', '90.98.0.0/17', '90.98.128.0/18', '103.244.50.0/24', '103.245.222.0/23', '103.245.224.0/24', '104.156.80.0/20', '140.248.64.0/18', '140.248.128.0/17', '146.75.0.0/17', '151.101.0.0/16', '157.52.64.0/18', '167.82.0.0/17', '167.82.128.0/20', '167.82.160.0/20', '167.82.224.0/20', '172.111.64.0/18', '185.31.16.0/22', '199.27.72.0/21', '199.232.0.0/16', '2a04:4e40::/32', '2a04:4e42::/31', '2a04:4e44::/32'],
+  google: ['35.191.0.0/16', '130.211.0.0/22'],
+}
+let proxyCache = { spec: null, list: null }
+
+function trustedProxies() {
+  const spec = process.env.APEX_TRUSTED_PROXIES ?? 'fastly,google'
+  if (proxyCache.spec === spec) return proxyCache.list
+  const list = new net.BlockList()
+  for (const item of spec.split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)) {
+    for (const cidr of PROXY_SETS[item] || [item]) {
+      const [addr, bits] = cidr.split('/')
+      const v = net.isIP(addr)
+      if (!v) continue
+      const prefix = bits == null ? (v === 6 ? 128 : 32) : Number(bits)
+      if (!Number.isInteger(prefix)) continue
+      try {
+        list.addSubnet(addr, prefix, v === 6 ? 'ipv6' : 'ipv4')
+      } catch {
+        /* bad entry: skip */
+      }
+    }
+  }
+  proxyCache = { spec, list }
+  return list
+}
+
+/** "1.2.3.4", "1.2.3.4:5678", "[2001:db8::1]:443", "::ffff:1.2.3.4" -> a bare address or ''. */
+function bareIp(s) {
+  let a = String(s || '').trim()
+  const bracket = /^\[([^\]]+)\](?::\d+)?$/.exec(a)
+  if (bracket) a = bracket[1]
+  else if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(a)) a = a.slice(0, a.lastIndexOf(':'))
+  if (/^::ffff:\d{1,3}(\.\d{1,3}){3}$/i.test(a)) a = a.slice(7)
+  return net.isIP(a) ? a : ''
+}
+
+function isTrustedProxy(ip) {
+  const a = bareIp(ip)
+  if (!a) return false
+  return trustedProxies().check(a, net.isIP(a) === 6 ? 'ipv6' : 'ipv4')
+}
+
 /**
- * The caller's IP. Behind Google's front end (or APEX_TRUST_PROXY=1) each trusted proxy appends
- * the address it saw to X-Forwarded-For, so the real client is APEX_TRUSTED_HOPS from the right
- * (1 = Cloud Functions called directly; 2 = through a Firebase Hosting rewrite). Anything further
- * left was written by the client and is never trusted.
+ * The caller's IP. On Cloud Functions (or with APEX_TRUST_PROXY=1) Google's front end appends
+ * the address that connected to it to X-Forwarded-For, so the last entry is real. We step left
+ * only past addresses that belong to trusted proxies (Firebase Hosting's CDN by default;
+ * APEX_TRUSTED_PROXIES to change), so whatever a client writes into the header itself is never
+ * believed.
  */
 export function clientIp(req) {
+  const peer = bareIp(req.socket?.remoteAddress || req.ip) || 'unknown'
   const trust = Boolean(process.env.K_SERVICE) || process.env.APEX_TRUST_PROXY === '1'
-  if (trust) {
-    const xff = String(req.headers?.['x-forwarded-for'] || '')
-    const parts = xff.split(',').map((s) => s.trim()).filter(Boolean)
-    const hops = Math.min(4, Math.max(1, Number.parseInt(process.env.APEX_TRUSTED_HOPS || '1', 10) || 1))
-    if (parts.length) return parts[Math.max(0, parts.length - hops)]
-  }
-  return req.socket?.remoteAddress || req.ip || 'unknown'
+  if (!trust) return peer
+  const parts = String(req.headers?.['x-forwarded-for'] || '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean)
+  if (!parts.length) return peer
+  let i = parts.length - 1
+  for (let steps = 0; i > 0 && steps < 4 && isTrustedProxy(parts[i]); steps++) i--
+  return bareIp(parts[i]) || peer
 }
 
 function cacheHeader(c) {

@@ -36,13 +36,15 @@ export function picksRoutes({ picks, access }) {
     if (!u) throw new ApiError(401, 'signin', 'Sign in first.')
     return u
   }
-  const throttle = (lim, key) => {
-    const t = lim.take(key)
+  const throttle = (lim, key, cost = 1) => {
+    const t = lim.take(key, cost)
     if (!t.ok) throw new ApiError(429, 'slow_down', 'Slow down a little.', { retryAfter: t.retryAfter })
   }
 
+  // older pages miss the CDN and cost real reads, so they count for more
+  const pageCost = (req) => (req.query.before ? 4 : 1)
   r.get('/feed', wrap(async (req) => {
-    throttle(readLimit, clientIp(req))
+    throttle(readLimit, clientIp(req), pageCost(req))
     return picks.feed({ before: req.query.before })
   }, 'public, max-age=10, s-maxage=20, stale-while-revalidate=60'))
 
@@ -52,7 +54,7 @@ export function picksRoutes({ picks, access }) {
   }, 'public, max-age=30, s-maxage=60, stale-while-revalidate=180'))
 
   r.get('/u/:handle', wrap(async (req, res) => {
-    throttle(readLimit, clientIp(req))
+    throttle(readLimit, clientIp(req), pageCost(req))
     // Owners see their own page fresh (and hidden pages); everyone else gets the cached copy.
     const auth = req.headers.authorization || req.headers['x-apex-admin-key']
     const v = auth ? await viewer(req).catch(() => null) : null
@@ -70,6 +72,10 @@ export function picksRoutes({ picks, access }) {
     const u = await signedIn(req)
     throttle(writeLimit, u.uid)
     return picks.post(u, req.body || {})
+  }))
+  r.post('/check', wrap(async (req) => {
+    throttle(readLimit, clientIp(req))
+    return picks.check(req.body || {})
   }))
   r.delete('/:id', wrap(async (req) => {
     const u = await signedIn(req)

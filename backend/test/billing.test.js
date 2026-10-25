@@ -45,8 +45,11 @@ test('plan math: buy, extend, switch with credit, lifetime, revoked', () => {
   const up = applyPurchase(active, 'elite', T0, cfg)
   assert.equal(up.plan, 'elite')
   assert.equal(up.paidUntil, T0 + P + Math.round((10 * DAY_MS * 29) / 79), 'unused Pro time converts at the price ratio')
-  const lapsed = { plan: 'elite', paidUntil: T0 - DAY_MS }
-  assert.equal(applyPurchase(lapsed, 'pro', T0, cfg).paidUntil, T0 + P, 'a lapsed pass starts fresh')
+  const lapsed = { plan: 'elite', paidUntil: T0 - 8 * DAY_MS }
+  assert.equal(applyPurchase(lapsed, 'pro', T0, cfg).paidUntil, T0 + P, 'a pass lapsed past the grace week starts fresh')
+  const inGrace = { plan: 'pro', paidUntil: T0 - 6 * DAY_MS }
+  assert.equal(applyPurchase(inGrace, 'pro', T0, cfg).paidUntil, T0 - 6 * DAY_MS + P, 'renewing in the grace week picks up where the pass ended')
+  assert.equal(applyPurchase({ plan: 'pro', paidUntil: T0 - 6 * DAY_MS }, 'pro', T0, cfg, DAY_MS).paidUntil, T0 + DAY_MS, 'never ends before tomorrow')
   assert.deepEqual(applyPurchase(null, 'elite', T0, cfg, 'lifetime'), { plan: 'elite', paidUntil: LIFETIME, lifetime: true })
   const life = { plan: 'elite', paidUntil: LIFETIME, lifetime: true }
   assert.equal(applyPurchase(life, 'pro', T0, cfg).plan, 'elite', 'lifetime Elite stays Elite')

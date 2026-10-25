@@ -156,31 +156,49 @@ test('stream tickets: signed, expiring, tamper-proof', () => {
   restore()
 })
 
-test('admin key: constant-time match, short keys refused, lockout after 10 misses', () => {
+test('admin key: constant-time match, short keys refused, lockouts per address and overall', () => {
   _resetAdminKeyFails()
+  const KEY = 'a-long-admin-key-0123456789'
   assert.equal(keyMatches('abc', 'abc'), true)
   assert.equal(keyMatches('abc', 'abd'), false)
   const req = (key, ip = '9.9.9.9') => ({ headers: { 'x-apex-admin-key': key }, socket: { remoteAddress: ip } })
-  assert.equal(checkAdminKey({ headers: {} }, 'a-long-admin-key-123'), 'none')
-  assert.equal(checkAdminKey(req('short'), 'short'), 'bad', 'keys under 12 chars never work')
-  assert.equal(checkAdminKey(req('a-long-admin-key-123'), 'a-long-admin-key-123'), 'ok')
-  for (let i = 0; i < 9; i++) assert.equal(checkAdminKey(req('wrong-guess-000000'), 'a-long-admin-key-123'), 'bad')
-  assert.equal(checkAdminKey(req('wrong-guess-000000'), 'a-long-admin-key-123'), 'bad')
-  assert.equal(checkAdminKey(req('a-long-admin-key-123'), 'a-long-admin-key-123'), 'blocked', 'even the right key waits out the lockout')
-  assert.equal(checkAdminKey(req('a-long-admin-key-123', '8.8.8.8'), 'a-long-admin-key-123'), 'ok', 'other addresses are fine')
+  assert.equal(checkAdminKey({ headers: {} }, KEY), 'none')
+  assert.equal(checkAdminKey(req('short-key-12345'), 'short-key-12345'), 'bad', 'keys under 24 chars never work')
+  assert.equal(checkAdminKey(req(KEY), KEY), 'ok')
+  for (let i = 0; i < 9; i++) assert.equal(checkAdminKey(req('wrong-guess-000000'), KEY), 'bad')
+  assert.equal(checkAdminKey(req('wrong-guess-000000'), KEY), 'bad')
+  assert.equal(checkAdminKey(req(KEY), KEY), 'blocked', 'even the right key waits out the lockout')
+  assert.equal(checkAdminKey(req(KEY, '8.8.8.8'), KEY), 'ok', 'other addresses are fine')
+  _resetAdminKeyFails()
+  // guesses spread over many addresses trip the overall backstop
+  for (let i = 0; i < 200; i++) checkAdminKey(req('wrong-guess-000000', `10.0.${i >> 8}.${i & 255}`), KEY)
+  assert.equal(checkAdminKey(req(KEY, '8.8.4.4'), KEY), 'blocked')
   _resetAdminKeyFails()
 })
 
-test('client ip: forwarded headers only count behind a trusted proxy', () => {
-  const req = { headers: { 'x-forwarded-for': '6.6.6.6, 1.2.3.4, 10.0.0.1' }, socket: { remoteAddress: '127.0.0.1' } }
-  let restore = withEnv({ K_SERVICE: null, APEX_TRUST_PROXY: null, APEX_TRUSTED_HOPS: null })
-  assert.equal(clientIp(req), '127.0.0.1')
+test('client ip: only trusted proxies can speak for a client', () => {
+  const req = (xff, peer = '127.0.0.1') => ({ headers: xff == null ? {} : { 'x-forwarded-for': xff }, socket: { remoteAddress: peer } })
+  let restore = withEnv({ K_SERVICE: null, APEX_TRUST_PROXY: null, APEX_TRUSTED_PROXIES: null })
+  assert.equal(clientIp(req('6.6.6.6, 1.2.3.4')), '127.0.0.1', 'no proxy in front: the socket')
+  assert.equal(clientIp(req(null, '::ffff:9.9.9.9')), '9.9.9.9')
   restore()
-  restore = withEnv({ APEX_TRUST_PROXY: '1', APEX_TRUSTED_HOPS: null })
-  assert.equal(clientIp(req), '10.0.0.1')
+  restore = withEnv({ K_SERVICE: 'chat', APEX_TRUST_PROXY: null, APEX_TRUSTED_PROXIES: null })
+  // called directly: Google appends the caller, whatever the caller wrote stays on the left
+  assert.equal(clientIp(req('1.2.3.4')), '1.2.3.4')
+  assert.equal(clientIp(req('6.6.6.6, 1.2.3.4')), '1.2.3.4', 'a forged entry is ignored')
+  assert.equal(clientIp(req('6.6.6.6, 151.101.1.1, 1.2.3.4')), '1.2.3.4', 'a forged proxy hop is ignored too')
+  // through Firebase Hosting: the CDN appended the client, Google appended the CDN
+  assert.equal(clientIp(req('6.6.6.6, 1.2.3.4, 151.101.65.195')), '1.2.3.4')
+  assert.equal(clientIp(req('1.2.3.4, 151.101.65.195, 35.191.3.4')), '1.2.3.4', 'past a Google proxy hop as well')
+  assert.equal(clientIp(req('2001:db8::7, 2a04:4e42:400::123')), '2001:db8::7', 'IPv6')
+  assert.equal(clientIp(req('1.2.3.4:5555')), '1.2.3.4', 'ports are dropped')
+  assert.equal(clientIp(req('garbage')), '127.0.0.1', 'junk falls back to the socket')
   restore()
-  restore = withEnv({ APEX_TRUST_PROXY: '1', APEX_TRUSTED_HOPS: '2' })
-  assert.equal(clientIp(req), '1.2.3.4')
+  restore = withEnv({ K_SERVICE: 'chat', APEX_TRUSTED_PROXIES: 'none' })
+  assert.equal(clientIp(req('1.2.3.4, 151.101.65.195')), '151.101.65.195', 'nothing trusted: the last hop')
+  restore()
+  restore = withEnv({ K_SERVICE: 'chat', APEX_TRUSTED_PROXIES: '10.0.0.0/8' })
+  assert.equal(clientIp(req('1.2.3.4, 10.1.2.3')), '1.2.3.4', 'your own proxy range')
   restore()
 })
 
@@ -241,6 +259,41 @@ test('hub: hello, initial data, publish, cleanup on close', async () => {
   await new Promise((r) => setTimeout(r, 50))
   assert.equal(hub.hasSubscribers('game:1'), false)
   assert.equal(hub.publish('game:1', 'update', {}), 0)
+  server.close()
+})
+
+test('hub: streams are capped per caller and per instance', async () => {
+  const hub = createHub({ heartbeatMs: 1000, maxClients: 3, maxPerOwner: 2 })
+  const server = http.createServer((req, res) => {
+    const c = hub.stream(req, res, { list: ['scoreboard'], owner: req.headers['x-owner'] })
+    if (!c) {
+      res.statusCode = 429
+      res.end()
+    }
+  })
+  await new Promise((ok) => server.listen(0, '127.0.0.1', ok))
+  const url = `http://127.0.0.1:${server.address().port}/`
+  const open = []
+  const connect = async (owner) => {
+    const ctrl = new AbortController()
+    const r = await fetch(url, { headers: { 'x-owner': owner }, signal: ctrl.signal })
+    if (r.status === 200) open.push(ctrl)
+    return r.status
+  }
+  assert.equal(await connect('a'), 200)
+  assert.equal(await connect('a'), 200)
+  assert.equal(await connect('a'), 429, 'a third tab from the same caller waits')
+  assert.equal(await connect('b'), 200)
+  assert.equal(await connect('c'), 429, 'the instance is full')
+  assert.equal(hub.stats().clients, 3)
+  open.shift().abort()
+  await new Promise((r) => setTimeout(r, 50))
+  assert.equal(hub.stats().clients, 2)
+  assert.equal(await connect('c'), 200, 'a closed stream frees its slot')
+  for (const c of open) c.abort()
+  await new Promise((r) => setTimeout(r, 50))
+  assert.equal(hub.stats().clients, 0)
+  assert.equal(hub.stats().owners, 0)
   server.close()
 })
 

@@ -4,6 +4,7 @@
 // counter lives in the shared store, which all instances read before spending.
 import { nameKey } from '../../lib/util.js'
 import { log, errText } from '../../lib/log.js'
+import { takeOddsCredits } from '../../lib/oddsBudget.js'
 
 const BASE = 'https://api.the-odds-api.com/v4/sports/americanfootball_nfl'
 const MARKETS = {
@@ -21,9 +22,6 @@ const MARKETS = {
 }
 const BOOKS = ['draftkings', 'fanduel', 'betmgm', 'williamhill_us', 'espnbet']
 
-function dayKey(t) {
-  return new Date(t).toISOString().slice(0, 10)
-}
 
 export function createOddsApi({ http, store, apiKey, now = () => Date.now(), dailyCredits = Number(process.env.APEX_ODDS_DAILY_CREDITS) || 400, perGameEveryMs = 3 * 3600e3 }) {
   let events = null
@@ -46,19 +44,8 @@ export function createOddsApi({ http, store, apiKey, now = () => Date.now(), dai
   /** Reserve credits in the shared counter. Returns false when today's budget is spent. */
   async function spend(cost) {
     if (!store) return true
-    const day = dayKey(now())
-    let ok = false
-    await store.update('oddsprops', `spend:${day}`, (cur) => {
-      const used = cur?.used || 0
-      if (used + cost > dailyCredits) {
-        ok = false
-        return undefined
-      }
-      ok = true
-      return { used: used + cost, day }
-    })
-    const cur = await store.get('oddsprops', `spend:${day}`)
-    state.spentToday = cur?.used || 0
+    const { ok, used } = await takeOddsCredits(store, cost, { pool: 'nfl', daily: dailyCredits, now })
+    state.spentToday = used
     return ok
   }
 

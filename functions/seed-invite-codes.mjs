@@ -46,7 +46,16 @@ const expiresDays = parseInt(process.env.INVITE_EXPIRES_DAYS || '', 10)
 const prefix = String(process.env.INVITE_PREFIX || 'APEX').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'APEX'
 
 const codes = new Set()
-while (codes.size < count) codes.add(`${prefix}-${randomBytes(4).toString('hex').toUpperCase()}`)
+// 10 bytes = 80 random bits, written as 16 base32 characters in groups of four: long enough
+// that guessing is hopeless, short enough to type. (No 0/1/O/I/L, so nothing to misread.)
+const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+function randomCode() {
+  const bytes = randomBytes(16)
+  let out = ''
+  for (let i = 0; i < 16; i++) out += ALPHABET[bytes[i] % ALPHABET.length]
+  return out.match(/.{4}/g).join('-')
+}
+while (codes.size < count) codes.add(`${prefix}-${randomCode()}`)
 
 const batch = db.batch()
 for (const code of codes) {

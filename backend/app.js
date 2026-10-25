@@ -1,5 +1,6 @@
 // The APEX API as one Express app, shared by backend/server.js (always-on daemon) and
 // functions/index.js (Cloud Functions, lazy engine).
+import crypto from 'node:crypto'
 import express from 'express'
 import cors from 'cors'
 import Anthropic from '@anthropic-ai/sdk'
@@ -7,7 +8,7 @@ import { createHttp } from './src/lib/http.js'
 import { createStore } from './src/lib/store.js'
 import { createHub } from './src/lib/hub.js'
 import { log, errText } from './src/lib/log.js'
-import { ApiError } from './src/lib/router.js'
+import { ApiError, clientIp } from './src/lib/router.js'
 import { createEngine } from './src/nfl/engine.js'
 import { createNflRouter } from './src/nfl/routes.js'
 import { createBilling, atLeast } from './src/billing/service.js'
@@ -28,7 +29,9 @@ import {
   handleMlbPropLadderRequest,
   handleOddsEventsRequest,
   handleOddsUpcomingRequest,
+  setOddsBudget,
 } from './oddsEvents.js'
+import { takeOddsCredits } from './src/lib/oddsBudget.js'
 import { nameKey, envInt } from './src/lib/util.js'
 import { renderUserHead } from './src/picks/og.js'
 import fs from 'node:fs'
@@ -123,7 +126,7 @@ export function createApexApp({
 
   const http = httpIn || createHttp({})
   const engineStore = storeIn || createStore({ getFirestore })
-  const hub = createHub()
+  const hub = createHub({ maxClients: envInt('APEX_MAX_STREAMS', process.env.K_SERVICE ? 180 : 2000, { min: 1, max: 100_000 }), maxPerOwner: envInt('APEX_MAX_STREAMS_PER_IP', 6, { min: 1, max: 1000 }) })
   let oddsApiKey = null
   try {
     oddsApiKey = oddsKey() || null
@@ -150,6 +153,48 @@ export function createApexApp({
   const chatHourly = createLimiter({ burst: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }), perSec: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) / 3600 })
   const adminHourly = createLimiter({ burst: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) * 10, perSec: (envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) * 10) / 3600 })
 
+  // A follow-up has to continue an analysis this user actually ran: the server built that
+  // first message, so its fingerprint is remembered for two days and each analysis allows a
+  // limited number of follow-ups. A made-up history can't spend the follow-up allowance.
+  const THREAD_MS = 48 * 3600_000
+  const followupsPerThread = () => envInt('APEX_FOLLOWUPS_PER_ANALYSIS', 10, { min: 1, max: 100 })
+  const fingerprint = (text) => crypto.createHash('sha256').update(String(text)).digest('base64url').slice(0, 22)
+  async function thread(uid, first, start) {
+    const fp = fingerprint(first)
+    let verdict = 'ok'
+    await engineStore.update('chatThreads', uid, (cur) => {
+      verdict = 'ok'
+      const t = Date.now()
+      const list = (cur?.list || []).filter((x) => t - x.at < THREAD_MS)
+      const hit = list.find((x) => x.fp === fp)
+      if (start) {
+        if (hit) return undefined
+        list.push({ fp, at: t, n: 0 })
+      } else if (!hit) {
+        verdict = 'unknown'
+        return undefined
+      } else if (hit.n >= followupsPerThread()) {
+        verdict = 'full'
+        return undefined
+      } else hit.n++
+      return { list: list.slice(-40) }
+    })
+    return verdict
+  }
+  // what a real conversation looks like: the analysis prompt, answers the model wrote (16k
+  // tokens tops), and questions a person typed
+  function followupShapeOk(messages) {
+    if (!Array.isArray(messages) || messages.length < 3 || messages.length > 41) return false
+    let total = 0
+    for (let i = 0; i < messages.length; i++) {
+      const c = typeof messages[i]?.content === 'string' ? messages[i].content : ''
+      total += c.length
+      const cap = i === 0 ? 100_000 : messages[i].role === 'assistant' ? 120_000 : 4_000
+      if (c.length > cap) return false
+    }
+    return total <= 600_000
+  }
+
   async function chatGate(req, res, next) {
     try {
       let user = null
@@ -159,11 +204,18 @@ export function createApexApp({
         if (!atLeast(a.tier, 'pro')) throw new ApiError(402, 'upgrade', 'The AI analyzer is part of Pro and Elite.', { need: 'pro', plan: a.tier, status: a.ent.status })
         user = a.user
         const kind = req.body?.game ? 'analyses' : 'followups'
-        // a follow-up continues an analysis: at least question, answer, next question
-        if (kind === 'followups' && !(Array.isArray(req.body?.messages) && req.body.messages.length >= 3)) throw new ApiError(400, 'bad_followup', 'Start with a game analysis, then ask follow-ups.')
+        const parsed = parseChatBody(req)
+        if (!parsed.ok) throw new ApiError(parsed.status, 'bad_request', parsed.error)
+        if (kind === 'followups') {
+          if (!followupShapeOk(req.body?.messages)) throw new ApiError(400, 'bad_followup', 'Start with a game analysis, then ask follow-ups. Keep each question under 4,000 characters.')
+          const v = await thread(user.uid, parsed.messagesForApi[0].content, false)
+          if (v === 'unknown') throw new ApiError(400, 'bad_followup', 'Follow-ups continue an analysis you ran in the last two days. Start a new analysis first.')
+          if (v === 'full') throw new ApiError(429, 'thread_full', `That analysis has had its ${followupsPerThread()} follow-ups. Start a new one to keep going.`)
+        }
         const u = await billing.useQuota(user, a.ent, kind)
         if (u.limit != null) res.setHeader('X-Apex-Usage', `${u.used}/${u.limit}`)
         req.apexQuota = { kind, user }
+        if (kind === 'analyses') await thread(user.uid, parsed.messagesForApi[0].content, true)
       } else if (authMode() !== 'optional') {
         user = await auth.authenticate(req)
         if (!(await auth.inviteVerified(user))) throw new ApiError(403, 'invite', 'Redeem an invite code to use the AI analyzer.')
@@ -227,6 +279,15 @@ export function createApexApp({
   app.post('/', chatGate, chatOnce)
 
   // ---- multi-sport odds endpoints from the original app ----------------------------------------
+  // Paid upstream calls come out of their own daily credit pool (APEX_ODDS_ANALYZER_DAILY_CREDITS),
+  // separate from the NFL board's, and each address gets a modest request rate.
+  setOddsBudget(async (cost) => (await takeOddsCredits(engineStore, cost, { pool: 'analyzer', daily: envInt('APEX_ODDS_ANALYZER_DAILY_CREDITS', 500, { min: 0, max: 1_000_000 }) })).ok)
+  const oddsLimit = createLimiter({ burst: 40, perSec: 0.5 })
+  app.use('/api/odds', (req, res, next) => {
+    const t = oddsLimit.take(clientIp(req))
+    if (t.ok) return next()
+    res.set('Retry-After', String(t.retryAfter)).set('Cache-Control', 'no-store').status(429).json({ error: 'Too many requests. Slow down a moment.', code: 'rate' })
+  })
   const odds = () => oddsKey()
   app.get('/api/odds/events', (req, res) => void handleOddsEventsRequest(req, res, odds()))
   app.get('/api/odds/upcoming', (req, res) => void handleOddsUpcomingRequest(req, res, odds()))
@@ -237,21 +298,36 @@ export function createApexApp({
   registerAdminSportsRoutes(app, { getAdminKey: adminKey, getFirestore })
 
   // Picks pages with a preview card of their own (see src/picks/og.js).
+  // The public address for preview cards: APEX_PUBLIC_SITE_URL, else the Hosting domain the
+  // request came through when it's one of ours (this project's web.app / firebaseapp.com, or an
+  // APEX_ALLOWED_ORIGINS entry), else this project's web.app. A forged header can't point a
+  // card at someone else's site.
+  function publicSite(req) {
+    if (process.env.APEX_PUBLIC_SITE_URL) return process.env.APEX_PUBLIC_SITE_URL.replace(/\/$/, '')
+    const project = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || ''
+    const known = new Set(String(process.env.APEX_ALLOWED_ORIGINS || '').split(',').map((o) => o.trim().replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase()).filter(Boolean))
+    if (project) {
+      known.add(`${project}.web.app`)
+      known.add(`${project}.firebaseapp.com`)
+    }
+    const host = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim().toLowerCase()
+    if (host && known.has(host)) return `https://${host}`
+    return project ? `https://${project}.web.app` : ''
+  }
+  const previewLimit = createLimiter({ burst: 60, perSec: 2 })
   app.get('/u/:handle', async (req, res, next) => {
     const html = indexHtml()
     if (!html) return next()
     let out = html
-    try {
-      const view = await picks.page(req.params.handle)
-      // the public address: configured, or the Hosting domain the request came through (only
-      // names we serve, so a forged header can't point the card somewhere else)
-      const host = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim().toLowerCase()
-      const allowed = String(process.env.APEX_ALLOWED_ORIGINS || '').split(',').map((o) => o.trim().replace(/^https?:\/\//, '').toLowerCase())
-      const known = /^[a-z0-9-]+\.(web\.app|firebaseapp\.com)$/.test(host) || allowed.includes(host)
-      const site = process.env.APEX_PUBLIC_SITE_URL || (known ? `https://${host}` : '')
-      if (site) out = renderUserHead(html, view, site.replace(/\/$/, ''))
-    } catch {
-      /* unknown handle: the app shows its own not-found */
+    // past the limit the page still loads, just without its own card (no database reads)
+    if (previewLimit.take(clientIp(req)).ok) {
+      try {
+        const view = await picks.page(req.params.handle)
+        const site = publicSite(req)
+        if (site) out = renderUserHead(html, view, site)
+      } catch {
+        /* unknown handle: the app shows its own not-found */
+      }
     }
     res.set('Cache-Control', 'public, max-age=60, s-maxage=300').type('html').send(out)
   })

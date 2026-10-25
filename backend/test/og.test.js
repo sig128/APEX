@@ -33,26 +33,38 @@ test('link preview: name, record and links, escaped, generic tags replaced', () 
 test('route: /u/:handle serves the app with its own card when the build is present', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'apex-web-'))
   fs.writeFileSync(path.join(dir, 'index.html'), HTML)
+  const saved = { idx: process.env.APEX_WEB_INDEX, proj: process.env.GCLOUD_PROJECT, site: process.env.APEX_PUBLIC_SITE_URL }
   process.env.APEX_WEB_INDEX = path.join(dir, 'index.html')
+  process.env.GCLOUD_PROJECT = 'apex-test'
+  delete process.env.APEX_PUBLIC_SITE_URL
   process.env.APEX_LOG_LEVEL = 'error'
   const { createApexApp } = await import(`../app.js?og=${Date.now()}`)
   const { createStore } = await import('../src/lib/store.js')
   const { fixtureHttp } = await import('./helpers.js')
   const { serve, clock } = await import('./support.js')
   const made = createApexApp({ engineMode: 'lazy', http: fixtureHttp().http, store: createStore({ driver: 'memory' }), now: clock() })
-  await made.picks.saveProfile({ uid: 'u1', email: 'a@b.c', name: 'Pat' }, { handle: 'pat_picks', name: 'Pat' })
   const api = await serve(made.app)
-  const r = await api.get('/u/pat_picks', { headers: { 'x-forwarded-host': 'apex-test.web.app' } })
-  assert.equal(r.status, 200)
-  assert.match(r.headers.get('content-type'), /html/)
-  assert.match(r.text, /<title>Pat \(@pat_picks\) on APEX<\/title>/)
-  assert.match(r.text, /https:\/\/apex-test.web.app\/u\/pat_picks/)
-  const forged = await api.get('/u/pat_picks', { headers: { 'x-forwarded-host': 'evil.example.com' } })
-  assert.ok(!forged.text.includes('evil.example.com'), 'a forged host never reaches the card')
-  const missing = await api.get('/u/nobody_here')
-  assert.equal(missing.status, 200, 'unknown handles still get the app, which shows its own not-found')
-  assert.match(missing.text, /<title>APEX NFL<\/title>/)
-  await api.close()
-  made.engine.stop()
-  delete process.env.APEX_WEB_INDEX
+  try {
+    await made.picks.saveProfile({ uid: 'u1', email: 'a@b.c', name: 'Pat' }, { handle: 'pat_picks', name: 'Pat' })
+    const r = await api.get('/u/pat_picks', { headers: { 'x-forwarded-host': 'apex-test.firebaseapp.com' } })
+    assert.equal(r.status, 200)
+    assert.match(r.headers.get('content-type'), /html/)
+    assert.match(r.text, /<title>Pat \(@pat_picks\) on APEX<\/title>/)
+    assert.match(r.text, /https:\/\/apex-test.firebaseapp.com\/u\/pat_picks/, 'this project’s own domains are used as asked')
+    const forged = await api.get('/u/pat_picks', { headers: { 'x-forwarded-host': 'evil.example.com' } })
+    assert.ok(!forged.text.includes('evil.example.com'), 'a forged host never reaches the card')
+    assert.match(forged.text, /https:\/\/apex-test.web.app\/u\/pat_picks/, 'it falls back to this project’s web.app')
+    const otherSite = await api.get('/u/pat_picks', { headers: { 'x-forwarded-host': 'someone-else.web.app' } })
+    assert.ok(!otherSite.text.includes('someone-else'), 'anyone can have a web.app site; only ours count')
+    const missing = await api.get('/u/nobody_here')
+    assert.equal(missing.status, 200, 'unknown handles still get the app, which shows its own not-found')
+    assert.match(missing.text, /<title>APEX NFL<\/title>/)
+  } finally {
+    await api.close()
+    made.engine.stop()
+    for (const [k, v] of [['APEX_WEB_INDEX', saved.idx], ['GCLOUD_PROJECT', saved.proj], ['APEX_PUBLIC_SITE_URL', saved.site]]) {
+      if (v === undefined) delete process.env[k]
+      else process.env[k] = v
+    }
+  }
 })

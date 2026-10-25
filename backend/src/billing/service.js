@@ -18,14 +18,18 @@ export const atLeast = (plan, need) => (PLAN_RANK[plan] ?? 0) >= (PLAN_RANK[need
 
 /**
  * New period end after buying `planId` at time `at`:
- * lapsed or new -> now + period; same plan -> extend; switching -> now + period + the unused
- * time of the old plan converted at the price ratio. periodMs 'lifetime' = never expires.
+ * new or long lapsed -> now + period; same plan -> extend; switching -> now + period + the
+ * unused time of the old plan converted at the price ratio; renewing during the grace week
+ * -> the new period starts where the old one ended (the grace days were used, not free).
+ * periodMs 'lifetime' = never expires.
  */
 export function applyPurchase(sub, planId, at, cfg, periodMs = cfg.periodDays * DAY_MS) {
   if (periodMs === 'lifetime') return { plan: planId, paidUntil: LIFETIME, lifetime: true }
   // a revoked pass gives no credit toward the next one
   const active = sub && sub.plan && !sub.revoked && sub.paidUntil > at ? sub : null
   if (active?.lifetime) return { plan: atLeast(active.plan, planId) ? active.plan : planId, paidUntil: LIFETIME, lifetime: true }
+  const inGrace = !active && sub && sub.plan && !sub.revoked && !sub.lifetime && at < sub.paidUntil + cfg.graceDays * DAY_MS
+  if (inGrace) return { plan: planId, paidUntil: Math.max(sub.paidUntil + periodMs, at + DAY_MS), lifetime: false }
   if (!active) return { plan: planId, paidUntil: at + periodMs, lifetime: false }
   if (active.plan === planId) return { plan: planId, paidUntil: active.paidUntil + periodMs, lifetime: false }
   const oldPrice = cfg.plans[active.plan]?.priceUsd || 0

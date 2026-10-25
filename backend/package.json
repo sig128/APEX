@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test --test-concurrency=4 test/*.test.js",
+    "test": "node --test --test-concurrency=4 --test-timeout=180000 test/*.test.js",
     "check": "node scripts/nfl-check.mjs"
   },
   "dependencies": {
