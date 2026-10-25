@@ -314,9 +314,27 @@ export function createApexApp({
     if (host && known.has(host)) return `https://${host}`
     return project ? `https://${project}.web.app` : ''
   }
+  // Without a bundled copy (a functions-only deploy that skipped the build), borrow the live
+  // site's index.html from Hosting, which serves it as a plain file.
+  let remoteIndex = { at: 0, html: null }
+  async function siteIndex(req) {
+    const local = indexHtml()
+    if (local) return local
+    if (remoteIndex.html && Date.now() - remoteIndex.at < 10 * 60_000) return remoteIndex.html
+    const site = publicSite(req)
+    if (!site) return null
+    try {
+      const r = await fetch(`${site}/index.html`, { signal: AbortSignal.timeout(5000) })
+      const html = r.ok ? await r.text() : null
+      if (html && /<html/i.test(html)) remoteIndex = { at: Date.now(), html }
+    } catch {
+      /* keep whatever we had */
+    }
+    return remoteIndex.html
+  }
   const previewLimit = createLimiter({ burst: 60, perSec: 2 })
   app.get('/u/:handle', async (req, res, next) => {
-    const html = indexHtml()
+    const html = await siteIndex(req)
     if (!html) return next()
     let out = html
     // past the limit the page still loads, just without its own card (no database reads)

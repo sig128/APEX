@@ -9,7 +9,7 @@
     "sync:functions": "node scripts/sync-functions.mjs",
     "deploy": "npm run build && firebase deploy",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
-    "deploy:functions": "firebase deploy --only functions",
+    "deploy:functions": "npm run build && firebase deploy --only functions",
     "deploy:rules": "firebase deploy --only firestore"
   },
   "devDependencies": {
