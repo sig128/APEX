@@ -24,7 +24,7 @@ export function parsePropId(id) {
   const team = subject.startsWith('t')
   if (team !== Boolean(market === 'teamPts')) return null
   const line = Number(lineStr)
-  if (!Number.isFinite(line) || line < -100 || line > MAX_LINE) return null
+  if (!Number.isFinite(line) || line < 0 || line > MAX_LINE) return null
   if (Math.round(line * 4) !== line * 4) return null
   if (mk.oneSided && (side !== 'o' || line !== mk.fixedLine)) return null
   return { id: propId(subject, market, side, line), subject, playerId: team ? null : subject, teamId: team ? subject.slice(1) : null, market, side, line }
@@ -155,6 +155,28 @@ export function modelProb(proj, market, line) {
   const mk = marketOf(market)
   if (mk?.dist === 'poisson') return poissonAtLeast(proj.lambda, Math.floor(line) + 1)
   return normalOver(proj.mean, proj.sd, line)
+}
+
+/**
+ * What the market would say about a line it didn't price. A posted main line without a price
+ * is close to a coin flip, so center the model's spread on it and read off the other line.
+ */
+export function marketAnchor(proj, market, mainLine, line) {
+  if (!proj || !Number.isFinite(mainLine) || !Number.isFinite(line)) return null
+  const mk = marketOf(market)
+  if (mk?.dist === 'poisson') {
+    const k = Math.floor(mainLine) + 1
+    let lo = 0.001
+    let hi = Math.max(2, mainLine * 3 + 6)
+    for (let i = 0; i < 48; i++) {
+      const mid = (lo + hi) / 2
+      if (poissonAtLeast(mid, k) < 0.5) lo = mid
+      else hi = mid
+    }
+    return poissonAtLeast((lo + hi) / 2, Math.floor(line) + 1)
+  }
+  if (!(proj.sd > 0)) return null
+  return normalOver(mainLine, proj.sd, line)
 }
 
 /**

@@ -300,6 +300,12 @@ function PostPick({ open, onClose, legs, mode }) {
       setState({ busy: false, err: null, done: null })
     }
   }, [open, mode])
+  // legs the server turned down that are still on the slip
+  const bad = (state.err?.body?.legs || []).filter((b) => legs.some((l) => l.id === b.id))
+  const blocked = bad.length > 0
+  useEffect(() => {
+    if (state.err?.body?.legs?.length && !bad.length) setState((x) => ({ ...x, err: null }))
+  }, [state.err, bad.length])
   const submit = async (e) => {
     e.preventDefault()
     setState({ busy: true, err: null, done: null })
@@ -353,7 +359,7 @@ function PostPick({ open, onClose, legs, mode }) {
             <span>Note (optional)</span>
             <textarea maxLength={280} rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why you like it" />
           </label>
-          {state.err && (
+          {state.err && !bad.length && (
             <p className="form-err" role="alert">
               {state.err.message}
               {state.err.code === 'no_profile' && (
@@ -366,15 +372,30 @@ function PostPick({ open, onClose, legs, mode }) {
               )}
             </p>
           )}
+          {bad.length > 0 && (
+            <div className="form-err" role="alert">
+              <p>{bad.length === 1 ? 'This leg can’t go on a record:' : `These ${bad.length} legs can’t go on a record:`}</p>
+              <ul className="bad-legs">
+                {bad.map((b) => (
+                  <li key={b.id}>
+                    <span>{b.error}</span>
+                    <button type="button" className="btn btn--quiet btn--s" onClick={() => removeLeg(b.id)}>
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="row">
-            <button type="submit" className="btn btn--gold" disabled={state.busy}>
+            <button type="submit" className="btn btn--gold" disabled={state.busy || blocked || !legs.length}>
               {state.busy ? 'Posting' : 'Post pick'}
             </button>
             <button type="button" className="btn btn--quiet" onClick={onClose}>
               Cancel
             </button>
           </div>
-          <p className="muted small">Records are graded at the market price when you post (or -110 when no price is listed), not the odds you typed, so every record is scored the same way. You can delete a pick until kickoff.</p>
+          <p className="muted small">Only lines a sportsbook posted count, graded at the price it posted when you post (main lines with no listed price grade at -110), not the odds you typed, so every record is scored the same way. You can delete a pick until kickoff.</p>
         </form>
       )}
     </Dialog>

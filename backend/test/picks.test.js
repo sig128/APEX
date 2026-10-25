@@ -120,25 +120,29 @@ test('profiles: handles, reserved names, socials only show for Elite', async () 
   await rejectsWith(picks.page('../etc'), 'not_found')
 })
 
+// two-sided main lines: postable with or without a price
+const mainLines = () => engine.views.game(GAME).props.filter((p) => p.kind === 'player' && !p.oneSided && p.posted === 'main')
+
 test('posting: frozen prices, limits, duplicates, conflicts, kickoff lock', async () => {
-  const g = engine.views.game(GAME)
-  const ids = g.props.filter((p) => p.kind === 'player').map((p) => p.id)
+  const two = mainLines()
+  const ids = two.map((p) => p.id)
   await rejectsWith(picks.post({ uid: 'u_nobody' }, { legs: [ids[0]] }), 'no_profile')
   await rejectsWith(picks.post(free, { legs: [] }), 'bad_legs')
   await rejectsWith(picks.post(free, { legs: ids.slice(0, 7) }), 'bad_legs')
   await rejectsWith(picks.post(free, { legs: [ids[0], ids[0]] }), 'dup_legs')
   await rejectsWith(picks.post(free, { legs: ['1.passYds.o.250.5'] }), 'no_prop')
   await rejectsWith(picks.post(free, { legs: ['junk'] }), 'bad_leg')
-  const p = g.props[0]
+  const p = two[0]
   const flip = `${p.playerId}.${p.market}.${p.side === 'o' ? 'u' : 'o'}.${p.line}`
-  if (!p.oneSided) await rejectsWith(picks.post(free, { legs: [p.id, flip] }), 'conflict')
+  await rejectsWith(picks.post(free, { legs: [p.id, flip] }), 'conflict')
   const out = await picks.post(free, { legs: [ids[0], ids[1]], units: 2.34, note: 'two-leg special' })
   assert.equal(out.picks.length, 1)
   const pk = out.picks[0]
   assert.equal(pk.units, 2.3)
   assert.equal(pk.legs.length, 2)
   assert.equal(pk.locked, false)
-  assert.equal(pk.legs[0].prob, g.props[0].prob, 'the APEX read is frozen at posting time')
+  assert.equal(pk.legs[0].prob, two[0].prob, 'the APEX read is frozen at posting time')
+  assert.equal(pk.legs[0].posted, undefined, 'internal fields stay private')
   assert.ok(Number.isInteger(pk.price))
   await rejectsWith(picks.post(free, { legs: [ids[1], ids[0]] }), 'dup_pick')
   const sep = await picks.post(free, { legs: ids.slice(2, 5), mode: 'separate' })
@@ -156,9 +160,74 @@ test('posting: frozen prices, limits, duplicates, conflicts, kickoff lock', asyn
   await rejectsWith(picks.remove(elite, sep.picks[1].id), 'not_found')
 })
 
+test('only lines a sportsbook posted go on a record, at prices it posted', async () => {
+  const wh = engine.wh
+  const t = now()
+  const r = mainLines().find((p) => p.line >= 40)
+  const subject = r.playerId
+  // made-up lines: the attack from the security review
+  await rejectsWith(picks.post(free, { legs: [`${subject}.${r.market}.o.-0.5`] }), 'bad_leg')
+  await rejectsWith(picks.post(free, { legs: [`${subject}.${r.market}.u.800`] }), 'not_posted')
+  const custom = `${subject}.${r.market}.o.${r.line - 7}`
+  await assert.rejects(picks.post(free, { legs: [custom] }), (e) => e.code === 'not_posted' && e.message.includes(String(r.line)), 'names the posted line')
+  // a stat with no posted line for this player at all
+  const unposted = ['passYds', 'rushYds', 'recYds', 'rec'].find((m) => m !== r.market && !(wh.lines.get(GAME).props || []).some((l) => l.athleteId === subject && l.market === m) && engine.views.findProp(`${subject}.${m}.o.0.5`))
+  if (unposted) await rejectsWith(picks.post(free, { legs: [`${subject}.${unposted}.o.0.5`] }), 'not_posted')
+
+  // an alternate line: only with a sportsbook price for that exact line
+  const lines = wh.lines.get(GAME)
+  const entry = lines.props.find((l) => l.athleteId === subject && l.market === r.market)
+  const saved = entry.alts
+  const altLine = r.line - 10
+  entry.alts = [altLine]
+  wh.bump('core')
+  const altId = `${subject}.${r.market}.o.${altLine}`
+  assert.equal(engine.views.findProp(altId).posted, 'alt')
+  await rejectsWith(picks.post(free, { legs: [altId] }), 'no_price')
+  const savedPrices = wh.prices
+  wh.prices = new Map([[`${subject}:${r.market}:${altLine}`, { over: -240, under: 185, book: 'draftkings' }]])
+  wh.bump('core')
+  const alt = (await picks.post(free, { legs: [altId], units: 1 })).picks[0]
+  assert.equal(alt.legs[0].price, -240, 'graded at the price the book posted')
+  assert.equal(alt.legs[0].book, 'draftkings')
+  assert.equal(alt.price, -240)
+
+  // the alternate's read leans on the main line, not on a coin flip
+  const altRow = engine.views.findProp(`${subject}.${r.market}.o.${Math.max(0.5, altLine - 20)}`)
+  const mainOver = engine.views.findProp(`${subject}.${r.market}.o.${r.line}`)
+  assert.ok(altRow.prob > mainOver.prob, `${altRow.prob} vs ${mainOver.prob}`)
+
+  // anytime TD: needs its yes price
+  const td = engine.views.game(GAME).props.find((p) => p.market === 'anyTd' && p.kind === 'player')
+  if (td) {
+    wh.prices = new Map()
+    wh.bump('core')
+    await rejectsWith(picks.post(free, { legs: [td.id] }), 'no_price')
+    wh.prices = new Map([[`${td.playerId}:anyTd:0.5`, { yes: 135, book: 'fanduel' }]])
+    wh.bump('core')
+    const tp = (await picks.post(free, { legs: [td.id] })).picks[0]
+    assert.equal(tp.legs[0].price, 135)
+  }
+
+  // a main line without a price is fine and grades at -110
+  wh.prices = new Map()
+  wh.bump('core')
+  const plain = (await picks.post(free, { legs: [mainLines()[7].id] })).picks[0]
+  assert.equal(plain.legs[0].price, null)
+  assert.equal(plain.price, -110)
+
+  // put everything back and take these picks off the page so the counts below hold
+  entry.alts = saved
+  wh.prices = savedPrices
+  wh.bump('core')
+  for (const pk of [alt, plain]) await picks.remove(free, pk.id)
+  const tdPick = (await picks.page('freefan', { viewer: free })).open.find((p) => p.legs[0].market === 'anyTd')
+  if (tdPick) await picks.remove(free, tdPick.id)
+  now.set(t)
+})
+
 test('feed and hidden pages: Elite only, hidden pages disappear', async () => {
-  const g = engine.views.game(GAME)
-  const ids = g.props.filter((p) => p.kind === 'player').map((p) => p.id)
+  const ids = mainLines().map((p) => p.id)
   await picks.post(elite, { legs: ids.slice(0, 6), mode: 'separate', units: 1 })
   now.add(25_000) // past the feed memo
   const feed = await picks.feed()

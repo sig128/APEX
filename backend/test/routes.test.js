@@ -231,7 +231,7 @@ test('buying a pass with USDC: invoice, transfer, confirm, Elite unlocked', asyn
 })
 
 test('picks: pages for everyone, showcase for Elite', async () => {
-  const props = (await api.get('/api/nfl/games/401873020')).body.props.filter((p) => p.kind === 'player')
+  const props = (await api.get('/api/nfl/games/401873020')).body.props.filter((p) => p.kind === 'player' && !p.oneSided && p.posted === 'main')
   assert.equal((await api.post('/api/picks', { legs: [props[0].id] })).status, 401)
   const noPage = await api.post('/api/picks', { legs: [props[0].id] }, { headers: bearer('u_elite') })
   assert.equal(noPage.body.code, 'no_profile')

@@ -1,7 +1,7 @@
 // Prop rows: everything a card needs (hit rates, APEX probability and score, fair odds,
 // matchup, injury boosts, line moves), plus parlays and cheatsheets built from them.
 import { MARKETS, marketOf, propLabel, shortLabel, POS_GROUP } from '../markets.js'
-import { marketRows, windows, bestWindow, apexOverProb, apexScore, fairOdds, propId, streakOf, outcome, summarize } from './core.js'
+import { marketRows, windows, bestWindow, apexOverProb, apexScore, fairOdds, propId, streakOf, outcome, summarize, marketAnchor } from './core.js'
 import { matchupFor, ordinal } from './defense.js'
 import { injurySeverity } from '../../providers/espn/normalize.js'
 import { noVig, americanToProb } from '../../lib/odds.js'
@@ -84,13 +84,15 @@ export function lineFit(avg, line, side, oneSided) {
  * Pull the estimate 40% of the way back to the market (the no-vig price when we have one,
  * else even money). One-sided markets (anytime TD) lean on the count model instead.
  */
-export function calibrate(raw, { implied = null, oneSided = false, model = null, keep = 0.6 } = {}) {
+export function calibrate(raw, { implied = null, anchor = null, oneSided = false, model = null, keep = 0.6 } = {}) {
   if (oneSided) {
-    const anchor = implied ?? model ?? raw
-    return clamp(anchor + (raw - anchor) * keep, 0.02, 0.97)
+    const a = implied ?? model ?? raw
+    return clamp(a + (raw - a) * keep, 0.02, 0.97)
   }
-  const anchor = implied ?? 0.5
-  return clamp(anchor + (raw - anchor) * keep, 0.03, 0.97)
+  // a price beats everything; an alternate line leans on where the main line sits; a posted
+  // main line without a price is even money
+  const a = implied ?? anchor ?? 0.5
+  return clamp(a + (raw - a) * keep, 0.03, 0.97)
 }
 
 function priceFor(ctx, playerId, market, line) {
@@ -139,7 +141,15 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
   } else if (price && price.yes != null) {
     implied = americanToProb(price.yes)
   }
-  const p = calibrate(raw, { implied, oneSided: mk.oneSided, model: s === 'o' ? prob.pModel : 1 - prob.pModel })
+  // Lines other than the posted main one: anchor on the main line (or, with nothing posted,
+  // on the model) instead of even money, or alternates get dragged toward 50%.
+  const main = Number.isFinite(meta.main) ? meta.main : null
+  let anchor = null
+  if (!mk.oneSided && implied == null && line !== main) {
+    const over = main != null ? marketAnchor(prob.proj, market, main, line) : prob.pModel
+    if (over != null) anchor = s === 'o' ? over : 1 - over
+  }
+  const p = calibrate(raw, { implied, anchor, oneSided: mk.oneSided, model: s === 'o' ? prob.pModel : 1 - prob.pModel })
   const edge = implied != null ? p - implied : 0
   const ws = windows(rows, line, s, {
     season: ctx.season,
@@ -199,6 +209,9 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
     boost,
     move,
     alts: meta.alts || [],
+    main,
+    // 'main' and 'alt' are lines a sportsbook posted; null is a line typed in for research
+    posted: main == null ? null : line === main ? 'main' : (meta.alts || []).includes(line) ? 'alt' : null,
     book: meta.book || null,
     price: price ? { over: price.over ?? null, under: price.under ?? null, yes: price.yes ?? null, book: price.book || null, books: price.books || null } : null,
     implied: implied != null ? round(implied, 4) : null,
@@ -220,7 +233,13 @@ export function buildTeamRow({ team, market = 'teamPts', line, side, game, sched
   const emp = (hitsO + pOverModel * 3) / (nO + 3)
   const pOver = clamp(0.55 * emp + 0.45 * pOverModel, 0.02, 0.98)
   const s = side || (pOver >= 0.5 ? 'o' : 'u')
-  const p = calibrate(s === 'o' ? pOver : 1 - pOver)
+  const main = Number.isFinite(meta.main) ? meta.main : null
+  let anchor = null
+  if (line !== main) {
+    const over = main != null ? normalOver(main, sdv, line) : pOverModel
+    anchor = s === 'o' ? over : 1 - over
+  }
+  const p = calibrate(s === 'o' ? pOver : 1 - pOver, { anchor })
   const isHome = game ? game.home?.id === team.id : null
   const opp = game ? (isHome ? game.away : game.home) : null
   const ws = windows(rows, line, s, { season: ctx.season, lastSeason: ctx.lastSeason, oppId: opp?.id, oppAbbr: opp?.abbr, home: isHome })
@@ -258,6 +277,9 @@ export function buildTeamRow({ team, market = 'teamPts', line, side, game, sched
     streak: streakOf(rows.map((r) => r.v), line, s),
     recent: rows.slice(-20).map((r) => ({ v: r.v, date: r.date, opp: r.oppAbbr, home: r.home, id: r.eventId, o: outcome(r.v, line, s) })),
     move: meta.open != null && meta.open !== line ? { open: meta.open, delta: round(line - meta.open, 1) } : null,
+    alts: meta.alts || [],
+    main,
+    posted: main == null ? null : line === main ? 'main' : (meta.alts || []).includes(line) ? 'alt' : null,
     updated: meta.updated || null,
   }
 }

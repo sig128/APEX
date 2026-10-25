@@ -77,7 +77,7 @@ test('billing and picks on Firestore, and every query has its index', async () =
   const engine = await fullEngine({ now })
   const picks = createPicks({ docs, engine, billing, now })
   await picks.saveProfile(user, { handle: 'fire_store', x: 'firestore' })
-  const ids = engine.views.game('401873020').props.slice(0, 2).map((p) => p.id)
+  const ids = engine.views.game('401873020').props.filter((p) => !p.oneSided && p.posted === 'main').slice(0, 2).map((p) => p.id)
   await picks.post(user, { legs: ids })
   assert.equal((await picks.page('fire_store')).open.length, 1)
   now.add(25_000)

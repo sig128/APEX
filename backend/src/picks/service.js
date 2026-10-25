@@ -217,7 +217,7 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
       price: p.price,
       profit: p.profit ?? null,
       note: p.note || '',
-      legs: p.legs.map((l) => ({ id: l.id, playerId: l.playerId || null, teamId: l.teamId || null, name: l.name, short: l.short, headshot: l.headshot || null, teamAbbr: l.teamAbbr, oppAbbr: l.oppAbbr, market: l.market, label: l.label, line: l.line, side: l.side, kickoff: l.kickoff, price: l.price, prob: l.prob, fair: l.fair, score: l.score, result: l.result || null, value: l.value ?? null, gameId: l.gameId })),
+      legs: p.legs.map((l) => ({ id: l.id, playerId: l.playerId || null, teamId: l.teamId || null, name: l.name, short: l.short, headshot: l.headshot || null, teamAbbr: l.teamAbbr, oppAbbr: l.oppAbbr, market: l.market, label: l.label, line: l.line, side: l.side, kickoff: l.kickoff, price: l.price, book: l.book || null, prob: l.prob, fair: l.fair, score: l.score, result: l.result || null, value: l.value ?? null, gameId: l.gameId })),
     }
   }
 
@@ -318,6 +318,16 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     const kick = Date.parse(g.date)
     if (g.status.state !== 'pre' || !(kick - now() > 60_000)) throw new ApiError(400, 'started', `${g.shortName} has started, so picks on it are locked.`)
     const price = row.side === 'u' ? row.price?.under : row.oneSided ? row.price?.yes : row.price?.over
+    // A record only means something on lines a sportsbook actually offered, at prices it
+    // actually offered. Main lines without a price grade at -110 (books set them near even
+    // money); alternates and anytime-TD style props swing too far from that to guess.
+    const who = `${row.short || row.name} ${row.label}`
+    if (row.posted == null) {
+      throw new ApiError(400, 'not_posted', row.main != null ? `${who} isn’t a line a sportsbook posted, so it can’t go on a record. The posted line is ${row.main}.` : `${who}: no sportsbook has posted this one, so it can’t go on a record.`)
+    }
+    if (!Number.isFinite(price) && (row.posted === 'alt' || row.oneSided)) {
+      throw new ApiError(400, 'no_price', row.oneSided ? `${who} has no sportsbook price yet, so it can’t be graded fairly. Try again closer to kickoff.` : `${who} is an alternate line with no sportsbook price, so it can’t be graded fairly. The main line is ${row.main}.`)
+    }
     return {
       id: row.id,
       playerId: row.playerId || null,
@@ -334,6 +344,8 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
       gameId: g.id,
       kickoff: kick,
       price: Number.isFinite(price) ? price : null,
+      book: Number.isFinite(price) ? row.price?.book || null : null,
+      posted: row.posted,
       prob: row.prob,
       fair: row.fair,
       score: row.score,
@@ -347,7 +359,22 @@ export function createPicks({ docs, engine, billing, now = () => Date.now() }) {
     const ids = Array.isArray(body.legs) ? body.legs.map(String) : []
     if (!ids.length || ids.length > MAX_LEGS) throw new ApiError(400, 'bad_legs', `Pick 1 to ${MAX_LEGS} props.`)
     if (new Set(ids).size !== ids.length) throw new ApiError(400, 'dup_legs', 'The same prop is in there twice.')
-    const legs = ids.map(legFrom)
+    // check every leg so the slip can show all the problems at once
+    const legs = []
+    const problems = []
+    for (const id of ids) {
+      try {
+        legs.push(legFrom(id))
+      } catch (e) {
+        if (!(e instanceof ApiError)) throw e
+        problems.push({ id, code: e.code, error: e.message, status: e.status })
+      }
+    }
+    if (problems.length) {
+      const [first] = problems
+      const msg = problems.length === 1 ? first.error : `${problems.length} of these legs can’t go on a record. ${first.error}`
+      throw new ApiError(first.status, first.code, msg, { legs: problems.map(({ id, code, error }) => ({ id, code, error })) })
+    }
     const players = legs.map((l) => `${l.playerId || l.teamId}:${l.market}`)
     if (new Set(players).size !== players.length) throw new ApiError(400, 'conflict', 'Two picks on the same player and stat cancel out. Keep one.')
     const separate = body.mode === 'separate' && legs.length > 1

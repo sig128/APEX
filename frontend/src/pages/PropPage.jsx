@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useApi, mutate } from '../lib/useApi.js'
 import { useLive } from '../lib/live.js'
 import { useTitle } from '../lib/hooks.js'
-import { pct, odds, kickoff, num, clock, decimalOf, parseOdds } from '../lib/format.js'
+import { pct, odds, kickoff, num, clock, decimalOf, parseOdds, bookName } from '../lib/format.js'
 import { kellyFraction } from '../lib/kelly.js'
 import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
@@ -145,15 +145,19 @@ export function PropPage() {
             )}
             {p.move && (
               <div>
-                <dt>Line move</dt>
+                <dt>Opened at</dt>
                 <dd className="num">
-                  {p.move.open} to {p.line}
+                  {p.move.open}
+                  <span className="fact-delta">
+                    {p.move.delta > 0 ? '+' : ''}
+                    {p.move.delta}
+                  </span>
                 </dd>
               </div>
             )}
             {p.price && (
               <div>
-                <dt>{p.price.book || 'Book'}</dt>
+                <dt>{bookName(p.price.book) || 'Book'}</dt>
                 <dd className="num">{odds(p.side === 'u' ? p.price.under : p.oneSided ? p.price.yes : p.price.over)}</dd>
               </div>
             )}

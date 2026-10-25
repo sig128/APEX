@@ -515,6 +515,31 @@
   color: var(--turf);
   margin: 0;
 }
+div.form-err p {
+  margin: 0 0 8px;
+}
+.bad-legs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.bad-legs li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-s);
+  background: var(--flag-dim);
+  color: var(--chalk);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.bad-legs li .btn {
+  flex: none;
+}
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.92em;
@@ -2031,8 +2056,13 @@ code {
 .prop-read__facts {
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
   gap: 8px;
+}
+.fact-delta {
+  margin-left: 6px;
+  font-size: 14px;
+  color: var(--chalk-2);
 }
 .prop-read__facts div {
   padding: 8px 10px;
