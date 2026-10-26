@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useWatch } from '../lib/watch.js'
 import { useApi } from '../lib/useApi.js'
@@ -23,11 +23,22 @@ const SORTS = [
   { key: 'move', label: 'Line move' },
   { key: 'kickoff', label: 'Kickoff' },
 ]
-const POS = ['QB', 'RB', 'WR', 'TE'].map((k) => ({ key: k, label: k }))
 const FOOTBALL = new Set(['nfl', 'ncaaf'])
+// each league's position groups, until the board's own list arrives
+const pills = (list) => list.map(([key, label]) => ({ key, label }))
+const BASKETBALL = pills([['G', 'Guards'], ['F', 'Forwards'], ['C', 'Centers']])
+const GROUPS = {
+  nfl: pills([['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE']]),
+  nba: BASKETBALL,
+  ncaab: BASKETBALL,
+  wnba: BASKETBALL,
+  nhl: pills([['F', 'Forwards'], ['D', 'Defensemen'], ['G', 'Goalies']]),
+  mlb: pills([['BAT', 'Hitters'], ['SP', 'Starting pitchers']]),
+}
+GROUPS.ncaaf = GROUPS.nfl
 /** Position filters from the league's own groups: QB/RB/WR/TE, guards/forwards/centers, hitters/pitchers. */
 const groupPills = (groups, sport) =>
-  groups?.length ? groups.map((g) => ({ key: g.key, label: FOOTBALL.has(sport) ? g.key : g.label.charAt(0).toUpperCase() + g.label.slice(1) })) : POS
+  groups?.length ? groups.map((g) => ({ key: g.key, label: FOOTBALL.has(sport) ? g.key : g.label.charAt(0).toUpperCase() + g.label.slice(1) })) : GROUPS[sport] || GROUPS.nfl
 const MIN_HIT = [
   { key: '0.6', label: '60%+' },
   { key: '0.7', label: '70%+' },
@@ -72,7 +83,15 @@ export function PropsPage() {
   // a fresh server loads game logs for a few seconds; until then the board polls itself
   // (quickly while it's empty, then slower until the last players are in)
   const [poll, setPoll] = useState(0)
-  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/board?${base}`, { maxAgeMs: 30_000, pollMs: poll })
+  const live = useApi(`${apiOf(sport)}/board?${base}`, { maxAgeMs: 30_000, pollMs: poll })
+  const { error, refresh } = live
+  // this league's last board stays on screen (dimmed) while a new filter loads, so the controls
+  // keep their options and the list doesn't flash empty
+  const lastBoard = useRef({})
+  if (live.data) lastBoard.current[sport] = live.data
+  const data = live.data || lastBoard.current[sport] || null
+  const updating = !live.data && Boolean(data)
+  const loading = live.loading && !data
   const warming = Boolean(data && !data.total && data.pending > 0)
   const [opened] = useState(() => Date.now())
   const nextPoll = !(data?.pending || data?.loading) || Date.now() - opened > 180_000 ? 0 : warming ? 4000 : 10_000
@@ -94,7 +113,9 @@ export function PropsPage() {
     <div className="container page">
       <header className="page-head">
         <h1 className="page-title">Props</h1>
-        <p className="page-sub">{warming ? 'Loading the board' : data ? `${data.total.toLocaleString()} props match` : 'Every player prop on the slate'}</p>
+        <p className="page-sub" aria-live="polite">
+          {warming ? 'Loading the board' : data ? `${data.total.toLocaleString()} props match${updating ? ', updating' : ''}` : 'Every player prop on the slate'}
+        </p>
       </header>
       {phone && (
         <button type="button" className="btn btn--quiet btn--block filters-toggle" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
@@ -171,7 +192,7 @@ export function PropsPage() {
         <Skeleton rows={10} />
       ) : data?.rows?.length ? (
         <>
-          <div className="prop-list">
+          <div className={`prop-list${updating ? ' prop-list--stale' : ''}`} aria-busy={updating}>
             {data.rows.map((c) => (
               <PropRow key={c.id} c={c} win={c.win} showGame />
             ))}

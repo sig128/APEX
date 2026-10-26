@@ -964,6 +964,16 @@ code {
   justify-items: center;
   gap: 8px;
 }
+/* the last board, dimmed, while the next filter's answer loads */
+.prop-list--stale {
+  opacity: 0.45;
+  transition: opacity 0.15s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .prop-list--stale {
+    transition: none;
+  }
+}
 /* a fresh server loading its game logs: the board fills in by itself */
 .warming {
   position: relative;
