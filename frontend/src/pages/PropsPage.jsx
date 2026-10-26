@@ -187,8 +187,23 @@ export function PropsPage() {
         </>
       ) : warming ? (
         <Warming pending={data.pending} />
+      ) : data && data.available === 0 && !q.get('q') ? (
+        <Empty title="No props posted yet">Sportsbooks post player props on game day. They show up here, with every filter, as soon as they do.</Empty>
       ) : (
-        data && <Empty title="No props match these filters">Loosen the hit-rate floor or pick every market.</Empty>
+        data && (
+          <Empty
+            title="No props match these filters"
+            action={
+              active > 0 && (
+                <button type="button" className="btn btn--quiet" onClick={() => setQ(new URLSearchParams(), { replace: true })}>
+                  Clear filters
+                </button>
+              )
+            }
+          >
+            Loosen the hit-rate floor or pick every market.
+          </Empty>
+        )
       )}
     </div>
   )

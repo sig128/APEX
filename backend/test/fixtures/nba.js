@@ -54,6 +54,8 @@ export function nbaFixtures({ now = NOW, players = PLAYERS } = {}) {
   const f = {
     [`${SITE}/scoreboard`]: S.scoreboard,
     [`${SITE}/scoreboard?dates=${etDay(now, 1)}`]: { events: [] },
+    // early in the morning ESPN's own day is still yesterday; then today is asked for by date
+    [`${SITE}/scoreboard?dates=${etDay(now)}`]: { events: [] },
     [`${SITE}/summary?event=${ev.id}`]: { header: { id: ev.id, competitions: [{ id: ev.id, date: ev.date, status: ev.status, competitors: ev.competitions[0].competitors }] }, injuries: [] },
     [`${SITE}/teams`]: { sports: [{ leagues: [{ teams: ev.competitions[0].competitors.map((c) => ({ team: c.team })) }] }] },
     [`${SITE}/teams/13/roster`]: roster('13'),

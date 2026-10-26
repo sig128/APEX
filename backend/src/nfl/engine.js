@@ -61,18 +61,34 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
   }
 
   // ---- tasks ---------------------------------------------------------------------------------
-  /** Week slates are one scoreboard; day slates are today plus tomorrow (late games roll over). */
+  /**
+   * Week slates are one scoreboard. Day slates are ESPN's current day (which keeps last night's
+   * late games until it rolls over), today in Eastern time when that isn't it yet (early in the
+   * morning ESPN still shows yesterday), and tomorrow.
+   */
   async function fetchScoreboard(priority) {
     const today = await espn.scoreboard({}, { priority })
     if (S.calendar !== 'day') return today
-    let next = null
-    try {
-      next = await espn.scoreboard({ dates: etDay(now(), 1) }, { priority: 'background' })
-    } catch (e) {
-      log.warn('next-day scoreboard failed', { sport: S.key, err: errText(e) })
+    const todayKey = etDay(now())
+    const covers = today.games.some((g) => etDay(Date.parse(g.date)) === todayKey)
+    const days = covers ? [etDay(now(), 1)] : [todayKey, etDay(now(), 1)]
+    const more = []
+    for (const d of days) {
+      try {
+        more.push(await espn.scoreboard({ dates: d }, { priority: 'background' }))
+      } catch (e) {
+        log.warn('day scoreboard failed', { sport: S.key, day: d, err: errText(e) })
+      }
     }
     const seen = new Set(today.games.map((g) => g.id))
-    const games = [...today.games, ...(next?.games || []).filter((g) => !seen.has(g.id))]
+    const games = [...today.games]
+    for (const sb of more) {
+      for (const g of sb?.games || []) {
+        if (seen.has(g.id)) continue
+        seen.add(g.id)
+        games.push(g)
+      }
+    }
     // a finished day can drop off once the next one has games
     const t = now()
     const keep = games.filter((g) => g.status.state !== 'post' || t - Date.parse(g.date) < 30 * HOUR)

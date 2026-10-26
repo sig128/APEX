@@ -254,6 +254,8 @@ export function createViews(engine) {
     list = list.slice(offset, offset + limit)
     return {
       total,
+      // props on games still to start, before any filter (0 = nothing posted yet)
+      available: rows.filter((r) => r.kind === kind && wh.games.get(r.gameId)?.status.state === 'pre').length,
       // lines whose players' game logs are still loading (a fresh server fills these in)
       pending,
       offset,

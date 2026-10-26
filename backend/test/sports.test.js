@@ -162,3 +162,25 @@ test('a cold serverless instance: catchUp finishes every game log so the board f
   assert.ok(home.tabs.apex.length > 0, 'the board has props once the logs are in')
   assert.equal(home.counts.pending, 0)
 })
+
+test('early morning: ESPN still shows yesterday, so today is fetched by date', async () => {
+  // 5 AM Eastern on Monday: ESPN's own scoreboard is still Sunday's
+  const monday5am = Date.parse('2026-10-26T09:00:00Z')
+  const f = nbaFixtures({ now: monday5am })
+  const sunday = S.scoreboard
+  const mondayGame = structuredClone(sunday.events[0])
+  mondayGame.id = '401909870'
+  mondayGame.date = '2026-10-26T23:00Z'
+  mondayGame.competitions[0].id = mondayGame.id
+  mondayGame.competitions[0].date = mondayGame.date
+  const site = 'site.api.espn.com/apis/site/v2/sports/basketball/nba'
+  f[`${site}/scoreboard`] = { ...sunday, events: sunday.events.map((e) => ({ ...e, date: '2026-10-25T21:00Z' })) }
+  f[`${site}/scoreboard?dates=20261026`] = { ...sunday, day: { date: '2026-10-26' }, events: [mondayGame] }
+  f[`${site}/scoreboard?dates=20261027`] = { events: [] }
+  const transport = createFixtureTransport(f)
+  const engine = createEngine({ mode: 'lazy', sport: 'nba', http: createHttp({ transport }), store: createStore({ driver: 'memory' }), now: () => monday5am })
+  await engine.runTask('scoreboard')
+  const ids = [...engine.wh.games.keys()]
+  assert.ok(ids.includes('401909870'), `Monday's game is on the board: ${ids}`)
+  assert.equal(engine.slate(), '2026-10-26', 'the slate is the day of the next game to finish')
+})
