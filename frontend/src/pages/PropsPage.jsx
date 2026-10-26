@@ -75,7 +75,7 @@ export function PropsPage() {
   const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/board?${base}`, { maxAgeMs: 30_000, pollMs: poll })
   const warming = Boolean(data && !data.total && data.pending > 0)
   const [opened] = useState(() => Date.now())
-  const nextPoll = !data?.pending || Date.now() - opened > 180_000 ? 0 : warming ? 4000 : 10_000
+  const nextPoll = !(data?.pending || data?.loading) || Date.now() - opened > 180_000 ? 0 : warming ? 4000 : 10_000
   useEffect(() => setPoll(nextPoll), [nextPoll])
   useTitle(`${sportInfo(sport).name} prop explorer`)
   const facets = data?.facets

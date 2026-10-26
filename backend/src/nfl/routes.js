@@ -108,24 +108,21 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
   // spends a few seconds loading them (every poll from a waiting page moves it along), and an
   // empty board is never cached, so nobody keeps getting it once the data is in.
   const WARM_MS = envInt('APEX_WARM_MS', 8000, { min: 0, max: 60_000 })
-  async function warmed(build, empty) {
+  /** Load before answering: the whole budget when the board is empty, a little while older seasons' logs are still coming. */
+  async function warmed(ctx, build, empty) {
     let out = build()
-    if (WARM_MS && empty(out) && engine.catchUp && engine.logsLeft?.() > 0) {
-      await engine.catchUp(WARM_MS)
+    const left = engine.logsLeft?.() || 0
+    if (WARM_MS && engine.catchUp && left > 0) {
+      await engine.catchUp(empty(out) ? WARM_MS : Math.min(WARM_MS, 2000))
       out = build()
     }
-    return out
+    const loading = (engine.logsLeft?.() || 0) > 0
+    // a board still filling in is never cached: the next request gets the rest
+    if (loading || empty(out)) ctx.cache = null
+    return { ...out, loading }
   }
-  r.get('/home', { tier: t('home'), cache: C(15, 20, 60) }, async (ctx) => {
-    const out = await warmed(() => views.home(), (o) => !o.counts.props && o.counts.pending > 0)
-    if (!out.counts.props && out.counts.pending) ctx.cache = null
-    return out
-  })
-  r.get('/board', { tier: t('board'), cache: C(15, 20, 60) }, async (ctx) => {
-    const out = await warmed(() => views.props(ctx.query), (o) => !o.total && o.pending > 0)
-    if (!out.total && out.pending) ctx.cache = null
-    return out
-  })
+  r.get('/home', { tier: t('home'), cache: C(15, 20, 60) }, (ctx) => warmed(ctx, () => views.home(), (o) => !o.counts.props && o.counts.pending > 0))
+  r.get('/board', { tier: t('board'), cache: C(15, 20, 60) }, (ctx) => warmed(ctx, () => views.props(ctx.query), (o) => !o.total && o.pending > 0))
   r.get('/props/:id', { tier: t('props'), cache: C(15, 20, 60) }, (ctx) => {
     if (!parsePropId(ctx.params.id)) throw new ApiError(400, 'bad_prop', 'That prop id is not valid.')
     const out = views.prop(ctx.params.id)

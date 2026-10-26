@@ -54,7 +54,7 @@ export function HomePage() {
   const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/home`, { maxAgeMs: 20_000, pollMs: poll })
   const warming = Boolean(data && !data.counts?.props && data.counts?.pending > 0)
   const [opened] = useState(() => Date.now())
-  const nextPoll = !data?.counts?.pending || Date.now() - opened > 180_000 ? 0 : warming ? 4000 : 10_000
+  const nextPoll = !(data?.counts?.pending || data?.loading) || Date.now() - opened > 180_000 ? 0 : warming ? 4000 : 10_000
   useEffect(() => setPoll(nextPoll), [nextPoll])
   useLive('scoreboard', () => {})
   const daily = (data?.calendar || info.calendar) === 'day'
