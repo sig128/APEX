@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const from = path.join(root, 'backend')
 const to = path.join(root, 'functions', 'apex')
 
-const FILES = ['app.js', 'streamChat.js', 'anthropicWebTools.js', 'oddsEvents.js', 'sportsConfig.js', 'adminSportsRoutes.js']
+const FILES = ['app.js', 'streamChat.js', 'oddsEvents.js', 'sportsConfig.js', 'adminSportsRoutes.js']
 const DIRS = ['src', 'prompts']
 
 fs.rmSync(to, { recursive: true, force: true })

@@ -1,5 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { getAnthropicWebSearchTools } from './anthropicWebTools.js'
+import { chatWebSearch, scrubKeys } from './src/ai/llm.js'
 import {
   getApexSystemPrompt,
   computeEffectivePromptMode,
@@ -115,18 +114,9 @@ function validateMessages(raw) {
   return out
 }
 
-export function extractTextFromMessage(msg) {
-  const blocks = msg?.content
-  if (!Array.isArray(blocks)) return ''
-  return blocks
-    .filter((b) => b && b.type === 'text' && typeof b.text === 'string')
-    .map((b) => b.text)
-    .join('')
-}
-
 /**
  * Shared validation for POST /api/chat and POST /api/chat/stream
- * @returns {{ ok: false, status: number, error: string } | { ok: true, messagesForApi: Array, model: string, maxTokens: number, system: string, resolvedSportKey?: string }}
+ * @returns {{ ok: false, status: number, error: string } | { ok: true, messagesForApi: Array, maxTokens: number, system: string, resolvedSportKey?: string }}
  */
 export function parseChatBody(req) {
   let { game } = req.body || {}
@@ -205,10 +195,9 @@ export function parseChatBody(req) {
     }
   }
 
-  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5'
   const maxTokens = Math.min(
-    Math.max(parseInt(process.env.ANTHROPIC_MAX_TOKENS || '16384', 10) || 16384, 1024),
-    200000,
+    Math.max(parseInt(process.env.APEX_AI_MAX_TOKENS || process.env.ANTHROPIC_MAX_TOKENS || '16384', 10) || 16384, 1024),
+    128000,
   )
 
   return {
@@ -216,7 +205,6 @@ export function parseChatBody(req) {
     // 'analysis' (the server wrote the prompt from `game`) or 'followup' (the client sent the thread)
     kind,
     messagesForApi,
-    model,
     maxTokens,
     system: getApexSystemPrompt(resolvedSportKey, effectivePromptMode, mlbBettingScope),
     resolvedSportKey: typeof resolvedSportKey === 'string' && resolvedSportKey ? resolvedSportKey : undefined,
@@ -224,15 +212,15 @@ export function parseChatBody(req) {
 }
 
 /**
- * NDJSON stream of Claude activity + text deltas; ends with `{ type: 'complete', ... }` (same shape as non-stream /api/chat JSON).
+ * NDJSON stream of the AI's activity + text deltas; ends with `{ type: 'complete', ... }` (same shape as non-stream /api/chat JSON).
  * @param {import('express').Request} req
  * @param {import('express').Response} res
- * @param {string | undefined} apiKey
+ * @param {ReturnType<typeof import('./src/ai/llm.js').createAi>} ai
  */
-export async function handleChatStream(req, res, apiKey) {
-  if (!apiKey) {
+export async function handleChatStream(req, res, ai) {
+  if (!ai?.ready()) {
     res.status(503).json({
-      error: 'ANTHROPIC_API_KEY is not set in backend/.env (the file the server loads).',
+      error: 'AI is not configured on this server (OPENAI_API_KEY).',
     })
     return { ok: false, produced: false }
   }
@@ -253,7 +241,8 @@ export async function handleChatStream(req, res, apiKey) {
   let produced = false
   let failed = false
 
-  const { messagesForApi, model, maxTokens, system } = parsed
+  const { messagesForApi, maxTokens, system } = parsed
+  const model = ai.model('chat')
 
   res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
   res.setHeader('Cache-Control', 'no-cache, no-transform')
@@ -261,95 +250,66 @@ export async function handleChatStream(req, res, apiKey) {
   res.flushHeaders?.()
 
   const write = (obj) => {
-    res.write(`${JSON.stringify(obj)}\n`)
+    try {
+      res.write(`${JSON.stringify(obj)}\n`)
+    } catch {
+      /* the reader left */
+    }
   }
 
   const started = Date.now()
-  let lastSearchLine = ''
+  // a reader who leaves stops the analysis too
+  const stop = new AbortController()
+  res.on?.('close', () => stop.abort())
 
   try {
-    const anthropic = new Anthropic({ apiKey })
-    const tools = getAnthropicWebSearchTools()
+    const webSearch = chatWebSearch()
     write({
       type: 'start',
       model,
       maxTokens,
-      webSearch: Boolean(tools),
+      webSearch: Boolean(webSearch),
     })
 
-    const stream = anthropic.messages.stream({
-      model,
-      max_tokens: maxTokens,
+    const out = await ai.stream({
+      feature: 'chat',
       system,
       messages: messagesForApi,
-      ...(tools ? { tools } : {}),
+      maxTokens,
+      webSearch,
+      signal: stop.signal,
+      onText: (textDelta) => {
+        if (textDelta) produced = true
+        write({ type: 'text_delta', text: textDelta })
+      },
+      onActivity: (a) => write({ type: 'activity', phase: a.phase, detail: a.detail }),
     })
-
-    stream.on('streamEvent', (event) => {
-      try {
-        if (event.type === 'content_block_start') {
-          const b = event.content_block
-          if (!b) return
-          if (b.type === 'server_tool_use' && b.name === 'web_search') {
-            write({ type: 'activity', phase: 'web_search', detail: 'Web search…' })
-          }
-          if (b.type === 'web_search_tool_result') {
-            write({ type: 'activity', phase: 'web_search', detail: 'Processing search results…' })
-          }
-          if (b.type === 'text') {
-            write({ type: 'activity', phase: 'writing', detail: 'Writing analysis…' })
-          }
-        }
-        if (event.type === 'message_delta' && event.delta?.stop_reason) {
-          write({ type: 'stop_reason', stop_reason: event.delta.stop_reason })
-        }
-      } catch {
-        /* ignore */
-      }
-    })
-
-    stream.on('text', (textDelta) => {
-      if (textDelta) produced = true
-      write({ type: 'text_delta', text: textDelta })
-    })
-
-    stream.on('inputJson', (_partial, input) => {
-      const q = input && typeof input === 'object' && typeof input.query === 'string' ? input.query : ''
-      if (q && q !== lastSearchLine) {
-        lastSearchLine = q
-        write({ type: 'activity', phase: 'web_search', detail: `Search query: ${q}` })
-      }
-    })
-
-    stream.on('error', (err) => {
-      write({ type: 'stream_error', error: err?.message || String(err) })
-    })
-
-    const finalMessage = await stream.finalMessage()
-    const assistantText = extractTextFromMessage(finalMessage)
+    if (out.stop) write({ type: 'stop_reason', stop_reason: out.stop })
+    const assistantText = out.text
     const fullThread = [...messagesForApi, { role: 'assistant', content: assistantText }]
 
     const ms = Date.now() - started
     console.log('[api/chat/stream] done', {
       ms,
       sec: (ms / 1000).toFixed(1),
-      stop_reason: finalMessage?.stop_reason,
-      id: finalMessage?.id,
+      stop_reason: out.stop,
+      id: out.id,
+      provider: ai.provider(),
     })
 
     write({
       type: 'complete',
       text: assistantText,
       messages: fullThread,
-      model,
-      id: finalMessage.id,
-      usage: finalMessage.usage,
-      stop_reason: finalMessage.stop_reason ?? null,
+      model: out.model || model,
+      id: out.id,
+      usage: out.usage,
+      stop_reason: out.stop ?? null,
     })
   } catch (e) {
-    const errMsg = e?.message || String(e)
+    const errMsg = scrubKeys(e?.message || String(e))
     const status = e?.status >= 400 && e?.status < 600 ? e.status : 502
-    console.error('[api/chat/stream] Anthropic error:', errMsg, { afterMs: Date.now() - started })
+    console.error('[api/chat/stream] AI error:', errMsg, { afterMs: Date.now() - started, provider: ai.provider() })
     failed = true
     try {
       write({ type: 'error', error: errMsg, status })

@@ -15,11 +15,12 @@ import { defaultAuthInstance, authMode } from '../security/auth.js'
 import { parsePropId } from './analytics/core.js'
 import { simulateSlip } from './analytics/sim.js'
 import { envInt } from '../lib/util.js'
+import { NO_AI } from '../ai/llm.js'
 
 /** Optional: make every read require sign-in (APEX_READS_NEED_AUTH=1). Off by default: stats are free. */
 const readsNeedAuth = () => process.env.APEX_READS_NEED_AUTH === '1'
 
-export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstance, access, billing, engines = null } = {}) {
+export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance, access, billing, engines = null } = {}) {
   const r = createRouter()
   const views = engine.views
   const home = engine.sport?.key || 'nfl'
@@ -256,8 +257,8 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
       },
     }
   }
-  const key = () => (typeof anthropicKey === 'function' ? anthropicKey() : anthropicKey)
-  const intel = createIntel({ engine, apiKey: key })
+  const AI_OFF = 'AI is not configured on this server (OPENAI_API_KEY).'
+  const intel = createIntel({ engine, ai })
 
   /**
    * Game intel: official injuries plus this week's reputable public reporting, tied to the props
@@ -275,7 +276,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
       await aiGate(req, res, { what: 'game intel', charge: false })
       return { ...hit.data, at: hit.at, cached: true }
     }
-    if (!key()) throw new ApiError(503, 'ai_off', 'AI is not configured on this server (ANTHROPIC_API_KEY).')
+    if (!ai.ready()) throw new ApiError(503, 'ai_off', AI_OFF)
     const gate = await aiGate(req, res, { what: 'game intel', limiterFor: intelLimiter })
     try {
       const e = await intel.get(gameId, { fresh: wantFresh })
@@ -340,7 +341,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     const propId = String(req.body?.propId || '')
     if (!parsePropId(propId)) throw new ApiError(400, 'bad_prop', 'That prop id is not valid.')
     const gate = await aiGate(req, res)
-    const out = await streamPropInsight({ propId, views, res, apiKey: key(), sport: engine.sport })
+    const out = await streamPropInsight({ propId, views, res, ai, sport: engine.sport })
     if (!out.produced) await gate.refund()
     return RAW
   })
@@ -365,8 +366,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
       return { ref, key: k, id: i > 0 ? ref.slice(i + 1) : ref, eng: engineFor(k) }
     })
     if (refs.some((x) => !x.eng || !parsePropId(x.id))) throw new ApiError(400, 'bad_legs', 'One of those legs is not a valid prop.')
-    const apiKey = key()
-    if (!apiKey) throw new ApiError(503, 'ai_off', 'AI is not configured on this server (ANTHROPIC_API_KEY).')
+    if (!ai.ready()) throw new ApiError(503, 'ai_off', AI_OFF)
     const gate = await aiGate(req, res, { what: 'parlay checks', limiterFor: checkLimiter })
     let matched = refs.map((x) => ({ id: x.id, key: x.key, eng: x.eng, ref: x.ref, odds: null }))
     let unmatched = []
@@ -377,7 +377,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     matched = matched.map((m) => ({ ...m, odds: Number.isFinite(priceOf(m)) && Math.abs(priceOf(m)) >= 100 ? Math.round(priceOf(m)) : null }))
     try {
       if (text || image) {
-        const ex = await extractLegs({ apiKey, text, image, sport: engine.sport })
+        const ex = await extractLegs({ ai, text, image, sport: engine.sport })
         const found = matchLegs(ex.legs, engine)
         const seen = new Set(matched.map((m) => `${m.key}:${m.id}`))
         matched = [...matched, ...found.matched.filter((m) => !seen.has(`${home}:${m.id}`)).map((m) => ({ ...m, key: home, eng: engine }))].slice(0, 12)
@@ -394,7 +394,7 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
       await gate.refund()
       throw new ApiError(422, 'no_legs', unmatched.length ? 'None of those legs are on the board right now.' : `No ${engine.sport?.name || 'NFL'} player props found on that slip.`, { unmatched, notes })
     }
-    const out = await streamParlayCheck({ engine, matched, unmatched, parlayOdds, notes, res, apiKey })
+    const out = await streamParlayCheck({ engine, matched, unmatched, parlayOdds, notes, res, ai })
     if (!out.produced) await gate.refund()
     return RAW
   })

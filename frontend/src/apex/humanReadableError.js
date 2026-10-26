@@ -1,5 +1,5 @@
 /**
- * Turns Anthropic/API/network errors into short, user-facing sentences (no raw JSON).
+ * Turns AI service, API and network errors into short, user-facing sentences (no raw JSON).
  * @param {unknown} err
  * @returns {string}
  */
@@ -100,10 +100,10 @@ function formatFromParsedPayload(payload) {
   if (!payload || typeof payload !== 'object') return null
   const o = /** @type {Record<string, unknown>} */ (payload)
 
-  // Anthropic SSE/JSON: { type: "error", error: { type, message } }
+  // AI SSE/JSON: { type: "error", error: { type, message } }
   if (o.type === 'error' && o.error && typeof o.error === 'object') {
     const inner = /** @type {Record<string, unknown>} */ (o.error)
-    const line = mapAnthropicType(
+    const line = mapAiErrorType(
       typeof inner.type === 'string' ? inner.type : '',
       typeof inner.message === 'string' ? inner.message : '',
     )
@@ -118,7 +118,7 @@ function formatFromParsedPayload(payload) {
   // { error: { type, message } }
   if (o.error && typeof o.error === 'object') {
     const inner = /** @type {Record<string, unknown>} */ (o.error)
-    const line = mapAnthropicType(
+    const line = mapAiErrorType(
       typeof inner.type === 'string' ? inner.type : '',
       typeof inner.message === 'string' ? inner.message : '',
     )
@@ -127,7 +127,7 @@ function formatFromParsedPayload(payload) {
   }
 
   if (typeof o.type === 'string' && typeof o.message === 'string') {
-    const line = mapAnthropicType(o.type, o.message)
+    const line = mapAiErrorType(o.type, o.message)
     if (line) return line
   }
 
@@ -138,21 +138,26 @@ function formatFromParsedPayload(payload) {
  * @param {string} type
  * @param {string} message
  */
-function mapAnthropicType(type, message) {
+function mapAiErrorType(type, message) {
   const msg = (message || '').trim()
   switch (type) {
     case 'overloaded_error':
-      return 'Claude is temporarily busy (servers overloaded). Wait a short time and try again.'
+    case 'server_error':
+      return 'The AI is busy right now. Wait a moment and try again.'
     case 'rate_limit_error':
+    case 'rate_limit_exceeded':
       return 'Too many requests right now. Wait a minute and try again.'
     case 'authentication_error':
-      return 'API key was rejected or is missing. Check ANTHROPIC_API_KEY in backend/.env or Cloud Functions secrets.'
+    case 'invalid_api_key':
+      return 'The AI key was refused or is missing. Check OPENAI_API_KEY on the server.'
     case 'billing_error':
-      return 'Billing or quota issue on the Anthropic account. Check your plan and billing in the Anthropic console.'
+    case 'insufficient_quota':
+      return 'The AI account is out of credit or over its quota. Check its plan and billing.'
     case 'permission_error':
       return 'This API key is not allowed to perform that action.'
     case 'not_found_error':
-      return 'The requested model or resource was not found. Check ANTHROPIC_MODEL if you set one.'
+    case 'model_not_found':
+      return 'That AI model is not available. Check OPENAI_MODEL if you set one.'
     case 'invalid_request_error':
       return msg ? `Invalid request: ${msg}` : 'The request was invalid. Check inputs and try again.'
     case 'api_error':
@@ -174,13 +179,13 @@ function mapAnthropicType(type, message) {
 function mapKnownPhrases(raw) {
   const lower = raw.toLowerCase()
   if (lower.includes('overloaded')) {
-    return 'Claude is temporarily busy (servers overloaded). Wait a short time and try again.'
+    return 'The AI is busy right now. Wait a moment and try again.'
   }
   if (lower.includes('rate limit') || lower.includes('429')) {
     return 'Too many requests right now. Wait a minute and try again.'
   }
   if (lower.includes('401') || lower.includes('unauthorized')) {
-    return 'API key was rejected or is missing. Check ANTHROPIC_API_KEY configuration.'
+    return 'The AI key was refused or is missing. Check OPENAI_API_KEY on the server.'
   }
   if (lower.includes('503') && lower.includes('service unavailable')) {
     return 'The AI service is temporarily unavailable. Try again shortly.'
@@ -201,7 +206,7 @@ function mapKnownPhrases(raw) {
 }
 
 /**
- * Maps Claude stop_reason values to short UI labels (status line, not an error).
+ * Maps the AI's stop_reason values to short UI labels (status line, not an error).
  * @param {string | null | undefined} sr
  * @returns {string}
  */

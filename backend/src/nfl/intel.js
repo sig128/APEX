@@ -4,11 +4,8 @@
 //
 // Public reporting only. The prompt rules out leaked, confidential or insider material, anonymous
 // social posts and betting touts, and every item has to carry the link it came from.
-import Anthropic from '@anthropic-ai/sdk'
 import { nameKey } from '../lib/util.js'
 import { log, errText } from '../lib/log.js'
-
-const MODEL = () => process.env.ANTHROPIC_INTEL_MODEL || process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5'
 
 /** Established outlets and the league's own sites. Search results outside these are not used. */
 export const INTEL_DOMAINS = [
@@ -176,7 +173,7 @@ export function cleanIntel(json, citations = []) {
  * One shared scan per game, cached: everyone looking at the game sees the same brief and the
  * searches are paid for once. Fresher close to kickoff.
  */
-export function createIntel({ engine, apiKey, now = () => Date.now() }) {
+export function createIntel({ engine, ai, now = () => Date.now() }) {
   const cache = new Map() // gameId -> { at, data }
   const inflight = new Map()
   const ttl = (kick) => {
@@ -193,23 +190,16 @@ export function createIntel({ engine, apiKey, now = () => Date.now() }) {
   }
 
   async function scan(gameId) {
-    const key = typeof apiKey === 'function' ? apiKey() : apiKey
     const data = engine.views.game(gameId)
     if (!data) return null
-    const tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: Math.min(10, Math.max(2, Number(process.env.APEX_INTEL_SEARCHES) || 6)), allowed_domains: INTEL_DOMAINS }]
-    const msg = await new Anthropic({ apiKey: key }).messages.create({ model: MODEL(), max_tokens: 2500, system: intelSystem(engine.sport), tools, messages: [{ role: 'user', content: intelBrief(data) }] })
-    const blocks = msg?.content || []
-    const text = blocks.filter((b) => b.type === 'text').map((b) => b.text).join('')
-    const citations = []
-    for (const b of blocks) {
-      if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) for (const r of b.content) if (r?.url) citations.push({ url: r.url, title: r.title })
-      if (b.type === 'text' && Array.isArray(b.citations)) for (const c of b.citations) if (c?.url) citations.push({ url: c.url, title: c.title })
-    }
-    const json = parseJsonLoose(text)
+    // web search held to the established outlets above
+    const webSearch = { maxUses: Math.min(10, Math.max(2, Number(process.env.APEX_INTEL_SEARCHES) || 6)), domains: INTEL_DOMAINS }
+    const reply = await ai.complete({ feature: 'intel', system: intelSystem(engine.sport), messages: [{ role: 'user', content: intelBrief(data) }], maxTokens: 2500, webSearch })
+    const json = parseJsonLoose(reply.text)
     if (!json) throw new Error('intel: no JSON in reply')
-    const out = linkPlayers(cleanIntel(json, citations), data)
+    const out = linkPlayers(cleanIntel(json, reply.citations || []), data)
     for (const n of out.news) if (n.url && !out.sources.some((s) => s.url === n.url)) out.sources.push({ title: n.headline, url: n.url })
-    const entry = { at: now(), data: { ...out, gameId, model: MODEL() } }
+    const entry = { at: now(), data: { ...out, gameId, model: reply.model || ai.model('intel') } }
     cache.set(gameId, entry)
     if (cache.size > 64) cache.delete(cache.keys().next().value)
     return entry

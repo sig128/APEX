@@ -121,7 +121,7 @@ function formatAnalyzeStreamUi(lineMode, mlbScope, isMlb) {
   }
 }
 
-/** Claude may return `content` as a string or Anthropic-style block array — normalize for parsing. */
+/** The AI may return `content` as a string or a block array — normalize for parsing. */
 function assistantMessageContentToString(content) {
   if (typeof content === 'string') return content
   if (Array.isArray(content)) {
@@ -831,7 +831,7 @@ export function ApexApp() {
       d.className = `chat-msg ${m.role === 'user' ? 'u' : 'a'}`
       const lab = document.createElement('div')
       lab.className = 'who'
-      lab.textContent = m.role === 'user' ? 'You' : 'Claude'
+      lab.textContent = m.role === 'user' ? 'You' : 'APEX AI'
       const body = document.createElement('div')
       body.textContent = m.content
       d.appendChild(lab)
@@ -1633,7 +1633,7 @@ export function ApexApp() {
           const data = await postChatStream(gamePayload, {
             onEvent(ev) {
               if (ev.type === 'start' && statusEl) {
-                statusEl.textContent = ev.webSearch ? 'Claude · web search enabled' : 'Claude'
+                statusEl.textContent = ev.webSearch ? 'APEX AI with web search' : 'APEX AI'
               }
               if (ev.type === 'activity' && statusEl) {
                 statusEl.textContent = ev.detail || ev.phase || '…'
@@ -1706,7 +1706,7 @@ export function ApexApp() {
             })
           }
           if (data?.stop_reason === 'max_tokens') {
-            sn('Output hit max length — answers are condensed by default; raise ANTHROPIC_MAX_TOKENS if you need more.')
+            sn('The answer hit its length limit. Answers are condensed by default; ask a follow-up for the rest.')
           }
           showAnalyzerDoneToast()
         } catch (e) {
@@ -1756,7 +1756,7 @@ export function ApexApp() {
           {
           onEvent(ev) {
             if (ev.type === 'start' && statusEl) {
-              statusEl.textContent = ev.webSearch ? 'Claude · web search' : 'Claude'
+              statusEl.textContent = ev.webSearch ? 'APEX AI with web search' : 'APEX AI'
             }
             if (ev.type === 'activity' && statusEl) {
               statusEl.textContent = ev.detail || ev.phase || '…'
@@ -1825,7 +1825,7 @@ export function ApexApp() {
           }
         }
         if (data?.stop_reason === 'max_tokens') {
-          sn('Output hit max length — try a shorter question or raise ANTHROPIC_MAX_TOKENS.')
+          sn('The answer hit its length limit. Try a shorter question.')
         }
       } catch (e) {
         streamWrap.remove()

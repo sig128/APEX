@@ -57,7 +57,7 @@ You need Node 22 (`nvm use` reads `.nvmrc`).
 npm run setup                       # installs root, backend, frontend and functions packages
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-# put your ANTHROPIC_API_KEY in backend/.env, and your Firebase web config in frontend/.env
+# put your OPENAI_API_KEY in backend/.env, and your Firebase web config in frontend/.env
 npm run dev                         # API on :8787, site on http://localhost:5173
 ```
 
@@ -90,7 +90,7 @@ The site and the API both run on Vercel; Firebase only does Google sign-in and t
    |---|---|
    | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | Google sign-in on the site (Firebase console > Project settings > Your apps > Web app) |
    | `FIREBASE_SERVICE_ACCOUNT` | The database: paste the whole JSON from Project settings > Service accounts > Generate new private key. Without it, stats and live tracking work, but passes, picks pages and codes stay off, and every new server instance reloads its data from ESPN, so the first visit after a quiet spell takes a few seconds longer. |
-   | `ANTHROPIC_API_KEY` | AI reads and the analyzer |
+   | `OPENAI_API_KEY` | The AI: prop reads, the parlay check, game intel and the analyzer. `ANTHROPIC_API_KEY` works instead; with both set, OpenAI answers. `OPENAI_MODEL` picks the model (default `gpt-6-sol`) |
    | `APEX_ADMIN_EMAILS` | Your Google account(s): the admin page and every plan |
    | `ADMIN_SPORTS_KEY` | 24+ random characters, for scripts and `/adminn` |
    | `THE_ODDS_API_KEY` | Optional: sportsbook prices |
@@ -104,7 +104,7 @@ The site and the API both run on Vercel; Firebase only does Google sign-in and t
    `firestore.rules` into the console's Rules tab; each missing index shows up in the function
    logs with a link that creates it).
 5. Open `https://<your-domain>/api/health`: `you` should be your own IP, `database` turns
-   `true` once the service account is in, `ai` once the Anthropic key is, and `odds.keys` counts
+   `true` once the service account is in, `ai` once an AI key is (`aiProvider` says which one answers), and `odds.keys` counts
    the Odds API keys (never the keys themselves).
 
 On Vercel a function call can last 5 minutes, so live streams quietly reconnect every few
@@ -226,6 +226,6 @@ ledger. NFL is the site's root (`/`, `/nfl/props`); the others live under their 
 ## Before you rely on it
 
 This build was tested end to end against recorded ESPN data, a simulated live game, a scripted
-blockchain and stand-ins for Firebase Auth and the Anthropic API. It has not yet run against
+blockchain and stand-ins for Firebase Auth and the OpenAI and Anthropic APIs. It has not yet run against
 real Google sign-in, a real Base transaction, Privy, or a live Sunday, so do one real pass
 purchase on base-sepolia and watch one live game before you announce it.

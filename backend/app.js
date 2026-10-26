@@ -3,8 +3,8 @@
 import crypto from 'node:crypto'
 import express from 'express'
 import cors from 'cors'
-import Anthropic from '@anthropic-ai/sdk'
 import { createHttp } from './src/lib/http.js'
+import { createAi, chatWebSearch, scrubKeys } from './src/ai/llm.js'
 import { createStore } from './src/lib/store.js'
 import { createHub } from './src/lib/hub.js'
 import { log, errText } from './src/lib/log.js'
@@ -20,8 +20,7 @@ import { picksRoutes } from './src/picks/routes.js'
 import { createAccess } from './src/security/access.js'
 import { defaultAuthInstance, authMode } from './src/security/auth.js'
 import { createLimiter } from './src/security/rateLimit.js'
-import { parseChatBody, handleChatStream, extractTextFromMessage, setGameContextProvider } from './streamChat.js'
-import { getAnthropicWebSearchTools } from './anthropicWebTools.js'
+import { parseChatBody, handleChatStream, setGameContextProvider } from './streamChat.js'
 import { registerAdminSportsRoutes } from './adminSportsRoutes.js'
 import { getDisabledSportKeys } from './sportsConfig.js'
 import {
@@ -118,7 +117,10 @@ export function createApexApp({
   auth = defaultAuthInstance,
   billing: billingIn,
   http: httpIn,
+  // the AI: OpenAI when its key is set, else Anthropic (see src/ai/llm.js)
+  openaiKey = () => process.env.OPENAI_API_KEY,
   anthropicKey = () => process.env.ANTHROPIC_API_KEY,
+  ai: aiIn,
   adminKey = () => process.env.ADMIN_SPORTS_KEY,
   // THE_ODDS_API_KEY, then THE_ODDS_API_KEY_BACKUP for when the first is refused or out of credits
   oddsKey = () => oddsKeys().join(','),
@@ -135,6 +137,7 @@ export function createApexApp({
   })
 
   const http = httpIn || createHttp({})
+  const ai = aiIn || createAi({ openaiKey, anthropicKey })
   const engineStore = storeIn || createStore({ getFirestore })
   // streams per instance: room left for ordinary requests on Cloud Functions (250 slots) and
   // under Vercel's 1,024 open files per instance
@@ -162,7 +165,7 @@ export function createApexApp({
   setGameContextProvider(gameContextFrom(engine))
 
   for (const [key, eng] of Object.entries(engines)) {
-    const router = createNflRouter(eng, { anthropicKey, auth, access, billing, engines })
+    const router = createNflRouter(eng, { ai, auth, access, billing, engines })
     app.use(`/api/${key}`, (req, res, next) => {
       router.handle(req, res, next).catch(next)
     })
@@ -288,15 +291,14 @@ export function createApexApp({
   }
 
   app.post('/api/chat/stream', chatGate, async (req, res) => {
-    const out = await handleChatStream(req, res, anthropicKey())
+    const out = await handleChatStream(req, res, ai)
     await refundIfEmpty(req, out)
   })
 
   async function chatOnce(req, res) {
-    const apiKey = anthropicKey()
-    if (!apiKey) {
+    if (!ai.ready()) {
       await refundIfEmpty(req, null)
-      return res.status(503).json({ error: 'ANTHROPIC_API_KEY is not set on the server.' })
+      return res.status(503).json({ error: 'AI is not configured on this server (OPENAI_API_KEY).' })
     }
     const parsed = req.apexParsed || parseChatBody(req)
     if (!parsed.ok) {
@@ -308,18 +310,16 @@ export function createApexApp({
       await refundIfEmpty(req, null)
       return res.status(403).json({ error: 'This sport is temporarily unavailable.' })
     }
-    const { messagesForApi, model, maxTokens, system } = parsed
+    const { messagesForApi, maxTokens, system } = parsed
     try {
-      const anthropic = new Anthropic({ apiKey })
-      const tools = getAnthropicWebSearchTools()
-      const msg = await anthropic.messages.create({ model, max_tokens: maxTokens, system, messages: messagesForApi, ...(tools ? { tools } : {}) })
-      const text = extractTextFromMessage(msg)
+      const out = await ai.complete({ feature: 'chat', system, messages: messagesForApi, maxTokens, webSearch: chatWebSearch() })
+      const text = out.text
       await refundIfEmpty(req, { produced: text.trim().length > 0 })
-      return res.json({ text, messages: [...messagesForApi, { role: 'assistant', content: text }], model, id: msg.id, usage: msg.usage })
+      return res.json({ text, messages: [...messagesForApi, { role: 'assistant', content: text }], model: out.model, id: out.id, usage: out.usage })
     } catch (e) {
       await refundIfEmpty(req, null)
       const status = e?.status >= 400 && e?.status < 600 ? e.status : 502
-      return res.status(status).json({ error: e?.message || String(e) })
+      return res.status(status).json({ error: scrubKeys(e?.message || String(e)) })
     }
   }
   app.post('/api/chat', chatGate, chatOnce)
@@ -452,7 +452,8 @@ export function createApexApp({
       sports: Object.keys(engines),
       billing: { paywall: cfg.paywall, network: cfg.network, treasury: Boolean(cfg.treasury), docs: billing.docsKind },
       auth: authMode(),
-      ai: Boolean(isSet(anthropicKey)),
+      ai: ai.ready(),
+      aiProvider: ai.provider(),
       odds: { keys: splitKeys(isSet(oddsKey)).length, leagues: oddsLeagues() },
     })
   })

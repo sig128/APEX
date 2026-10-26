@@ -4,6 +4,24 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useTitle } from '../lib/hooks.js'
 import { Wordmark } from '../ui/Shell.jsx'
 
+/** What went wrong with Google sign-in, in plain words (Firebase's codes otherwise). */
+export function signInError(e) {
+  switch (e?.code) {
+    case 'auth/unauthorized-domain':
+      return `Sign-in isn't switched on for ${window.location.hostname} yet. The site owner adds it in Firebase under Authentication, Settings, Authorized domains.`
+    case 'auth/operation-not-allowed':
+      return 'Google sign-in is turned off for this site. The site owner turns it on in Firebase under Authentication, Sign-in method.'
+    case 'auth/network-request-failed':
+      return "Couldn't reach Google. Check your connection and try again."
+    case 'auth/too-many-requests':
+      return 'Too many sign-in attempts. Wait a few minutes and try again.'
+    case 'auth/user-disabled':
+      return 'This account is disabled.'
+    default:
+      return e?.message || 'Sign-in failed. Try again.'
+  }
+}
+
 /** Sign in with Google. Stats don't need an account; picks pages, passes and the AI do. */
 export function LoginPage() {
   const { user, loading, signInGoogle, firebaseConfigured } = useAuth()
@@ -48,7 +66,7 @@ export function LoginPage() {
         )}
         {err && (
           <p className="form-err" role="alert">
-            {err.message}
+            {signInError(err)}
           </p>
         )}
         <p className="small muted">

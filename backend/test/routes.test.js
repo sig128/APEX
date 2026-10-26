@@ -12,6 +12,9 @@ import { nbaFixtures } from './fixtures/nba.js'
 
 const ADMIN_KEY = 'test-admin-key-0123456789'
 const restoreEnv = withEnv({
+  // these tests script the Anthropic path; a real OpenAI key in the shell must not take over
+  OPENAI_API_KEY: null,
+  APEX_AI_PROVIDER: null,
   APEX_TREASURY_ADDRESS: TREASURY,
   APEX_PAYWALL: null,
   APEX_BILLING_NETWORK: 'base',

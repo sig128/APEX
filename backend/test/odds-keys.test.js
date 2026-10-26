@@ -12,7 +12,7 @@ import { fetchOddsEventsSafe, _resetOddsCaches } from '../oddsEvents.js'
 import { fixtureHttp } from './helpers.js'
 import { clock, testAuth, USERS, withEnv, serve } from './support.js'
 
-const restoreEnv = withEnv({ APEX_LOG_LEVEL: 'silent', APEX_ODDS_SPORTS: null })
+const restoreEnv = withEnv({ APEX_LOG_LEVEL: 'silent', APEX_ODDS_SPORTS: null, OPENAI_API_KEY: null })
 after(() => restoreEnv())
 
 const refused = (code, status = 401) => Object.assign(new Error(`HTTP ${status}`), { upstreamStatus: status, upstreamCode: code })

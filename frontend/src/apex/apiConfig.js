@@ -3,7 +3,7 @@
  * - Dev: leave VITE_API_BASE unset → same-origin `/api/...` (Vite proxy → local backend).
  * - Production: MUST set VITE_API_BASE to the Cloud Function HTTPS URL (see `.env.production`).
  *   If unset, the browser calls `/api/chat/stream` on Firebase Hosting; rewrites hit the same
- *   function but Hosting enforces ~60s, which cuts long Claude streams mid-flight ("Load failed").
+ *   function but Hosting enforces ~60s, which cuts long AI streams mid-flight ("Load failed").
  */
 const raw = import.meta.env.VITE_API_BASE
 export const CHAT_API_BASE = typeof raw === 'string' ? raw.replace(/\/+$/, '') : ''

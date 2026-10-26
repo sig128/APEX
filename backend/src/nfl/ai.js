@@ -1,5 +1,4 @@
 // "AI picks": a short APEX read of one prop, streamed as NDJSON (same framing as /api/chat/stream).
-import Anthropic from '@anthropic-ai/sdk'
 import { log, errText } from '../lib/log.js'
 import { RULES, RULES_PROMPT } from './rules.js'
 import { certifyLeg } from './analytics/lock.js'
@@ -61,14 +60,14 @@ function brief(ctx) {
 }
 
 /** Returns { ok, produced } so the caller can refund the allowance when nothing came out. */
-export async function streamPropInsight({ propId, views, res, apiKey, sport, model = process.env.ANTHROPIC_INSIGHT_MODEL || process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5', maxTokens = 700 }) {
+export async function streamPropInsight({ propId, views, res, ai, sport, maxTokens = 700 }) {
   const ctx = views.propContext(propId)
   if (!ctx) {
     res.status(404).set('Cache-Control', 'no-store').json({ error: 'That prop is not on the board.', code: 'not_found' })
     return { ok: false, produced: false }
   }
-  if (!apiKey) {
-    res.status(503).set('Cache-Control', 'no-store').json({ error: 'AI is not configured on this server (ANTHROPIC_API_KEY).', code: 'ai_off' })
+  if (!ai?.ready()) {
+    res.status(503).set('Cache-Control', 'no-store').json({ error: 'AI is not configured on this server (OPENAI_API_KEY).', code: 'ai_off' })
     return { ok: false, produced: false }
   }
   res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
@@ -84,19 +83,26 @@ export async function streamPropInsight({ propId, views, res, apiKey, sport, mod
   }
   let text = ''
   let closed = false
+  // a reader who leaves stops the answer too (nobody pays for words no one sees)
+  const stop = new AbortController()
   res.on?.('close', () => {
     closed = true
+    stop.abort()
   })
   try {
-    write({ type: 'start', model, prop: ctx.prop.id })
-    const anthropic = new Anthropic({ apiKey })
-    const stream = anthropic.messages.stream({ model, max_tokens: maxTokens, system: sport ? propSystem(sport) : PROP_SYSTEM, messages: [{ role: 'user', content: brief(ctx) }] })
-    stream.on('text', (d) => {
-      text += d
-      if (!closed) write({ type: 'text_delta', text: d })
+    write({ type: 'start', model: ai.model('insight'), prop: ctx.prop.id })
+    const out = await ai.stream({
+      feature: 'insight',
+      system: sport ? propSystem(sport) : PROP_SYSTEM,
+      messages: [{ role: 'user', content: brief(ctx) }],
+      maxTokens,
+      signal: stop.signal,
+      onText: (d) => {
+        text += d
+        if (!closed) write({ type: 'text_delta', text: d })
+      },
     })
-    const final = await stream.finalMessage()
-    write({ type: 'complete', text, stop_reason: final?.stop_reason ?? null })
+    write({ type: 'complete', text, stop_reason: out.stop ?? null })
     return { ok: true, produced: text.trim().length > 0 }
   } catch (e) {
     log.warn('prop insight failed', { prop: propId, err: errText(e) })

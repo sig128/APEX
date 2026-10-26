@@ -1,7 +1,6 @@
 // Parlay check: a slip (from the board, typed out, or a screenshot of a betslip) read leg by
 // leg. The legs are matched to the APEX board, played out in the simulator, scored, and then
 // the AI says which to keep, which to cut and why, grounded in those numbers.
-import Anthropic from '@anthropic-ai/sdk'
 import { MARKETS, FOOTBALL_MARKETS, marketOf } from './markets.js'
 import { parsePropId } from './analytics/core.js'
 import { simulateSlip } from './analytics/sim.js'
@@ -11,7 +10,6 @@ import { certifyLeg } from './analytics/lock.js'
 import { RULES, RULES_PROMPT } from './rules.js'
 import { log, errText } from '../lib/log.js'
 
-const MODEL = () => process.env.ANTHROPIC_PARLAY_MODEL || process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5'
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 export const MAX_IMAGE_CHARS = 1_600_000 // base64, about 1.2 MB
 export const MAX_TEXT = 4000
@@ -59,8 +57,6 @@ This is analysis, not advice. Never promise a win.
 ${RULES_PROMPT}`
 export const CHECK_SYSTEM = checkSystem()
 
-const anthropicClient = (apiKey) => new Anthropic({ apiKey })
-
 function parseJsonLoose(text) {
   const s = String(text || '')
   const start = s.indexOf('{')
@@ -74,13 +70,12 @@ function parseJsonLoose(text) {
 }
 
 /** Screenshot or text -> [{ player, team, market, side, line, odds }], parlayOdds, notes. */
-export async function extractLegs({ apiKey, text, image, sport }) {
+export async function extractLegs({ ai, text, image, sport }) {
   const content = []
-  if (image) content.push({ type: 'image', source: { type: 'base64', media_type: image.type, data: image.data } })
+  if (image) content.push({ type: 'image', mediaType: image.type, data: image.data })
   content.push({ type: 'text', text: text ? `Betslip text:\n${text}` : 'Extract the legs from this betslip.' })
-  const msg = await anthropicClient(apiKey).messages.create({ model: MODEL(), max_tokens: 1200, system: extractSystem(sport || NFL_SPORT), messages: [{ role: 'user', content }] })
-  const raw = (msg?.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('')
-  const json = parseJsonLoose(raw)
+  const out = await ai.complete({ feature: 'parlay', system: extractSystem(sport || NFL_SPORT), messages: [{ role: 'user', content }], maxTokens: 1200 })
+  const json = parseJsonLoose(out.text)
   if (!json || !Array.isArray(json.legs)) return { legs: [], parlayOdds: null, notes: 'Could not read that betslip.' }
   const legs = json.legs
     .slice(0, MAX_LEGS)
@@ -157,7 +152,7 @@ function legBrief(i, ctx, odds, s, sim) {
  * Stream the check as NDJSON: { type:'legs' } (cards with a quick lean) and { type:'sim' } right
  * away, then the AI's text. Returns { produced } for the allowance refund.
  */
-export async function streamParlayCheck({ engine, matched, unmatched = [], parlayOdds = null, notes = '', res, apiKey }) {
+export async function streamParlayCheck({ engine, matched, unmatched = [], parlayOdds = null, notes = '', res, ai }) {
   const sport = engine.sport || NFL_SPORT
   // each leg is read on its own league's board (a slip can mix leagues)
   const legs = matched.map((m) => ({ m, eng: m.eng || engine })).map((x) => ({ ...x, c: x.eng.views.propContext(x.m.id) })).filter((x) => x.c)
@@ -197,8 +192,8 @@ export async function streamParlayCheck({ engine, matched, unmatched = [], parla
       write({ type: 'complete', text: '' })
       return { produced: false }
     }
-    if (!apiKey) {
-      write({ type: 'error', error: 'AI is not configured on this server (ANTHROPIC_API_KEY).' })
+    if (!ai?.ready()) {
+      write({ type: 'error', error: 'AI is not configured on this server (OPENAI_API_KEY).' })
       return { produced: false }
     }
     const brief = [
@@ -211,14 +206,21 @@ export async function streamParlayCheck({ engine, matched, unmatched = [], parla
     ]
       .filter((x) => x !== '')
       .join('\n\n')
-    write({ type: 'start', model: MODEL() })
-    const stream = anthropicClient(apiKey).messages.stream({ model: MODEL(), max_tokens: 1400, system: checkSystem(sport), messages: [{ role: 'user', content: brief }] })
-    stream.on('text', (d) => {
-      text += d
-      write({ type: 'text_delta', text: d })
+    write({ type: 'start', model: ai.model('parlay') })
+    const stop = new AbortController()
+    res.on?.('close', () => stop.abort())
+    const out = await ai.stream({
+      feature: 'parlay',
+      system: checkSystem(sport),
+      messages: [{ role: 'user', content: brief }],
+      maxTokens: 1400,
+      signal: stop.signal,
+      onText: (d) => {
+        text += d
+        write({ type: 'text_delta', text: d })
+      },
     })
-    const final = await stream.finalMessage()
-    write({ type: 'complete', text, stop_reason: final?.stop_reason ?? null })
+    write({ type: 'complete', text, stop_reason: out.stop ?? null })
     return { produced: text.trim().length > 0 }
   } catch (e) {
     log.warn('parlay check failed', { err: errText(e) })

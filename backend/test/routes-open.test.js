@@ -7,7 +7,7 @@ import { createStore } from '../src/lib/store.js'
 import { fixtureHttp } from './helpers.js'
 import { clock, loadAll, testAuth, USERS, bearer, withEnv, serve } from './support.js'
 
-const restoreEnv = withEnv({ APEX_TREASURY_ADDRESS: null, APEX_PAYWALL: 'off', APEX_READS_NEED_AUTH: null, APEX_AUTH: null, K_SERVICE: null, APEX_STREAM_SECRET: 's'.repeat(32), APEX_LOG_LEVEL: 'error' })
+const restoreEnv = withEnv({ OPENAI_API_KEY: null, APEX_AI_PROVIDER: null, APEX_TREASURY_ADDRESS: null, APEX_PAYWALL: 'off', APEX_READS_NEED_AUTH: null, APEX_AUTH: null, K_SERVICE: null, APEX_STREAM_SECRET: 's'.repeat(32), APEX_LOG_LEVEL: 'error' })
 
 let api
 let engine
