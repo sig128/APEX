@@ -147,3 +147,18 @@ test('an NBA day: daily slate, ESPN prices, the board, a prop, the lock', async 
   const misses = [...transport.misses].filter((k) => !k.includes('/schedule'))
   assert.deepEqual(misses, [], 'every request had an answer')
 })
+
+test('a cold serverless instance: catchUp finishes every game log so the board fills', async () => {
+  const transport = createFixtureTransport(nbaFixtures())
+  // two logs per round, so it takes several rounds, the way 100+ players do on a real slate
+  const engine = createEngine({ mode: 'lazy', sport: 'nba', http: createHttp({ transport }), store: createStore({ driver: 'memory' }), now: () => NOW, backfillBatch: 2 })
+  assert.deepEqual(await engine.catchUp(1000), { skipped: true }, 'nothing to do before anyone opened the league')
+  await engine.ensureStarted()
+  assert.ok(engine.logsLeft() > 2, `${engine.logsLeft()} logs to fetch`)
+  const out = await engine.catchUp(20_000)
+  assert.equal(engine.logsLeft(), 0, JSON.stringify(out))
+  assert.ok(out.rounds >= 3)
+  const home = engine.views.home()
+  assert.ok(home.tabs.apex.length > 0, 'the board has props once the logs are in')
+  assert.equal(home.counts.pending, 0)
+})

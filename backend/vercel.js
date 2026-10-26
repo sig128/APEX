@@ -55,6 +55,29 @@ async function build() {
 /** For tests: the app this instance built. */
 export const _state = { made: null }
 
+// Vercel keeps an instance alive for promises handed to waitUntil (what @vercel/functions'
+// waitUntil does, without the dependency). Anywhere else this is a no-op.
+const CONTEXT = Symbol.for('@vercel/request-context')
+export function waitUntil(promise) {
+  const ctx = globalThis[CONTEXT]?.get?.()
+  if (typeof ctx?.waitUntil !== 'function') return false
+  ctx.waitUntil(promise)
+  return true
+}
+
+/**
+ * After the response: let the leagues this request touched finish loading (game logs above all),
+ * so the board fills in instead of waiting forever on a frozen instance.
+ */
+export function afterResponse(req, made = _state.made) {
+  if (!made?.engines) return Promise.resolve()
+  const key = /^\/api\/([a-z]+)\//.exec(String(req.url || ''))?.[1]
+  const list = Object.entries(made.engines)
+    .filter(([k, e]) => e.started?.() && (k === key || k === 'nfl'))
+    .map(([, e]) => e.catchUp(Number(process.env.APEX_CATCHUP_MS) || 45_000).catch(() => {}))
+  return Promise.allSettled(list)
+}
+
 export default async function handler(req, res) {
   ready ||= build().catch((e) => {
     ready = null
@@ -70,5 +93,17 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store')
     return res.end(JSON.stringify({ error: 'The API could not start. Check the function logs.', code: 'startup' }))
   }
+  waitUntil(
+    new Promise((resolve) => {
+      let ran = false
+      const done = () => {
+        if (ran) return
+        ran = true
+        afterResponse(req).then(resolve, resolve)
+      }
+      res.once('finish', done)
+      res.once('close', done)
+    }),
+  )
   return app(req, res)
 }

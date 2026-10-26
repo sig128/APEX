@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApi } from '../lib/useApi.js'
 import { useLive } from '../lib/live.js'
@@ -11,7 +11,7 @@ import { GameStrip } from '../ui/GameStrip.jsx'
 import { PropList } from '../ui/PropRow.jsx'
 import { HitChart } from '../ui/HitChart.jsx'
 import { Headshot, TeamLogo } from '../ui/Img.jsx'
-import { RateChip, Tabs, Section, Skeleton, ErrorBox, Empty } from '../ui/Bits.jsx'
+import { RateChip, Tabs, Section, Skeleton, ErrorBox, Empty, Warming } from '../ui/Bits.jsx'
 import { useSport, apiOf, sp, sportInfo, slateDay, slateLabel } from '../lib/sport.js'
 
 const TABS = [
@@ -48,7 +48,14 @@ function boardDay(data, style = 'long') {
 export function HomePage() {
   const sport = useSport()
   const info = sportInfo(sport)
-  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/home`, { maxAgeMs: 20_000 })
+  // a fresh server loads game logs for a few seconds; until then the board polls itself
+  // (quickly while it's empty, then slower until the last players are in)
+  const [poll, setPoll] = useState(0)
+  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/home`, { maxAgeMs: 20_000, pollMs: poll })
+  const warming = Boolean(data && !data.counts?.props && data.counts?.pending > 0)
+  const [opened] = useState(() => Date.now())
+  const nextPoll = !data?.counts?.pending || Date.now() - opened > 180_000 ? 0 : warming ? 4000 : 10_000
+  useEffect(() => setPoll(nextPoll), [nextPoll])
   useLive('scoreboard', () => {})
   const daily = (data?.calendar || info.calendar) === 'day'
   const phone = useMedia('(max-width: 759px)')
@@ -124,24 +131,27 @@ export function HomePage() {
           )}
         </header>
 
-        <LockBanner />
+        {warming && <Warming pending={data.counts.pending} />}
+        {!warming && <LockBanner />}
         <MyGames games={data?.games} />
         {loading && <Skeleton kind="hero" rows={1} />}
         {top && <Hero card={top} />}
 
-        <Section
-          id="board"
-          title="The board"
-          aside={
-            <Link to={sp(sport, '/props')} className="link">
-              All props
-            </Link>
-          }
-        >
-          <Tabs tabs={tabs.map((t) => ({ ...t, count: data?.tabs?.[t.key]?.length }))} value={cur} onChange={setTab} label="Board" className="board-tabs" />
-          <p className="section__note">{TAB_NOTE[cur] || ''}</p>
-          {loading ? <Skeleton rows={8} /> : <PropList rows={data?.tabs?.[cur]} ranked={cur === 'apex'} showGame empty="Nothing qualifies for this list right now. It fills in as lines post." />}
-        </Section>
+        {!warming && (
+          <Section
+            id="board"
+            title="The board"
+            aside={
+              <Link to={sp(sport, '/props')} className="link">
+                All props
+              </Link>
+            }
+          >
+            <Tabs tabs={tabs.map((t) => ({ ...t, count: data?.tabs?.[t.key]?.length }))} value={cur} onChange={setTab} label="Board" className="board-tabs" />
+            <p className="section__note">{TAB_NOTE[cur] || ''}</p>
+            {loading ? <Skeleton rows={8} /> : <PropList rows={data?.tabs?.[cur]} ranked={cur === 'apex'} showGame empty="Nothing qualifies for this list right now. It fills in as lines post." />}
+          </Section>
+        )}
 
         {data?.cheatsheets?.length > 0 && (
           <Section id="sheets" title="Cheatsheets">

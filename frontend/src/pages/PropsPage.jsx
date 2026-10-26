@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useWatch } from '../lib/watch.js'
 import { useApi } from '../lib/useApi.js'
 import { useTitle, useMedia } from '../lib/hooks.js'
 import { PropRow } from '../ui/PropRow.jsx'
-import { Pills, Skeleton, ErrorBox, Empty } from '../ui/Bits.jsx'
+import { Pills, Skeleton, ErrorBox, Empty, Warming } from '../ui/Bits.jsx'
 import { useSport, apiOf, sportInfo } from '../lib/sport.js'
 
 const WINDOWS = [
@@ -69,7 +69,14 @@ export function PropsPage() {
   for (const k of ['side', 'minHit', 'game', 'q']) if (get(k)) params.set(k, get(k))
   if (pos.length) params.set('pos', pos.join(','))
   const base = params.toString()
-  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/board?${base}`, { maxAgeMs: 30_000 })
+  // a fresh server loads game logs for a few seconds; until then the board polls itself
+  // (quickly while it's empty, then slower until the last players are in)
+  const [poll, setPoll] = useState(0)
+  const { data, error, loading, refresh } = useApi(`${apiOf(sport)}/board?${base}`, { maxAgeMs: 30_000, pollMs: poll })
+  const warming = Boolean(data && !data.total && data.pending > 0)
+  const [opened] = useState(() => Date.now())
+  const nextPoll = !data?.pending || Date.now() - opened > 180_000 ? 0 : warming ? 4000 : 10_000
+  useEffect(() => setPoll(nextPoll), [nextPoll])
   useTitle(`${sportInfo(sport).name} prop explorer`)
   const facets = data?.facets
   const posPills = useMemo(() => groupPills(facets?.groups, sport), [facets, sport])
@@ -87,7 +94,7 @@ export function PropsPage() {
     <div className="container page">
       <header className="page-head">
         <h1 className="page-title">Props</h1>
-        <p className="page-sub">{data ? `${data.total.toLocaleString()} props match` : 'Every player prop on the slate'}</p>
+        <p className="page-sub">{warming ? 'Loading the board' : data ? `${data.total.toLocaleString()} props match` : 'Every player prop on the slate'}</p>
       </header>
       {phone && (
         <button type="button" className="btn btn--quiet btn--block filters-toggle" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
@@ -178,6 +185,8 @@ export function PropsPage() {
             </button>
           )}
         </>
+      ) : warming ? (
+        <Warming pending={data.pending} />
       ) : (
         data && <Empty title="No props match these filters">Loosen the hit-rate floor or pick every market.</Empty>
       )}

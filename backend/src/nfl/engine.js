@@ -195,7 +195,8 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     return [...ids]
   }
 
-  async function logsTask(limit = backfillBatch ?? (mode === 'lazy' ? 24 : 60)) {
+  /** Game logs still to fetch: [playerId, season], this season first. */
+  function logsTodo() {
     const yr = season()
     const t = now()
     const todo = []
@@ -206,6 +207,12 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     }
     // current season first, then last season
     todo.sort((a, b) => b[1] - a[1])
+    return todo
+  }
+
+  async function logsTask(limit = backfillBatch ?? (mode === 'lazy' ? 24 : 60)) {
+    const yr = season()
+    const todo = logsTodo()
     const batch = todo.slice(0, limit)
     await mapLimit(batch, 6, async ([pid, yr2]) => {
       try {
@@ -344,6 +351,39 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     }
   }
 
+  /**
+   * Serverless (Vercel): the instance is frozen as soon as a response is sent, so work kicked off
+   * by touch() would never finish there. The host keeps the instance alive for this promise
+   * after the response: everything stale gets done, game logs batch after batch, within the
+   * time budget. Without it a fresh instance's board stays empty while its logs wait.
+   */
+  async function catchUp(budgetMs = 45_000) {
+    if (mode !== 'lazy' || !started) return { skipped: true }
+    const until = Date.now() + budgetMs
+    const settle = () => Promise.race([Promise.allSettled([...running.values()]), new Promise((r) => setTimeout(r, Math.max(0, until - Date.now())))])
+    try {
+      await started
+    } catch {
+      return { skipped: true }
+    }
+    touch()
+    await settle()
+    let rounds = 0
+    let left = logsTodo().length
+    while (left > 0 && Date.now() < until && rounds < 20) {
+      await runTask('logs')
+      const next = logsTodo().length
+      if (next >= left) break // ESPN refused what's left; the next request tries again
+      left = next
+      rounds++
+    }
+    if (wh.dirty.size) {
+      wh.at.persist = now()
+      await Promise.race([runTask('persist'), settle()])
+    }
+    return { rounds, left }
+  }
+
   /** Lazy mode: while anyone holds a stream open, keep live data moving. */
   function onSubscribersChanged(count) {
     if (mode !== 'lazy') return
@@ -392,6 +432,9 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
       return started
     },
     touch,
+    catchUp,
+    started: () => Boolean(started),
+    logsLeft: () => logsTodo().length,
     runTask,
     logsTask,
     persist,

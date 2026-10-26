@@ -964,6 +964,50 @@ code {
   justify-items: center;
   gap: 8px;
 }
+/* a fresh server loading its game logs: the board fills in by itself */
+.warming {
+  position: relative;
+  overflow: hidden;
+  margin: 8px 0 20px;
+  padding: 22px 20px 20px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.warming__bar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: warming 1.4s ease-in-out infinite;
+}
+@keyframes warming {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .warming__bar {
+    animation: none;
+    background: var(--gold);
+    opacity: 0.5;
+  }
+}
+.warming__title {
+  margin: 0 0 4px;
+  font-weight: 700;
+  font-size: 18px;
+}
+.warming__body {
+  margin: 0;
+  color: var(--chalk-2);
+  max-width: 60ch;
+}
 .empty__leagues {
   justify-content: center;
   margin-top: 6px;

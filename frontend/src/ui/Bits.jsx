@@ -114,3 +114,16 @@ export function SlipToggle({ on, onClick, label }) {
     </button>
   )
 }
+
+/** The board while a fresh server pulls game logs: it fills in by itself. */
+export function Warming({ pending }) {
+  return (
+    <div className="warming" role="status">
+      <span className="warming__bar" aria-hidden="true" />
+      <p className="warming__title">Loading the board</p>
+      <p className="warming__body">
+        Pulling game logs for {pending.toLocaleString()} {pending === 1 ? 'line' : 'lines'}. The board fills in by itself in a few seconds.
+      </p>
+    </div>
+  )
+}

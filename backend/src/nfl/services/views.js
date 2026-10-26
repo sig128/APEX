@@ -212,7 +212,7 @@ export function createViews(engine) {
 
   // ---- props explorer ---------------------------------------------------------------------------
   function props(q = {}) {
-    const { rows } = allRows()
+    const { rows, pending } = allRows()
     const markets = String(q.market || 'core')
     const wantMarkets = markets === 'all' ? null : markets === 'core' ? new Set(CORE) : new Set(markets.split(',').filter((m) => fam.MARKETS[m]))
     const kind = q.kind === 'teams' ? 'team' : 'player'
@@ -254,6 +254,8 @@ export function createViews(engine) {
     list = list.slice(offset, offset + limit)
     return {
       total,
+      // lines whose players' game logs are still loading (a fresh server fills these in)
+      pending,
       offset,
       limit,
       window: win,

@@ -104,8 +104,18 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     return { season: s.season, week: s.week, games: s.games, live: s.live, props: s.props, players: s.players, logs: s.logs, wanted: s.wanted, at: s.at, mode: s.mode, version: s.version, odds: s.odds?.enabled || false }
   })
   r.get('/week', { tier: t('week'), cache: C(5, 5, 20) }, () => views.strip())
-  r.get('/home', { tier: t('home'), cache: C(15, 20, 60) }, () => views.home())
-  r.get('/board', { tier: t('board'), cache: C(15, 20, 60) }, (ctx) => views.props(ctx.query))
+  // while a fresh server is still loading game logs the board is empty: don't let a cache keep
+  // serving that empty board once the data is in
+  r.get('/home', { tier: t('home'), cache: C(15, 20, 60) }, (ctx) => {
+    const out = views.home()
+    if (!out.counts.props && out.counts.pending) ctx.cache = null
+    return out
+  })
+  r.get('/board', { tier: t('board'), cache: C(15, 20, 60) }, (ctx) => {
+    const out = views.props(ctx.query)
+    if (!out.total && out.pending) ctx.cache = null
+    return out
+  })
   r.get('/props/:id', { tier: t('props'), cache: C(15, 20, 60) }, (ctx) => {
     if (!parsePropId(ctx.params.id)) throw new ApiError(400, 'bad_prop', 'That prop id is not valid.')
     const out = views.prop(ctx.params.id)

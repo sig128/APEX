@@ -53,3 +53,29 @@ test('no database: stats on, passes and picks pages off, the caller is who Verce
   const missing = await get('/api/nope')
   assert.equal(missing.status, 404)
 })
+
+test('after each response the touched leagues finish loading, on Vercel only', async () => {
+  const calls = []
+  const eng = (k, on = true) => ({ started: () => on, catchUp: async (ms) => calls.push([k, ms]) })
+  const made = { engines: { nfl: eng('nfl'), nba: eng('nba'), nhl: eng('nhl', false), mlb: eng('mlb') } }
+  await mod.afterResponse({ url: '/api/nba/board?market=pts' }, made)
+  assert.deepEqual(calls.map((c) => c[0]).sort(), ['nba', 'nfl'], 'this league, plus the NFL for picks grading; never a league nobody opened')
+  calls.length = 0
+  await mod.afterResponse({ url: '/api/nhl/home' }, made)
+  assert.deepEqual(calls.map((c) => c[0]), ['nfl'], 'a league that never started stays asleep')
+  // the request context Vercel provides: the promise is handed over, and only there
+  assert.equal(mod.waitUntil(Promise.resolve()), false, 'off Vercel nothing is kept alive')
+  const kept = []
+  const key = Symbol.for('@vercel/request-context')
+  globalThis[key] = { get: () => ({ waitUntil: (p) => kept.push(p) }) }
+  try {
+    assert.equal(mod.waitUntil(Promise.resolve()), true)
+    const r = await fetch(base + '/api/health')
+    await r.text()
+    assert.ok(kept.length >= 2, 'every request leaves its after-work with Vercel')
+    await Promise.race([Promise.all(kept), new Promise((_, no) => setTimeout(() => no(new Error('after-work never settled')), 5000))])
+  } finally {
+    delete globalThis[key]
+  }
+})
+
