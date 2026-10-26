@@ -56,15 +56,25 @@ export function PropsPage() {
   const sport = useSport()
   const [q, setQ] = useSearchParams()
   const get = (k, d = '') => q.get(k) ?? d
+  // Filters build on the address bar as it is at the moment of the tap, not as of the last
+  // render, so two quick taps both count (the second used to undo the first).
+  const latest = () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : q)
   const set = (k, v) => {
-    const next = new URLSearchParams(q)
+    const next = latest()
     if (v == null || v === '' || (Array.isArray(v) && !v.length)) next.delete(k)
     else next.set(k, Array.isArray(v) ? v.join(',') : v)
     if (k !== 'page') next.delete('page')
     setQ(next, { replace: true })
   }
+  /** Turn one position on or off. */
+  const togglePos = (k) => {
+    const cur = new Set((latest().get('pos') || '').split(',').filter(Boolean))
+    if (cur.has(k)) cur.delete(k)
+    else cur.add(k)
+    set('pos', [...cur])
+  }
   const setMany = (obj) => {
-    const next = new URLSearchParams(q)
+    const next = latest()
     for (const [k, v] of Object.entries(obj)) {
       if (v == null || v === '') next.delete(k)
       else next.set(k, v)
@@ -164,7 +174,7 @@ export function PropsPage() {
         </label>
         <div className="filters__row">
           <span className="filters__k">Position</span>
-          <Pills label="Position" options={posPills} value={pos} multiple onChange={(v) => set('pos', v)} />
+          <Pills label="Position" options={posPills} value={pos} multiple onChange={(_, k) => togglePos(k)} />
           <span className="filters__k">Side</span>
           <Pills label="Side" options={SIDES} value={get('side') || null} onChange={(v) => set('side', v)} />
         </div>

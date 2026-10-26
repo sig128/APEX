@@ -34,7 +34,8 @@ export function Pills({ options, value, onChange, multiple = false, label }) {
     const cur = new Set(value || [])
     if (cur.has(k)) cur.delete(k)
     else cur.add(k)
-    onChange([...cur])
+    // the key that was tapped rides along, for callers that toggle against fresher state
+    onChange([...cur], k)
   }
   return (
     <div className="pills" role="group" aria-label={label}>
