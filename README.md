@@ -89,7 +89,7 @@ The site and the API both run on Vercel; Firebase only does Google sign-in and t
    | Variable | What it's for |
    |---|---|
    | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | Google sign-in on the site (Firebase console > Project settings > Your apps > Web app) |
-   | `FIREBASE_SERVICE_ACCOUNT` | The database: paste the whole JSON from Project settings > Service accounts > Generate new private key. Without it, stats and live tracking work, but passes, picks pages and codes stay off, and every new server instance reloads its data from ESPN (the first visit after a quiet spell shows "Loading the board" for a few seconds). |
+   | `FIREBASE_SERVICE_ACCOUNT` | The database: paste the whole JSON from Project settings > Service accounts > Generate new private key. Without it, stats and live tracking work, but passes, picks pages and codes stay off, and every new server instance reloads its data from ESPN, so the first visit after a quiet spell takes a few seconds longer. |
    | `ANTHROPIC_API_KEY` | AI reads and the analyzer |
    | `APEX_ADMIN_EMAILS` | Your Google account(s): the admin page and every plan |
    | `ADMIN_SPORTS_KEY` | 24+ random characters, for scripts and `/adminn` |
