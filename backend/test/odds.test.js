@@ -97,6 +97,31 @@ test('prices survive a cold start through the store', async () => {
   assert.match(odds.status().lastError, /HTTP 503|cooling/)
 })
 
+test('a fresh serverless instance starts from the prices another one saved, even right after the odds ran', async () => {
+  const now = clock()
+  const store = createStore({ driver: 'memory' })
+  const a = createEngine({ mode: 'lazy', http: createHttp({ transport: createFixtureTransport(fixtures()) }), store, now, oddsApiKey: '' })
+  await loadAll(a)
+  const on = a.views.props({ limit: 500 }).rows.find((r) => r.kind === 'player' && !r.oneSided && r.posted === 'main')
+  assert.ok(on, 'a posted over/under on the board')
+  // another instance ran the odds a moment ago: its snapshot says so, and its prices are saved
+  a.wh.at.odds = now()
+  a.wh.bump('core')
+  await a.persist(true)
+  a.stop()
+  const sides = [{ side: 'over', price: -118 }, { side: 'under', price: -102 }]
+  await store.set('oddsprops', 'all', [[on.gameId, { at: now(), rows: sides.map((s) => ({ pid: on.playerId, market: on.market, line: on.line, book: 'fanduel', ...s })) }]])
+  const asked = []
+  const transport = createFixtureTransport(fixtures(), { onMiss: (k) => k.includes('the-odds-api') && asked.push(k) })
+  const b = createEngine({ mode: 'lazy', http: createHttp({ transport }), store, now, oddsApiKey: 'fresh-instance-key' })
+  await b.ensureStarted()
+  assert.equal(b.wh.prices.get(`${on.playerId}:${on.market}:${on.line}`)?.books?.fanduel?.over, -118, 'the saved prices are there from the first request')
+  const row = b.views.props({ limit: 500 }).rows.find((r) => r.id === on.id)
+  assert.equal(row?.price?.book, 'fanduel', 'and they reach the board')
+  assert.equal(asked.length, 0, 'without buying them again')
+  b.stop()
+})
+
 test('every league: NBA and NHL props map to APEX markets, each league spends its own budget', async () => {
   const NBA = 'https://api.the-odds-api.com/v4/sports/basketball_nba'
   const NHL = 'https://api.the-odds-api.com/v4/sports/icehockey_nhl'

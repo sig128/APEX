@@ -332,7 +332,13 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
 
   /** Everything needed for the first page: restore the snapshot, then the scoreboard. */
   async function bootstrap() {
-    await restore()
+    // The snapshot remembers when any instance last ran the odds, so this one may not run them
+    // for a while; it starts from the prices they saved instead of showing none.
+    const [, saved] = await Promise.all([restore(), odds ? odds.cached().catch(() => null) : null])
+    if (saved?.size && !wh.prices.size) {
+      wh.prices = saved
+      wh.bump()
+    }
     const needScoreboard = !wh.games.size || age('scoreboard') > 2 * MIN
     if (needScoreboard) await runTask('scoreboard')
     if (mode === 'daemon') {

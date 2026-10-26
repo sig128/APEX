@@ -103,18 +103,26 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
   let events = null
   let eventsAt = 0
   const snapshots = new Map() // espnGameId -> { at, rows }
-  let loaded = false
   const state = { spentToday: 0, lastError: null, lastRefresh: 0 }
+  // a game's prices are dropped this long after they were last fetched (its game is long over)
+  const KEEP_MS = 3 * 86400e3
 
+  /**
+   * The prices every instance has saved. Read again before each refresh: on serverless, other
+   * instances fetch games too, and a game one of them just paid for shouldn't be bought twice.
+   */
   async function loadSnapshots() {
-    if (loaded || !store) return
-    loaded = true
+    if (!store) return
     try {
       const saved = await store.get('oddsprops', SNAP)
-      for (const [id, s] of saved || []) snapshots.set(id, s)
+      for (const [id, s] of saved || []) {
+        const cur = snapshots.get(id)
+        if (s && (!cur || (s.at || 0) > (cur.at || 0))) snapshots.set(id, s)
+      }
     } catch (e) {
-      log.warn('odds snapshot load failed', { err: errText(e) })
+      log.warn('odds snapshot load failed', { sport, err: errText(e) })
     }
+    for (const [id, s] of snapshots) if (now() - (s?.at || 0) > KEEP_MS) snapshots.delete(id)
   }
 
   /** Reserve credits in the shared counter. Returns false when today's budget is spent. */
@@ -206,12 +214,18 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
 
   return {
     status: () => ({ enabled: true, sport, ...state, games: snapshots.size, budget: dailyCredits, keys: keys.status() }),
+    /** The saved prices only, no API calls: what a fresh instance shows before its own refresh. */
+    async cached() {
+      await loadSnapshots()
+      return snapshots.size ? toPrices() : null
+    },
     async refresh({ games, players }) {
       await loadSnapshots()
       try {
         await listEvents()
       } catch (e) {
         state.lastError = errText(e)
+        log.warn('odds events failed', { sport, err: state.lastError, code: e.upstreamCode || undefined })
         return snapshots.size ? toPrices() : null
       }
       let changed = false
@@ -230,6 +244,7 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
           changed = true
         } catch (e) {
           state.lastError = errText(e)
+          log.warn('odds prices failed', { sport, game: g.id, err: state.lastError, code: e.upstreamCode || undefined })
         }
       }
       state.lastRefresh = now()
