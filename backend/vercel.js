@@ -48,7 +48,7 @@ async function build() {
   const { createApexApp } = await import('./app.js')
   const made = createApexApp({ engineMode: 'lazy', getFirestore: () => db })
   _state.made = made
-  log.info('apex api ready on vercel', { database: Boolean(db), projectId: projectId || null })
+  log.info('apex api ready on vercel', { database: Boolean(db), projectId: projectId || null, waitUntil: typeof globalThis[CONTEXT]?.get === 'function' })
   return made.app
 }
 
@@ -74,7 +74,7 @@ export function afterResponse(req, made = _state.made) {
   const key = /^\/api\/([a-z]+)\//.exec(String(req.url || ''))?.[1]
   const list = Object.entries(made.engines)
     .filter(([k, e]) => e.started?.() && (k === key || k === 'nfl'))
-    .map(([, e]) => e.catchUp(Number(process.env.APEX_CATCHUP_MS) || 45_000).catch(() => {}))
+    .map(([k, e]) => e.catchUp(Number(process.env.APEX_CATCHUP_MS) || 45_000).catch((err) => log.warn('catch-up failed', { sport: k, err: errText(err) })))
   return Promise.allSettled(list)
 }
 
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store')
     return res.end(JSON.stringify({ error: 'The API could not start. Check the function logs.', code: 'startup' }))
   }
-  waitUntil(
+  const kept = waitUntil(
     new Promise((resolve) => {
       let ran = false
       const done = () => {
@@ -105,5 +105,10 @@ export default async function handler(req, res) {
       res.once('close', done)
     }),
   )
+  if (!kept && !warned) {
+    warned = true
+    log.warn('no waitUntil on this runtime: data loads only while a request is open')
+  }
   return app(req, res)
 }
+let warned = false

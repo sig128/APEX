@@ -397,7 +397,9 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
       wh.at.persist = now()
       await Promise.race([runTask('persist'), settle()])
     }
-    return { rounds, left }
+    const out = { rounds, left, logs: wh.logs.size, ms: Date.now() - (until - budgetMs) }
+    if (rounds || left) log.info('caught up', { sport: S.key, ...out })
+    return out
   }
 
   /** Lazy mode: while anyone holds a stream open, keep live data moving. */

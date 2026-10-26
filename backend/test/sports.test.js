@@ -14,6 +14,8 @@ import { createStore } from '../src/lib/store.js'
 import { statCorrelation } from '../src/nfl/analytics/sim.js'
 import { gameFraction } from '../src/nfl/services/live.js'
 import { nbaFixtures, NOW } from './fixtures/nba.js'
+import { createApexApp } from '../app.js'
+import { serve, withEnv } from './support.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const S = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'nba-sample.json'), 'utf8'))
@@ -184,3 +186,22 @@ test('early morning: ESPN still shows yesterday, so today is fetched by date', a
   assert.ok(ids.includes('401909870'), `Monday's game is on the board: ${ids}`)
   assert.equal(engine.slate(), '2026-10-26', 'the slate is the day of the next game to finish')
 })
+
+test('the first visitor to a fresh server gets a board, not an empty one', async () => {
+  const restore = withEnv({ APEX_PAYWALL: 'off', APEX_LOG_LEVEL: 'error', APEX_WARM_MS: null })
+  const transport = createFixtureTransport(nbaFixtures())
+  const made = createApexApp({ engineMode: 'lazy', http: createHttp({ transport }), store: createStore({ driver: 'memory' }), anthropicKey: () => null, oddsKey: () => null, now: () => NOW })
+  const api = await serve(made.app)
+  try {
+    const board = await api.get('/api/nba/board?market=core')
+    assert.equal(board.status, 200)
+    assert.ok(board.body.total > 0, `the request loaded the logs before answering: ${JSON.stringify({ total: board.body.total, pending: board.body.pending })}`)
+    assert.equal(board.body.pending, 0)
+    assert.match(board.headers.get('cache-control'), /^public/, 'a full board caches as usual')
+  } finally {
+    await api.close()
+    for (const e of Object.values(made.engines)) e.stop()
+    restore()
+  }
+})
+

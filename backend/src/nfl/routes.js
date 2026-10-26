@@ -104,15 +104,25 @@ export function createNflRouter(engine, { anthropicKey, auth = defaultAuthInstan
     return { season: s.season, week: s.week, games: s.games, live: s.live, props: s.props, players: s.players, logs: s.logs, wanted: s.wanted, at: s.at, mode: s.mode, version: s.version, odds: s.odds?.enabled || false }
   })
   r.get('/week', { tier: t('week'), cache: C(5, 5, 20) }, () => views.strip())
-  // while a fresh server is still loading game logs the board is empty: don't let a cache keep
-  // serving that empty board once the data is in
-  r.get('/home', { tier: t('home'), cache: C(15, 20, 60) }, (ctx) => {
-    const out = views.home()
+  // A fresh serverless instance has no game logs yet, so its board is empty. The request then
+  // spends a few seconds loading them (every poll from a waiting page moves it along), and an
+  // empty board is never cached, so nobody keeps getting it once the data is in.
+  const WARM_MS = envInt('APEX_WARM_MS', 8000, { min: 0, max: 60_000 })
+  async function warmed(build, empty) {
+    let out = build()
+    if (WARM_MS && empty(out) && engine.catchUp && engine.logsLeft?.() > 0) {
+      await engine.catchUp(WARM_MS)
+      out = build()
+    }
+    return out
+  }
+  r.get('/home', { tier: t('home'), cache: C(15, 20, 60) }, async (ctx) => {
+    const out = await warmed(() => views.home(), (o) => !o.counts.props && o.counts.pending > 0)
     if (!out.counts.props && out.counts.pending) ctx.cache = null
     return out
   })
-  r.get('/board', { tier: t('board'), cache: C(15, 20, 60) }, (ctx) => {
-    const out = views.props(ctx.query)
+  r.get('/board', { tier: t('board'), cache: C(15, 20, 60) }, async (ctx) => {
+    const out = await warmed(() => views.props(ctx.query), (o) => !o.total && o.pending > 0)
     if (!out.total && out.pending) ctx.cache = null
     return out
   })
