@@ -1,6 +1,7 @@
 /** The Odds API — big-4 schedule search (events endpoint does not use monthly quota). */
 
 import { getDisabledSportKeys, filterEnabledSportKeys } from './sportsConfig.js'
+import { keyRing, oddsFailure } from './src/providers/oddsapi/keys.js'
 
 const ODDS_BASE = 'https://api.the-odds-api.com/v4'
 
@@ -73,7 +74,8 @@ export function resolveSportsParam(sport) {
  * @returns {Promise<{ events: object[], errors: { sport: string, message: string }[] }>}
  */
 export async function fetchOddsEventsSafe(apiKey, sportKeys) {
-  const oddsKey = typeof apiKey === 'string' ? apiKey.trim() : ''
+  // the paid key first, the backup when the API turns the first one down
+  const keys = keyRing(apiKey)
   const errors = []
   const settled = await Promise.allSettled(
     sportKeys.map((sportKey) => {
@@ -81,14 +83,15 @@ export async function fetchOddsEventsSafe(apiKey, sportKeys) {
       const hit = scheduleCache.get(sportKey)
       if (hit && Date.now() - hit.at < SCHEDULE_TTL_MS) return hit.promise
       const p = (async () => {
-        const url = new URL(`${ODDS_BASE}/sports/${encodeURIComponent(sportKey)}/events`)
-        url.searchParams.set('apiKey', oddsKey)
-        url.searchParams.set('dateFormat', 'iso')
-        const res = await fetch(url, { headers: { Accept: 'application/json' } })
-        const text = await res.text()
-        if (!res.ok) {
-          throw new Error(parseOddsApiErrorMessage(text, res.status))
-        }
+        const text = await keys.run(async (k) => {
+          const url = new URL(`${ODDS_BASE}/sports/${encodeURIComponent(sportKey)}/events`)
+          url.searchParams.set('apiKey', k)
+          url.searchParams.set('dateFormat', 'iso')
+          const res = await fetch(url, { headers: { Accept: 'application/json' } })
+          const body = await res.text()
+          if (!res.ok) throw oddsFailure(parseOddsApiErrorMessage(body, res.status), res.status, body)
+          return body
+        })
         try {
           const data = JSON.parse(text)
           return Array.isArray(data) ? data : []
@@ -686,23 +689,22 @@ async function fetchMlbEventPlayerPropsOdds(apiKey, eventId, req = null) {
     }
     // a call that didn't return odds gives its credits back
     const refund = () => (oddsBudget ? Promise.resolve(oddsBudget(-cost, { req })).catch(() => {}) : null)
-    let res
     let text
     try {
-      const url = new URL(`${ODDS_BASE}/sports/baseball_mlb/events/${encodeURIComponent(id)}/odds`)
-      url.searchParams.set('apiKey', apiKey)
-      url.searchParams.set('regions', 'us')
-      url.searchParams.set('oddsFormat', 'american')
-      url.searchParams.set('markets', markets.join(','))
-      res = await fetch(url, { headers: { Accept: 'application/json' } })
-      text = await res.text()
+      text = await keyRing(apiKey).run(async (k) => {
+        const url = new URL(`${ODDS_BASE}/sports/baseball_mlb/events/${encodeURIComponent(id)}/odds`)
+        url.searchParams.set('apiKey', k)
+        url.searchParams.set('regions', 'us')
+        url.searchParams.set('oddsFormat', 'american')
+        url.searchParams.set('markets', markets.join(','))
+        const res = await fetch(url, { headers: { Accept: 'application/json' } })
+        const body = await res.text()
+        if (!res.ok) throw oddsFailure(parseOddsApiErrorMessage(body, res.status), res.status, body)
+        return body
+      })
     } catch (e) {
       await refund()
       throw e
-    }
-    if (!res.ok) {
-      await refund()
-      throw new Error(parseOddsApiErrorMessage(text, res.status))
     }
     try {
       return JSON.parse(text)

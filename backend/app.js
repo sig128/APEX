@@ -9,7 +9,7 @@ import { createStore } from './src/lib/store.js'
 import { createHub } from './src/lib/hub.js'
 import { log, errText } from './src/lib/log.js'
 import { ApiError, clientIp } from './src/lib/router.js'
-import { createEngine } from './src/nfl/engine.js'
+import { createEngine, oddsLeagues } from './src/nfl/engine.js'
 import { createNflRouter } from './src/nfl/routes.js'
 import { SPORTS, SPORT_KEYS } from './src/sports/index.js'
 import { createBilling, atLeast } from './src/billing/service.js'
@@ -33,6 +33,7 @@ import {
   setOddsBudget,
 } from './oddsEvents.js'
 import { takeOddsCredits } from './src/lib/oddsBudget.js'
+import { oddsKeys, splitKeys } from './src/providers/oddsapi/keys.js'
 import { nameKey, envInt } from './src/lib/util.js'
 import { renderUserHead } from './src/picks/og.js'
 import fs from 'node:fs'
@@ -119,7 +120,8 @@ export function createApexApp({
   http: httpIn,
   anthropicKey = () => process.env.ANTHROPIC_API_KEY,
   adminKey = () => process.env.ADMIN_SPORTS_KEY,
-  oddsKey = () => process.env.THE_ODDS_API_KEY,
+  // THE_ODDS_API_KEY, then THE_ODDS_API_KEY_BACKUP for when the first is refused or out of credits
+  oddsKey = () => oddsKeys().join(','),
   now,
 } = {}) {
   const app = express()
@@ -149,7 +151,7 @@ export function createApexApp({
   for (const key of enabledSports()) {
     if (key === 'nfl') continue
     const h = createHub({ maxClients: envInt('APEX_MAX_STREAMS_OTHER', process.env.K_SERVICE ? 60 : process.env.VERCEL ? 120 : 600, { min: 1, max: 100_000 }), maxPerOwner: envInt('APEX_MAX_STREAMS_PER_IP', 6, { min: 1, max: 1000 }) })
-    engines[key] = createEngine({ mode: engineMode === 'daemon' ? 'lazy' : engineMode, http, store: engineStore, hub: h, sport: key, ...(now ? { now } : {}) })
+    engines[key] = createEngine({ mode: engineMode === 'daemon' ? 'lazy' : engineMode, http, store: engineStore, hub: h, sport: key, oddsApiKey, ...(now ? { now } : {}) })
   }
   const billing = billingIn || createBilling({ getFirestore, store: engineStore, lookupUid: lookupUidByEmail, ...(now ? { now } : {}) })
   const access = createAccess({ auth, billing })
@@ -429,6 +431,14 @@ export function createApexApp({
     res.set('Cache-Control', 'public, max-age=60, s-maxage=300').type('html').send(out)
   })
 
+  // whether a key is set, never the key
+  const isSet = (get) => {
+    try {
+      return get() || ''
+    } catch {
+      return ''
+    }
+  }
   app.get('/api/health', (req, res) => {
     const s = engine.status()
     const cfg = billingConfig()
@@ -442,6 +452,8 @@ export function createApexApp({
       sports: Object.keys(engines),
       billing: { paywall: cfg.paywall, network: cfg.network, treasury: Boolean(cfg.treasury), docs: billing.docsKind },
       auth: authMode(),
+      ai: Boolean(isSet(anthropicKey)),
+      odds: { keys: splitKeys(isSet(oddsKey)).length, leagues: oddsLeagues() },
     })
   })
 

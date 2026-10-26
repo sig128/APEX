@@ -6,6 +6,7 @@
 // loop only runs while someone is connected to the stream.
 import { createEspnClient } from '../providers/espn/client.js'
 import { createOddsApi, ODDS_SPORTS } from '../providers/oddsapi/props.js'
+import { oddsKeys } from '../providers/oddsapi/keys.js'
 import { createWarehouse } from './warehouse.js'
 import { createScheduler } from '../lib/scheduler.js'
 import { createViews } from './services/views.js'
@@ -31,7 +32,7 @@ export function oddsLeagues(env = process.env) {
   return raw.split(',').map((s) => s.trim()).filter((s) => ODDS_SPORTS[s])
 }
 
-export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl', oddsApiKey = process.env.THE_ODDS_API_KEY, now = () => Date.now(), backfillBatch } = {}) {
+export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl', oddsApiKey = oddsKeys().join(','), now = () => Date.now(), backfillBatch } = {}) {
   const S = sportOf(sport)
   const NS = S.key // store namespace: 'nfl' stays where it always was
   const espn = createEspnClient({ http, sport: S.espn.sport, league: S.espn.league, fam: S.fam, headshots: S.headshots })

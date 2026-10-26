@@ -14,6 +14,16 @@ export class HttpError extends Error {
 
 const PRIORITY = { live: 0, user: 1, normal: 2, background: 3 }
 
+function errorCodeOf(text) {
+  if (typeof text !== 'string' || !text.trimStart().startsWith('{')) return ''
+  try {
+    const code = JSON.parse(text)?.error_code
+    return typeof code === 'string' && /^[A-Z_]{2,64}$/.test(code) ? code : ''
+  } catch {
+    return ''
+  }
+}
+
 function hostOf(url) {
   try {
     return new URL(url).host
@@ -65,7 +75,14 @@ export function createHttp({ transport, defaultTimeoutMs = 9000, maxPerHost = 6,
       const res = await doFetch(url, { headers: { accept: 'application/json', ...headers }, signal: ctrl.signal })
       if (!res.ok) {
         const retryAfter = Number(res.headers?.get?.('retry-after')) || 0
-        throw Object.assign(new HttpError(`HTTP ${res.status}`, { status: res.status, url }), { retryAfter })
+        // an API that says why (`{"error_code": "..."}`) lets the caller tell a refused key from a bad request
+        let upstreamCode = ''
+        try {
+          upstreamCode = errorCodeOf(await res.text())
+        } catch {
+          /* no readable body */
+        }
+        throw Object.assign(new HttpError(`HTTP ${res.status}`, { status: res.status, url }), { retryAfter, upstreamCode })
       }
       const text = await res.text()
       try {

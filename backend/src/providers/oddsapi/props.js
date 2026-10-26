@@ -7,6 +7,7 @@ import { nameKey } from '../../lib/util.js'
 import { log, errText } from '../../lib/log.js'
 import { takeOddsCredits } from '../../lib/oddsBudget.js'
 import { MARKETS as APEX_MARKETS } from '../../nfl/markets.js'
+import { keyRing } from './keys.js'
 
 const FOOTBALL = {
   player_pass_yds: 'passYds',
@@ -97,6 +98,8 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
   const MARKETS = conf.markets
   // the NFL keeps the keys it always had
   const SNAP = sport === 'nfl' ? 'all' : `all-${sport}`
+  // the paid key first, the backup when the API turns the first one down (see keys.js)
+  const keys = keyRing(apiKey)
   let events = null
   let eventsAt = 0
   const snapshots = new Map() // espnGameId -> { at, rows }
@@ -124,7 +127,7 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
 
   async function listEvents() {
     if (events && now() - eventsAt < 30 * 60e3) return events
-    events = await http.getJson(`${BASE}/events?apiKey=${encodeURIComponent(apiKey)}`, { priority: 'background', retries: 1 })
+    events = await keys.run((k) => http.getJson(`${BASE}/events?apiKey=${encodeURIComponent(k)}`, { priority: 'background', retries: 1 }))
     eventsAt = now()
     return events
   }
@@ -202,7 +205,7 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
   }
 
   return {
-    status: () => ({ enabled: true, sport, ...state, games: snapshots.size, budget: dailyCredits }),
+    status: () => ({ enabled: true, sport, ...state, games: snapshots.size, budget: dailyCredits, keys: keys.status() }),
     async refresh({ games, players }) {
       await loadSnapshots()
       try {
@@ -221,8 +224,8 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
         const cost = markets.length
         if (!(await spend(cost))) break
         try {
-          const url = `${BASE}/events/${ev.id}/odds?apiKey=${encodeURIComponent(apiKey)}&oddsFormat=american&markets=${markets.join(',')}&bookmakers=${BOOKS.join(',')}&includeLinks=true`
-          const json = await http.getJson(url, { priority: 'background', retries: 0 })
+          const url = (k) => `${BASE}/events/${ev.id}/odds?apiKey=${encodeURIComponent(k)}&oddsFormat=american&markets=${markets.join(',')}&bookmakers=${BOOKS.join(',')}&includeLinks=true`
+          const json = await keys.run((k) => http.getJson(url(k), { priority: 'background', retries: 0 }))
           snapshots.set(g.id, { at: now(), rows: parse(g, json, players) })
           changed = true
         } catch (e) {

@@ -94,6 +94,7 @@ The site and the API both run on Vercel; Firebase only does Google sign-in and t
    | `APEX_ADMIN_EMAILS` | Your Google account(s): the admin page and every plan |
    | `ADMIN_SPORTS_KEY` | 24+ random characters, for scripts and `/adminn` |
    | `THE_ODDS_API_KEY` | Optional: sportsbook prices |
+   | `THE_ODDS_API_KEY_BACKUP` | Optional: a second Odds API key, used when the first is refused or out of credits |
    | `APEX_TREASURY_ADDRESS`, `APEX_BILLING_NETWORK` | Payments (see below; start with `base-sepolia`) |
    | `VITE_PRIVY_APP_ID` | Optional: "Pay with Privy" |
 
@@ -102,8 +103,9 @@ The site and the API both run on Vercel; Firebase only does Google sign-in and t
    `npx firebase-tools deploy --only firestore --project <your-project-id>` (or paste
    `firestore.rules` into the console's Rules tab; each missing index shows up in the function
    logs with a link that creates it).
-5. Open `https://<your-domain>/api/health`: `you` should be your own IP, and `database` turns
-   `true` once the service account is in.
+5. Open `https://<your-domain>/api/health`: `you` should be your own IP, `database` turns
+   `true` once the service account is in, `ai` once the Anthropic key is, and `odds.keys` counts
+   the Odds API keys (never the keys themselves).
 
 On Vercel a function call can last 5 minutes, so live streams quietly reconnect every few
 minutes (the browser does it on its own), and the first visit after a quiet spell is a cold
@@ -178,7 +180,10 @@ ledger. NFL is the site's root (`/`, `/nfl/props`); the others live under their 
   `APEX_ODDS_SPORTS` (default `nfl`; `all` for every league) get every book's prices: DraftKings,
   FanDuel, BetMGM, Caesars, Fanatics, BetRivers and theScore Bet. Each league spends its own
   `APEX_ODDS_DAILY_CREDITS`, so add leagues to match your Odds API plan. bet365 has no US feed;
-  Caesars and Fanatics need a paid Odds API plan.
+  Caesars and Fanatics need a paid Odds API plan. With a second key in
+  `THE_ODDS_API_KEY_BACKUP` (or several keys, comma-separated, in `THE_ODDS_API_KEY`), a key the
+  API turns down, because it's invalid or its monthly credits are used up, is set aside for six
+  hours and the next key takes over in the same request; then the first gets another try.
 - A slip can mix leagues: the simulator, line shopping, the parlay check and picks all take
   legs from several leagues at once (legs from different leagues are independent).
 
