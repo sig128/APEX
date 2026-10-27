@@ -18,6 +18,8 @@ export const PropRow = memo(function PropRow({ c, rank, showGame = false, win, l
   const on = slip.legs.some((l) => l.id === c.id)
   const isTeam = c.kind === 'team'
   const strong = c.prob >= 0.6
+  // the bottom line and its most telling reason, under the prop (the prop page has every reason)
+  const note = !compact && !live && c.note ? c.note : null
   return (
     <div className={`prop-row${compact ? ' prop-row--compact' : ''}${live ? ` prop-row--live is-${live.status}` : ''}`}>
       {rank != null && <span className="prop-row__rank num">{rank}</span>}
@@ -71,6 +73,12 @@ export const PropRow = memo(function PropRow({ c, rank, showGame = false, win, l
         </span>
       )}
       <SlipToggle on={on} onClick={() => toggleLeg(c)} label={`${c.name} ${c.shortLabel || c.label}`} />
+      {note && (
+        <p className={`prop-row__note is-${c.read?.lean || note.tone}`}>
+          {c.read && <b className="prop-row__lean">{c.read.label}</b>}
+          {note.text}
+        </p>
+      )}
     </div>
   )
 })

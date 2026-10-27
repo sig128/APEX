@@ -145,6 +145,15 @@ export function PropsPage() {
     set('market', [...cur])
   }
   const sides = SIDES.map((s) => ({ ...s, label: withCount(s.label, facets?.sides?.[s.key] ?? null) }))
+  // on phones the chips scroll sideways: keep the first picked bet type in view
+  const chipsRef = useRef(null)
+  useEffect(() => {
+    const row = chipsRef.current
+    const on = row?.querySelector('.pill.is-on')
+    if (!row || !on || row.scrollWidth <= row.clientWidth) return
+    const left = on.offsetLeft - row.offsetLeft
+    if (left < row.scrollLeft || left + on.offsetWidth > row.scrollLeft + row.clientWidth) row.scrollTo({ left: Math.max(0, left - 16) })
+  }, [market, types.length])
   const flipDir = () => {
     const next = dir === 'asc' ? 'desc' : 'asc'
     set('dir', next === naturalDir(sort) ? '' : next)
@@ -184,7 +193,7 @@ export function PropsPage() {
           <span className="filters__k" id="bet-type-k">
             Bet type
           </span>
-          <div className="pills-scroll board-types__chips">
+          <div className="pills-scroll board-types__chips" ref={chipsRef}>
             <Pills label="Bet type" options={types} value={picked.length ? picked : [market]} multiple onChange={(_, k) => pickType(k)} />
           </div>
         </div>

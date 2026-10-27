@@ -165,6 +165,9 @@ export function createViews(engine) {
       shop: r.price?.best?.[r.oneSided ? 'yes' : r.side === 'u' ? 'under' : 'over'] || null,
       edge: r.edge ?? null,
       posted: r.posted ?? null,
+      // the bottom line and the most telling note, for lists (the prop page has them all)
+      read: r.read || null,
+      note: r.notes?.[0] || null,
     }
 
   function strip() {

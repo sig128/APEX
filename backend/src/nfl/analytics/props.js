@@ -3,6 +3,7 @@
 import { MARKETS, marketOf, propLabel, shortLabel, POS_GROUP } from '../markets.js'
 import { marketRows, windows, bestWindow, apexOverProb, apexScore, fairOdds, propId, streakOf, outcome, summarize, marketAnchor } from './core.js'
 import { matchupFor, ordinal } from './defense.js'
+import { propNotes } from './notes.js'
 import { injurySeverity } from '../../providers/espn/normalize.js'
 import { noVig, americanToProb } from '../../lib/odds.js'
 import { normalOver } from '../../lib/stats.js'
@@ -147,6 +148,25 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
   const fit = lineFit(sum.avg, line, s, mk.oneSided)
   const id = propId(player.id, market, s, line)
   const move = meta.open != null && meta.open !== line ? { open: meta.open, delta: round(line - meta.open, 1) } : null
+  const statNoun = matchup ? fam.NOUN?.[matchup.stat] || MARKETS[matchup.stat]?.long?.toLowerCase() || matchup.stat : ''
+  // the read: hit rate weighed against tonight's matchup, in a few plain sentences
+  const { notes, read } = propNotes({
+    rows,
+    line,
+    side: s,
+    oneSided: Boolean(mk.oneSided),
+    matchup,
+    dvp: ctx.dvp,
+    opp,
+    windows: ws,
+    proj: prob.proj ? prob.proj.mean ?? prob.proj.lambda : null,
+    boost,
+    move,
+    noun: String(fam.NOUN?.[market] || mk.long || mk.label).toLowerCase(),
+    statNoun,
+    groupName: matchup ? fam.GROUP_NAMES?.[matchup.group] || `${matchup.group}s` : '',
+    short: player.short || player.name,
+  })
   return {
     id,
     kind: 'player',
@@ -199,6 +219,8 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
     implied: implied != null ? round(implied, 4) : null,
     edge: implied != null ? round(edge, 4) : null,
     updated: meta.updated || null,
+    notes,
+    read,
   }
 }
 

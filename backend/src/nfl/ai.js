@@ -52,6 +52,7 @@ function brief(ctx) {
   if (r.matchup) lines.push(`MATCHUP: ${r.matchup.text} (${r.matchup.perGame} per game vs ${r.matchup.avg} league average)`)
   if (r.boost) lines.push(`INJURY CONTEXT: ${r.boost.teammate} (${r.boost.status}). In ${r.boost.games} games without him this player averaged ${r.boost.withoutAvg} vs ${r.boost.avg}.`)
   if (r.move) lines.push(`LINE MOVE: opened ${r.move.open}, now ${r.line} (${r.move.delta > 0 ? '+' : ''}${r.move.delta})`)
+  if (r.notes?.length) lines.push(`APEX NOTES (hit rate weighed against this matchup): ${r.notes.map((n) => `[${n.tone}] ${n.text}`).join(' ')}`)
   if (ctx.injury) lines.push(`PLAYER STATUS: ${ctx.injury.status}`)
   if (ctx.logs?.length) lines.push(`LAST GAMES (newest last): ${ctx.logs.map((l) => `${l.date} ${l.home ? 'vs' : '@'}${l.opp}: ${l.v}`).join(' | ')}`)
   const cert = certifyLeg(r, { now: Date.now(), injury: ctx.injury })

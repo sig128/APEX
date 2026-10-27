@@ -12,6 +12,7 @@ import { useSlip } from '../lib/useSlip.js'
 import { Headshot, TeamLogo, logoFor } from '../ui/Img.jsx'
 import { HitChart } from '../ui/HitChart.jsx'
 import { PropRow } from '../ui/PropRow.jsx'
+import { ReadFeed } from '../ui/ReadFeed.jsx'
 import { AskApex } from '../ui/AskApex.jsx'
 import { Locked } from '../ui/Locked.jsx'
 import { Skeleton, ErrorBox, Section } from '../ui/Bits.jsx'
@@ -206,20 +207,7 @@ export function PropPage() {
             ))}
           </div>
           <HitChart games={games} line={p.line} side={p.side} oneSided={p.oneSided} label={curW?.label} height={230} />
-          {p.matchup?.text && (
-            <p className={`matchup-note${p.matchup.rank <= 6 ? ' is-soft' : p.matchup.rank > p.matchup.of - 6 ? ' is-tough' : ''}`}>
-              <span className="num">
-                {p.matchup.rank}
-                <sup>{ordinal(p.matchup.rank)}</sup>
-              </span>
-              {p.matchup.text}. {p.matchup.perGame != null && `${num(p.matchup.perGame)} a game against a league average of ${num(p.matchup.avg)}.`}
-            </p>
-          )}
-          {p.boost && (
-            <p className="boost-note">
-              {p.boost.teammate} is {String(p.boost.status || 'out').toLowerCase()}. In the {p.boost.games} {p.boost.games === 1 ? 'game' : 'games'} he missed, {p.short} averaged <b className="num">{num(p.boost.withoutAvg)}</b>, against <span className="num">{num(p.boost.avg)}</span> overall.
-            </p>
-          )}
+          {p.notes ? <ReadFeed p={p} /> : <OldNotes p={p} />}
         </div>
       </div>
 
@@ -246,6 +234,28 @@ export function PropPage() {
         </Section>
       )}
     </div>
+  )
+}
+
+/** The matchup and injury lines, for a prop served without the read (an older answer mid-deploy). */
+function OldNotes({ p }) {
+  return (
+    <>
+      {p.matchup?.text && (
+        <p className={`matchup-note${p.matchup.rank <= 6 ? ' is-soft' : p.matchup.rank > p.matchup.of - 6 ? ' is-tough' : ''}`}>
+          <span className="num">
+            {p.matchup.rank}
+            <sup>{ordinal(p.matchup.rank)}</sup>
+          </span>
+          {p.matchup.text}. {p.matchup.perGame != null && `${num(p.matchup.perGame)} a game against a league average of ${num(p.matchup.avg)}.`}
+        </p>
+      )}
+      {p.boost && (
+        <p className="boost-note">
+          {p.boost.teammate} is {String(p.boost.status || 'out').toLowerCase()}. In the {p.boost.games} {p.boost.games === 1 ? 'game' : 'games'} he missed, {p.short} averaged <b className="num">{num(p.boost.withoutAvg)}</b>, against <span className="num">{num(p.boost.avg)}</span> overall.
+        </p>
+      )}
+    </>
   )
 }
 

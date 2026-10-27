@@ -5524,13 +5524,9 @@ code {
   display: grid;
   gap: 8px;
 }
-.board-types__chips .pill {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-}
 /* counts read like the scoreboard numbers elsewhere on the site */
 .pill__n {
+  margin-left: 7px;
   font: 700 14px/1 var(--font-num);
   letter-spacing: 0.02em;
   color: var(--chalk-3);
@@ -5600,4 +5596,126 @@ code {
     margin: 0 -14px;
     padding: 0 14px;
   }
+}
+
+/* ------------------------------------------------------------------------- the read on a prop */
+/* For screen readers only. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* In lists: the bottom line and its most telling reason, under the prop. */
+.prop-row:has(.prop-row__note) {
+  grid-template-areas: 'main read add' 'form form form' 'note note note';
+}
+.prop-row__note {
+  grid-area: note;
+  margin: 0;
+  padding-left: 52px;
+  max-width: 76ch;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--chalk-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.prop-row__lean {
+  margin-right: 7px;
+  font-weight: 700;
+  color: var(--chalk);
+}
+.prop-row__note.is-for .prop-row__lean {
+  color: var(--turf);
+}
+.prop-row__note.is-against .prop-row__lean {
+  color: var(--flag);
+}
+.prop-row__note.is-mixed .prop-row__lean {
+  color: var(--gold);
+}
+@media (min-width: 760px) {
+  .prop-row:has(.prop-row__note) {
+    grid-template-areas: 'main form read add' 'note note note note';
+  }
+  .prop-list--ranked .prop-row:has(.prop-row__note),
+  .prop-row:has(.prop-row__rank):has(.prop-row__note) {
+    grid-template-areas: 'rank main form read add' '. note note note note';
+  }
+  .prop-row__note {
+    margin-top: -4px;
+  }
+}
+
+/* On the prop page: the bottom line, then every reason, marked by what it does to the pick. */
+.read-feed {
+  margin-top: 14px;
+  padding: 14px 16px 12px;
+  border-radius: var(--r-m);
+  background: var(--night);
+  border: 1px solid var(--seat);
+}
+.read-feed__lean {
+  margin: 0 0 10px;
+  padding-left: 12px;
+  border-left: 3px solid var(--seat-2);
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--chalk);
+}
+.read-feed__lean.is-for {
+  border-left-color: var(--turf);
+}
+.read-feed__lean.is-for b {
+  color: var(--turf);
+}
+.read-feed__lean.is-against {
+  border-left-color: var(--flag);
+}
+.read-feed__lean.is-against b {
+  color: var(--flag);
+}
+.read-feed__lean.is-mixed {
+  border-left-color: var(--gold);
+}
+.read-feed__lean.is-mixed b {
+  color: var(--gold);
+}
+.read-feed__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.read-feed__item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: baseline;
+  padding: 8px 0;
+  border-top: 1px solid var(--seat);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--chalk-2);
+  max-width: 72ch;
+}
+.read-feed__item:first-child {
+  border-top: 0;
+}
+.read-feed__mark {
+  font: 800 17px/1 var(--font-num);
+  color: var(--chalk-3);
+}
+.read-feed__item.is-for .read-feed__mark {
+  color: var(--turf);
+}
+.read-feed__item.is-against .read-feed__mark {
+  color: var(--flag);
 }
