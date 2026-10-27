@@ -5905,6 +5905,16 @@ code {
   flex: none;
   margin-top: 6px;
 }
+.adm-gate {
+  max-width: 560px;
+  margin: 48px auto;
+  display: grid;
+  gap: 12px;
+}
+.adm-gate p {
+  margin: 0;
+  color: var(--chalk-2);
+}
 .adm-filters {
   display: flex;
   flex-wrap: wrap;

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import { useBilling } from '../context/BillingContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import { useTitle } from '../lib/hooks.js'
 import { Skeleton } from '../ui/Bits.jsx'
 import { SPORTS } from '../lib/leagues.js'
@@ -33,7 +34,8 @@ const tabFromHash = () => {
 
 /** The admin page: is the board making money at real prices, where, and how the business is doing. */
 export function AdminPage() {
-  const { isAdmin, loading } = useBilling()
+  const { isAdmin, loading, me, refresh } = useBilling()
+  const { user, signOutUser } = useAuth()
   const [period, setPeriod] = useState(30)
   const [sport, setSport] = useState('')
   const [tab, setTab] = useState(tabFromHash)
@@ -78,7 +80,9 @@ export function AdminPage() {
   }
 
   if (loading) return <div className="container page"><Skeleton rows={6} /></div>
-  if (!isAdmin) return <Navigate to="/" replace />
+  // not signed in: sign in, then come straight back here (the tab too)
+  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(`/admin${window.location.hash || ''}`)}`} replace />
+  if (!isAdmin) return <NotAdmin email={user.email} checked={Boolean(me)} onRetry={refresh} onSwitch={signOutUser} />
   return (
     <div className="container page adm">
       <header className="adm-head">
@@ -139,6 +143,38 @@ export function AdminPage() {
           {tab === 'tools' && <Tools data={data} onChanged={load} />}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Signed in, but not as an admin (or the account check failed): say which, and what to do. */
+function NotAdmin({ email, checked, onRetry, onSwitch }) {
+  return (
+    <div className="container page">
+      <section className="adm-panel adm-gate">
+        <h1 className="adm-h2">This page is for the site’s admin</h1>
+        {checked ? (
+          <p>
+            You’re signed in as <b>{email || 'an account without an email'}</b>, which isn’t on the admin list. Sign in with the Google account that runs the site.
+          </p>
+        ) : (
+          <p>Your account couldn’t be checked just now, so the admin page stays closed. Try again in a moment.</p>
+        )}
+        <div className="row">
+          {checked ? (
+            <button type="button" className="btn btn--gold" onClick={() => onSwitch()}>
+              Sign in with another account
+            </button>
+          ) : (
+            <button type="button" className="btn btn--gold" onClick={() => onRetry()}>
+              Try again
+            </button>
+          )}
+          <Link to="/" className="btn btn--quiet">
+            Back to props
+          </Link>
+        </div>
+      </section>
     </div>
   )
 }
