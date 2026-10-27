@@ -11,6 +11,7 @@
       "includeFiles": "build/index.html"
     }
   },
+  "crons": [{ "path": "/api/cron/daily", "schedule": "30 15 * * *" }],
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" },
     { "source": "/u/:handle", "destination": "/api/index" },
