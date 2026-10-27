@@ -784,7 +784,8 @@ function pickTier(W, H) {
 
 function normalizeStats(s) {
   if (!s || typeof s !== 'object') return null
-  const num = (v) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.round(Number(v)) : null)
+  // null stays null (Number(null) is 0, which put "WEEK 0" on day-by-day leagues)
+  const num = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.round(Number(v)) : null)
   const out = { week: num(s.week), games: num(s.games), live: num(s.live), props: num(s.props), chips: null }
   if (Array.isArray(s.chips)) {
     const chips = s.chips

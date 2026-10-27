@@ -1,8 +1,12 @@
-# APEX
+# Propify
+
+> Propify was called APEX until October 2026. Settings, file names, storage keys and headers
+> still use `apex` (for example `APEX_ADMIN_EMAILS`), so existing deployments and saved data keep
+> working. The logo and icons come from `scripts/brand/build.py`.
 
 Player-prop research, live, for the NFL, NBA, MLB, NHL, college football, college basketball and
 the WNBA: every prop on the slate with its hit rates, head to head, matchup, line move and the
-APEX probability (shown as a percentage next to every price); game pages; a live tracker; a bet
+Propify probability (shown as a percentage next to every price); game pages; a live tracker; a bet
 slip that prices parlays fairly, shops the line across sportsbooks and sends the parlay to the
 book's app; the 3-Leg Lock; and a picks showcase where every pick is graded from the box score.
 Stats are free. Two passes, paid in USDC on Base:
@@ -14,7 +18,7 @@ Stats are free. Two passes, paid in USDC on Base:
 | Line shopping across books, "Send to sportsbook" | yes | yes | yes |
 | Kelly calculator (OddsJam-style) | yes | yes | yes |
 | Your picks page at /u/handle with an auto-graded record, tailing picks | yes | yes | yes |
-| AI read of any prop (your APEX ruleset), AI game analyzer | | 15 / 8 a day | 30 / 15 a day |
+| AI read of any prop (your Propify ruleset), AI game analyzer | | 15 / 8 a day | 30 / 15 a day |
 | The 3-Leg Lock and its season ledger (the record is public) | | yes | yes |
 | Parlay check: upload a betslip, AI keeps or cuts every leg | | yes | yes |
 | Monte Carlo parlay simulator (10k-100k runs, luck vs skill) | | yes | yes |
@@ -25,7 +29,7 @@ Stats are free. Two passes, paid in USDC on Base:
 A pass runs 30 days. When it ends there are 7 days of grace with everything still on, then the
 paid features lock until it's renewed. Renewing early stacks, and renewing during the grace week
 starts the new 30 days where the old pass ended; switching plans converts unused days at the
-price ratio. APEX never holds money: people send USDC straight to your wallet, and
+price ratio. Propify never holds money: people send USDC straight to your wallet, and
 the API checks the transfer on-chain.
 
 ## What's where
@@ -145,8 +149,8 @@ instead, add that range to `APEX_TRUSTED_PROXIES` in functions/.env and deploy a
 
 ## Turn on payments
 
-1. Use a wallet you control on Base (a hardware wallet or a fresh one just for APEX). Its address
-   is the treasury; APEX only reads the chain and never needs its keys.
+1. Use a wallet you control on Base (a hardware wallet or a fresh one just for Propify). Its address
+   is the treasury; Propify only reads the chain and never needs its keys.
 2. Try it on the test network first: set `APEX_BILLING_NETWORK=base-sepolia` and
    `APEX_TREASURY_ADDRESS=0x...` (in Vercel's environment variables, or functions/.env on
    Firebase), deploy, buy a pass with test USDC (Circle's faucet gives it out free), and watch it
@@ -161,7 +165,7 @@ instead, add that range to `APEX_TRUSTED_PROXIES` in functions/.env and deploy a
 
 How a payment works: the Account page asks for a payment request, which has an exact amount
 like 29.004213 USDC (the last digits make it unique), valid for 24 hours. The person sends
-exactly that to the treasury on Base, from a connected wallet or from anywhere, and APEX finds
+exactly that to the treasury on Base, from a connected wallet or from anywhere, and Propify finds
 the transfer (or takes the transaction hash), waits for 3 confirmations, and starts the pass.
 A transaction can only ever pay one request.
 
