@@ -31,6 +31,8 @@ export function HitChart({ games, line, side = 'o', label, height = 210, oneSide
   const ly = geo.y(line)
   const words = `${label || 'Recent games'}: ${hits} of ${decided} ${oneSided ? 'with a touchdown' : `${side === 'u' ? 'under' : 'over'} ${line}`}`
   const showX = geo.step >= 22
+  // on a phone ten bars leave no room for "@UTA@BUF"; the tooltip still says home or away
+  const showAt = geo.step >= 32
   return (
     <figure className="hit-chart" ref={ref}>
       <svg width={W} height={height} viewBox={`0 0 ${W} ${height}`} role="img" aria-label={words} onMouseLeave={() => setHover(null)}>
@@ -58,7 +60,7 @@ export function HitChart({ games, line, side = 'o', label, height = 210, oneSide
               )}
               {showX && (
                 <text x={x + geo.bw / 2} y={height - 9} textAnchor="middle" className="hit-chart__x">
-                  {g.home ? '' : '@'}
+                  {g.home || !showAt ? '' : '@'}
                   {g.opp}
                 </text>
               )}
