@@ -8,7 +8,7 @@ import { useSlip } from '../lib/useSlip.js'
 import { useApi } from '../lib/useApi.js'
 import { Search } from './Search.jsx'
 import { SlipPanel } from './SlipPanel.jsx'
-import { PickCard } from './PickCard.jsx'
+import { PickNudge } from './PickNudge.jsx'
 import { playIntro } from '../intro/intro.js'
 import { DAY } from './time.js'
 import { Headshot } from './Img.jsx'
@@ -129,7 +129,7 @@ export function Shell({ children }) {
       <Footer />
       <TabBar slipCount={slip.legs.length} onSlip={() => setSlipOpen(true)} />
       <SlipPanel open={slipOpen} onClose={() => setSlipOpen(false)} />
-      {!slipOpen && <PickCard />}
+      {!slipOpen && <PickNudge />}
     </div>
   )
 }

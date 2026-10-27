@@ -5739,7 +5739,7 @@ code {
   font-weight: 800;
 }
 /* The moment a prop goes on the slip: why it's good, and what could sink it. */
-.pick-card {
+.pick-nudge {
   position: fixed;
   z-index: 60;
   left: var(--gutter);
@@ -5753,24 +5753,24 @@ code {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
   animation: pick-in 180ms ease-out;
 }
-.pick-card.is-for {
+.pick-nudge.is-for {
   border-top-color: var(--turf);
 }
-.pick-card.is-against {
+.pick-nudge.is-against {
   border-top-color: var(--flag);
 }
-.pick-card.is-mixed {
+.pick-nudge.is-mixed {
   border-top-color: var(--gold);
 }
 @media (min-width: 760px) {
-  .pick-card {
+  .pick-nudge {
     left: auto;
     width: 420px;
   }
 }
 @media (min-width: 960px) {
   /* no tab bar from here up */
-  .pick-card {
+  .pick-nudge {
     right: 24px;
     bottom: 24px;
   }
@@ -5786,25 +5786,25 @@ code {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pick-card {
+  .pick-nudge {
     animation: none;
   }
 }
-.pick-card__head {
+.pick-nudge__head {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
-.pick-card__what {
+.pick-nudge__what {
   flex: 1;
   margin: 0;
   font-size: 14px;
   color: var(--chalk-2);
 }
-.pick-card__what b {
+.pick-nudge__what b {
   color: var(--chalk);
 }
-.pick-card__close {
+.pick-nudge__close {
   flex: none;
   display: grid;
   place-items: center;
@@ -5817,37 +5817,37 @@ code {
   color: var(--chalk-3);
   cursor: pointer;
 }
-.pick-card__close:hover {
+.pick-nudge__close:hover {
   color: var(--chalk);
   background: var(--stand-3);
 }
-.pick-card__close:focus-visible {
+.pick-nudge__close:focus-visible {
   outline: none;
   box-shadow: var(--focus);
 }
-.pick-card__lean {
+.pick-nudge__lean {
   margin: 8px 0 0;
   font-size: 15px;
   line-height: 1.4;
   color: var(--chalk);
 }
-.pick-card.is-for .pick-card__lean b {
+.pick-nudge.is-for .pick-nudge__lean b {
   color: var(--turf);
 }
-.pick-card.is-against .pick-card__lean b {
+.pick-nudge.is-against .pick-nudge__lean b {
   color: var(--flag);
 }
-.pick-card.is-mixed .pick-card__lean b {
+.pick-nudge.is-mixed .pick-nudge__lean b {
   color: var(--gold);
 }
-.pick-card__why {
+.pick-nudge__why {
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
   display: grid;
   gap: 6px;
 }
-.pick-card__why li {
+.pick-nudge__why li {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   align-items: baseline;
@@ -5855,23 +5855,23 @@ code {
   line-height: 1.4;
   color: var(--chalk-2);
 }
-.pick-card__mark {
+.pick-nudge__mark {
   font: 800 17px/1 var(--font-num);
 }
-.pick-card__why .is-for .pick-card__mark {
+.pick-nudge__why .is-for .pick-nudge__mark {
   color: var(--turf);
 }
-.pick-card__why .is-against .pick-card__mark {
+.pick-nudge__why .is-against .pick-nudge__mark {
   color: var(--flag);
 }
-.pick-card__actions {
+.pick-nudge__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 18px;
   margin-top: 12px;
   font-size: 14px;
 }
-.pick-card__undo {
+.pick-nudge__undo {
   border: 0;
   padding: 0;
   background: none;
