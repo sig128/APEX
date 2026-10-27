@@ -5514,3 +5514,90 @@ code {
   line-height: 1.55;
   color: var(--chalk-2);
 }
+
+/* ---------------------------------------------------------------- props board: bet type & order */
+/* Bet type, side and order stay on screen on every width; the rest folds away on phones. */
+.filters--board {
+  grid-template-columns: minmax(0, 1fr);
+}
+.board-types {
+  display: grid;
+  gap: 8px;
+}
+.board-types__chips .pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+}
+/* counts read like the scoreboard numbers elsewhere on the site */
+.pill__n {
+  font: 700 14px/1 var(--font-num);
+  letter-spacing: 0.02em;
+  color: var(--chalk-3);
+}
+.pill.is-on .pill__n {
+  color: var(--night);
+  opacity: 0.62;
+}
+.board-order__sort select {
+  min-width: 150px;
+}
+.sort-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 13px 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--seat-2);
+  background: transparent;
+  color: var(--chalk-2);
+  font: 600 14px/1 var(--font-ui);
+  cursor: pointer;
+}
+.sort-dir:hover {
+  border-color: var(--chalk-3);
+  color: var(--chalk);
+}
+.sort-dir:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.filters__more {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--seat);
+}
+.filters--board .filters-toggle {
+  margin: 0;
+}
+@media (min-width: 760px) {
+  .board-types {
+    display: flex;
+    align-items: center;
+    gap: 10px 12px;
+  }
+  .board-types .filters__k {
+    flex: none;
+  }
+  .board-order__sort {
+    margin-left: auto;
+  }
+}
+@media (min-width: 960px) {
+  .filters__more {
+    grid-template-columns: 260px minmax(0, 1fr);
+    align-items: center;
+  }
+  .filters__more .filters__row {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 759px) {
+  /* the chips run edge to edge inside the panel and scroll sideways */
+  .filters--board .pills-scroll {
+    margin: 0 -14px;
+    padding: 0 14px;
+  }
+}

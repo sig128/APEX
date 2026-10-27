@@ -222,11 +222,11 @@ export function createViews(engine) {
     const minHit = Math.max(0, Math.min(1, Number(q.minHit) || 0))
     const game = q.game ? new Set(String(q.game).split(',').filter((x) => /^\d{6,12}$/.test(x)).slice(0, 16)) : null
     const name = q.q ? nameKey(q.q) : ''
-    let list = rows.filter((r) => {
+    // every filter but the bet type and the side, so each bet type and side can say how many
+    // props it would show with the rest of the filters as they are
+    const base = rows.filter((r) => {
       if (r.kind !== kind) return false
-      if (kind === 'player' && wantMarkets && !wantMarkets.has(r.market)) return false
       if (pos && !pos.has(fam.posGroup(r.pos))) return false
-      if (side && r.side !== side) return false
       if (game && game.size && !game.has(r.gameId)) return false
       if (name && !nameKey(r.name).includes(name)) return false
       if (!name && q.all !== '1' && (r.role ?? 1) < 0.45) return false
@@ -238,16 +238,42 @@ export function createViews(engine) {
       if (q.live !== '1' && st && st !== 'pre') return false
       return true
     })
-    const sorters = {
-      score: (a, b) => (b.rank ?? b.score) - (a.rank ?? a.score) || b.score - a.score,
-      prob: (a, b) => b.prob - a.prob,
-      hit: (a, b) => rate(b, win) - rate(a, win) || (b.rank ?? 0) - (a.rank ?? 0),
-      streak: (a, b) => b.streak - a.streak || b.score - a.score,
-      move: (a, b) => Math.abs(b.move?.delta || 0) - Math.abs(a.move?.delta || 0),
-      edge: (a, b) => (b.edge ?? -1) - (a.edge ?? -1),
-      kickoff: (a, b) => String(a.kickoff).localeCompare(String(b.kickoff)) || b.score - a.score,
+    const marketOk = (r) => kind !== 'player' || !wantMarkets || wantMarkets.has(r.market)
+    const perMarket = {}
+    const perSide = { o: 0, u: 0 }
+    let core = 0
+    for (const r of base) {
+      if (!side || r.side === side) {
+        perMarket[r.market] = (perMarket[r.market] || 0) + 1
+        if (CORE.includes(r.market)) core++
+      }
+      if (marketOk(r) && (r.side === 'o' || r.side === 'u')) perSide[r.side]++
     }
-    list.sort(sorters[q.sort] || sorters.score)
+    let list = base.filter((r) => marketOk(r) && (!side || r.side === side))
+    // Sort by one number, highest first (start time: earliest first); dir flips it. Props
+    // without that number (no price, no sample) stay at the bottom either way, and ties go to
+    // the better APEX read.
+    const SORT = {
+      score: (r) => r.rank ?? r.score,
+      prob: (r) => r.prob,
+      hit: (r) => (rate(r, win) >= 0 ? rate(r, win) : null),
+      streak: (r) => r.streak ?? 0,
+      move: (r) => Math.abs(r.move?.delta || 0),
+      edge: (r) => (Number.isFinite(r.edge) ? r.edge : null),
+      line: (r) => (Number.isFinite(r.line) ? r.line : null),
+      kickoff: (r) => (Date.parse(r.kickoff) || null),
+    }
+    const sortKey = Object.hasOwn(SORT, q.sort) ? q.sort : 'score'
+    const natural = sortKey === 'kickoff' ? 'asc' : 'desc'
+    const dir = q.dir === 'asc' || q.dir === 'desc' ? q.dir : natural
+    const metric = SORT[sortKey]
+    const better = (a, b) => (b.rank ?? b.score) - (a.rank ?? a.score) || b.score - a.score
+    list.sort((a, b) => {
+      const x = metric(a)
+      const y = metric(b)
+      if (x == null || y == null) return x == null && y == null ? better(a, b) : x == null ? 1 : -1
+      return (dir === 'asc' ? x - y : y - x) || better(a, b)
+    })
     const total = list.length
     const offset = Math.max(0, Number(q.offset) || 0)
     const limit = Math.min(100, Math.max(1, Number(q.limit) || 40))
@@ -261,9 +287,14 @@ export function createViews(engine) {
       offset,
       limit,
       window: win,
+      sort: sortKey,
+      dir,
       rows: list.map((r) => ({ ...card(r), win: r.windows.find((w) => w.key === win) || null })),
       facets: {
-        markets: Object.entries(fam.MARKETS).map(([k, m]) => ({ key: k, label: m.label, core: CORE.includes(k) })),
+        // count: props of that bet type the other filters let through (the side included)
+        markets: Object.entries(fam.MARKETS).map(([k, m]) => ({ key: k, label: m.label, core: CORE.includes(k), count: perMarket[k] || 0 })),
+        marketTotals: { core, all: Object.values(perMarket).reduce((s, n) => s + n, 0) },
+        sides: perSide,
         groups: fam.GROUPS.map((g) => ({ key: g, label: fam.GROUP_NAMES?.[g] || g })),
         games: [...wh.games.values()].filter((g) => g.status.state === 'pre').map((g) => ({ id: g.id, label: g.shortName, date: g.date })),
       },

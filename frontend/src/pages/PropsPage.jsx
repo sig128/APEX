@@ -16,13 +16,24 @@ const WINDOWS = [
   { key: 'venue', label: 'Home/away' },
 ]
 const SORTS = [
-  { key: 'score', label: 'APEX' },
+  { key: 'score', label: 'APEX score' },
   { key: 'hit', label: 'Hit rate' },
-  { key: 'streak', label: 'Streak' },
   { key: 'prob', label: 'Probability' },
+  { key: 'edge', label: 'Edge over the book' },
+  { key: 'line', label: 'Line' },
+  { key: 'streak', label: 'Streak' },
   { key: 'move', label: 'Line move' },
   { key: 'kickoff', label: 'Kickoff' },
 ]
+/** How a sort reads in each direction: numbers high to low by default, start times earliest first. */
+const naturalDir = (sort) => (sort === 'kickoff' ? 'asc' : 'desc')
+const dirLabel = (sort, dir) => (sort === 'kickoff' ? (dir === 'asc' ? 'Earliest first' : 'Latest first') : dir === 'asc' ? 'Lowest first' : 'Highest first')
+const withCount = (label, n) => (
+  <>
+    {label}
+    {n != null && <span className="pill__n">{n.toLocaleString()}</span>}
+  </>
+)
 const FOOTBALL = new Set(['nfl', 'ncaaf'])
 // each league's position groups, until the board's own list arrives
 const pills = (list) => list.map(([key, label]) => ({ key, label }))
@@ -85,9 +96,11 @@ export function PropsPage() {
   const market = get('market', 'core')
   const pos = get('pos') ? get('pos').split(',') : []
   const win = get('window', 'L10')
+  const sort = get('sort', 'score')
+  const dir = get('dir') || naturalDir(sort)
   const page = Math.max(1, Math.min(40, Number(get('page', '1')) || 1))
-  const params = new URLSearchParams({ market, window: win, sort: get('sort', 'score'), limit: String(PAGE) })
-  for (const k of ['side', 'minHit', 'game', 'q']) if (get(k)) params.set(k, get(k))
+  const params = new URLSearchParams({ market, window: win, sort, limit: String(PAGE) })
+  for (const k of ['side', 'minHit', 'game', 'q', 'dir']) if (get(k)) params.set(k, get(k))
   if (pos.length) params.set('pos', pos.join(','))
   const base = params.toString()
   // a fresh server loads game logs for a few seconds; until then the board polls itself
@@ -110,14 +123,40 @@ export function PropsPage() {
   const facets = data?.facets
   const posPills = useMemo(() => groupPills(facets?.groups, sport), [facets, sport])
   const sorts = useMemo(() => SORTS.map((x) => (x.key === 'kickoff' && !FOOTBALL.has(sport) ? { ...x, label: 'Start time' } : x)), [sport])
-  const markets = useMemo(() => [{ key: 'core', label: 'Main markets' }, { key: 'all', label: 'Every market' }, ...(facets?.markets || []).map((m) => ({ key: m.key, label: m.label }))], [facets])
-  // on phones the filters fold away behind one button so the props are on the first screen
+  // Bet types: the league's main ones, every one, or any mix of single types (shots, points...),
+  // each with how many props it holds under the other filters. Types with none aren't shown.
+  const picked = market === 'core' || market === 'all' ? [] : market.split(',').filter(Boolean)
+  const types = useMemo(() => {
+    const totals = facets?.marketTotals
+    return [
+      { key: 'core', label: withCount('Main', totals?.core) },
+      { key: 'all', label: withCount('Every type', totals?.all) },
+      ...(facets?.markets || []).filter((m) => m.count > 0 || picked.includes(m.key)).map((m) => ({ key: m.key, label: withCount(m.label, m.count ?? null) })),
+    ]
+    // picked is derived from the address; its string form is the dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facets, market])
+  const pickType = (k) => {
+    if (k === 'core') return set('market', '')
+    if (k === 'all') return set('market', 'all')
+    const cur = new Set((latest().get('market') || '').split(',').filter((x) => x && x !== 'core' && x !== 'all'))
+    if (cur.has(k)) cur.delete(k)
+    else cur.add(k)
+    set('market', [...cur])
+  }
+  const sides = SIDES.map((s) => ({ ...s, label: withCount(s.label, facets?.sides?.[s.key] ?? null) }))
+  const flipDir = () => {
+    const next = dir === 'asc' ? 'desc' : 'asc'
+    set('dir', next === naturalDir(sort) ? '' : next)
+  }
+  // on phones the less-used filters fold away behind one button so the props are on the first screen
   const phone = useMedia('(max-width: 759px)')
   const [showFilters, setShowFilters] = useState(false)
   // "My games": the starred games still on the slate
   const watch = useWatch()
   const mine = (facets?.games || []).filter((g) => watch.includes(g.id)).map((g) => g.id)
-  const active = ['side', 'minHit', 'game', 'q', 'pos'].filter((k) => get(k)).length + (market !== 'core' ? 1 : 0) + (win !== 'L10' ? 1 : 0)
+  const folded = ['minHit', 'game', 'q', 'pos'].filter((k) => get(k)).length + (win !== 'L10' ? 1 : 0)
+  const active = folded + ['side', 'dir'].filter((k) => get(k)).length + (market !== 'core' ? 1 : 0) + (sort !== 'score' ? 1 : 0)
 
   return (
     <div className="container page">
@@ -127,11 +166,6 @@ export function PropsPage() {
           {warming ? 'Loading the board' : data ? `${data.total.toLocaleString()} props match${updating ? ', updating' : ''}` : 'Every player prop on the slate'}
         </p>
       </header>
-      {phone && (
-        <button type="button" className="btn btn--quiet btn--block filters-toggle" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
-          {showFilters ? 'Hide filters' : `Filters and sorting${active ? ` (${active} on)` : ''}`}
-        </button>
-      )}
       {mine.length > 0 && (
         <div className="mygames">
           <button type="button" className={`chip-toggle${get('game') === mine.join(',') ? ' is-on' : ''}`} aria-pressed={get('game') === mine.join(',')} onClick={() => set('game', get('game') === mine.join(',') ? '' : mine.join(','))}>
@@ -144,59 +178,79 @@ export function PropsPage() {
           )}
         </div>
       )}
-      {(!phone || showFilters) && (
-      <div className="filters">
-        <label className="field field--inline">
-          <span>Market</span>
-          <select value={market} onChange={(e) => set('market', e.target.value)}>
-            {markets.map((m) => (
-              <option key={m.key} value={m.key}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field field--inline">
-          <span>Game</span>
-          <select value={mine.length && get('game') === mine.join(',') ? '__mine' : get('game')} onChange={(e) => set('game', e.target.value === '__mine' ? mine.join(',') : e.target.value)}>
-            <option value="">All games</option>
-            {mine.length > 0 && <option value="__mine">My games ({mine.length})</option>}
-            {(facets?.games || []).map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field field--inline field--grow">
-          <span>Player</span>
-          <input type="search" placeholder="Any player" value={get('q')} onChange={(e) => set('q', e.target.value)} />
-        </label>
-        <div className="filters__row">
-          <span className="filters__k">Position</span>
-          <Pills label="Position" options={posPills} value={pos} multiple onChange={(_, k) => togglePos(k)} />
-          <span className="filters__k">Side</span>
-          <Pills label="Side" options={SIDES} value={get('side') || null} onChange={(v) => set('side', v)} />
+      <div className="filters filters--board">
+        {/* bet type, side and order stay on screen everywhere: they're what people change most */}
+        <div className="board-types">
+          <span className="filters__k" id="bet-type-k">
+            Bet type
+          </span>
+          <div className="pills-scroll board-types__chips">
+            <Pills label="Bet type" options={types} value={picked.length ? picked : [market]} multiple onChange={(_, k) => pickType(k)} />
+          </div>
         </div>
-        <div className="filters__row">
-          <label className="field field--inline">
-            <span>Hit rate over</span>
-            <select value={win} onChange={(e) => set('window', e.target.value)}>
-              {WINDOWS.map((w) => (
-                <option key={w.key} value={w.key}>
-                  {w.label}
+        <div className="filters__row board-order">
+          <span className="filters__k">Side</span>
+          <Pills label="Side" options={sides} value={get('side') || null} onChange={(v) => set('side', v)} />
+          <label className="field field--inline board-order__sort">
+            <span>Sort by</span>
+            <select value={sort} onChange={(e) => setMany({ sort: e.target.value === 'score' ? '' : e.target.value, dir: '' })}>
+              {sorts.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
                 </option>
               ))}
             </select>
           </label>
-          <Pills label="Minimum hit rate" options={MIN_HIT} value={get('minHit') || null} onChange={(v) => set('minHit', v)} />
+          <button type="button" className="sort-dir" onClick={flipDir} aria-label={`${dirLabel(sort, dir)}. Switch to ${dirLabel(sort, dir === 'asc' ? 'desc' : 'asc').toLowerCase()}`}>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+              <path d={dir === 'asc' ? 'M8 13V3M4 7l4-4 4 4' : 'M8 3v10M4 9l4 4 4-4'} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {dirLabel(sort, dir)}
+          </button>
         </div>
-        <div className="filters__row">
-          <span className="filters__k">Sort by</span>
-          <Pills label="Sort" options={sorts} value={get('sort', 'score')} onChange={(v) => set('sort', v || 'score')} />
-        </div>
+        {phone && (
+          <button type="button" className="btn btn--quiet btn--block filters-toggle" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
+            {showFilters ? 'Fewer filters' : `Game, player, position and hit rate${folded ? ` (${folded} on)` : ''}`}
+          </button>
+        )}
+        {(!phone || showFilters) && (
+          <div className="filters__more">
+            <label className="field field--inline">
+              <span>Game</span>
+              <select value={mine.length && get('game') === mine.join(',') ? '__mine' : get('game')} onChange={(e) => set('game', e.target.value === '__mine' ? mine.join(',') : e.target.value)}>
+                <option value="">All games</option>
+                {mine.length > 0 && <option value="__mine">My games ({mine.length})</option>}
+                {(facets?.games || []).map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field field--inline field--grow">
+              <span>Player</span>
+              <input type="search" placeholder="Any player" value={get('q')} onChange={(e) => set('q', e.target.value)} />
+            </label>
+            <div className="filters__row">
+              <span className="filters__k">Position</span>
+              <Pills label="Position" options={posPills} value={pos} multiple onChange={(_, k) => togglePos(k)} />
+            </div>
+            <div className="filters__row">
+              <label className="field field--inline">
+                <span>Hit rate over</span>
+                <select value={win} onChange={(e) => set('window', e.target.value)}>
+                  {WINDOWS.map((w) => (
+                    <option key={w.key} value={w.key}>
+                      {w.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Pills label="Minimum hit rate" options={MIN_HIT} value={get('minHit') || null} onChange={(v) => set('minHit', v)} />
+            </div>
+          </div>
+        )}
       </div>
-      )}
       <ErrorBox error={error} onRetry={refresh} />
       {loading ? (
         <Skeleton rows={10} />
@@ -232,7 +286,7 @@ export function PropsPage() {
               )
             }
           >
-            Loosen the hit-rate floor or pick every market.
+            Loosen the hit-rate floor or pick another bet type.
           </Empty>
         )
       )}
