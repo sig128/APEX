@@ -93,11 +93,12 @@ export function propNotes({ rows, line, side, oneSided = false, matchup, dvp, op
   // 4. the projection against the line
   if (!oneSided && Number.isFinite(proj) && Number.isFinite(line)) {
     const diff = proj - line
-    const room = Math.max(0.5, Math.abs(line) * 0.06)
+    // half a shot off a 1.5 line is a real lean; on 250 yards it takes more than a few
+    const room = Math.max(0.3, Math.abs(line) * 0.06)
     const margin = side === 'u' ? -diff : diff
     const tone = margin > room ? 'for' : margin < -room ? 'against' : 'info'
     const where = Math.abs(diff) < 0.05 ? 'right on the line' : `${round1(Math.abs(diff))} ${diff > 0 ? 'above' : 'below'} the line`
-    add('projection', tone, `APEX projects ${round1(proj)}, ${where}.`, tone === 'info' ? 1.5 : 3)
+    add('projection', tone, `APEX projects ${round1(proj).toFixed(1)}, ${where}.`, tone === 'info' ? 1.5 : 3)
   }
 
   // 5. which way the player is trending: the last five against the games before them

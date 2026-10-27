@@ -53,6 +53,11 @@ test('unders flip what helps and hurts', () => {
   // against tough defenses the under hit 3 of 4
   assert.equal(note(out, 'split').tone, 'for')
   assert.match(note(out, 'split').text, /and 3 of 4 against defenses that allow few shots on goal, like CHI\./)
+  // half a shot under a 1.5 line backs the under; the projection reads like the line does
+  const low = propNotes({ ...base, line: 1.5, side: 'u', proj: 1 })
+  assert.equal(note(low, 'projection').text, 'APEX projects 1.0, 0.5 below the line.')
+  assert.equal(note(low, 'projection').tone, 'for')
+  assert.equal(note(propNotes({ ...base, line: 1.5, side: 'u', proj: 1.3 }), 'projection').tone, 'info', 'two tenths is noise')
 })
 
 test('no notes from a matchup the data can not back yet, and plain grammar for one reason', () => {
