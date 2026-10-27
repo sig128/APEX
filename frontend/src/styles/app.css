@@ -5719,3 +5719,162 @@ code {
 .read-feed__item.is-against .read-feed__mark {
   color: var(--flag);
 }
+
+/* ---------------------------------------------------------------- the pick card and slip reasons */
+/* A pick's reasons, under it on the slip. */
+.slip-leg__why {
+  display: grid;
+  gap: 3px;
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--chalk-2);
+}
+.slip-leg__why .is-for > span:first-child {
+  color: var(--turf);
+  font-weight: 800;
+}
+.slip-leg__why .is-against > span:first-child {
+  color: var(--flag);
+  font-weight: 800;
+}
+/* The moment a prop goes on the slip: why it's good, and what could sink it. */
+.pick-card {
+  position: fixed;
+  z-index: 60;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: calc(var(--tabbar) + 12px + env(safe-area-inset-bottom, 0px));
+  padding: 14px 16px 12px;
+  border-radius: var(--r-l);
+  background: var(--stand-2);
+  border: 1px solid var(--seat-2);
+  border-top: 3px solid var(--seat-2);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  animation: pick-in 180ms ease-out;
+}
+.pick-card.is-for {
+  border-top-color: var(--turf);
+}
+.pick-card.is-against {
+  border-top-color: var(--flag);
+}
+.pick-card.is-mixed {
+  border-top-color: var(--gold);
+}
+@media (min-width: 760px) {
+  .pick-card {
+    left: auto;
+    width: 420px;
+  }
+}
+@media (min-width: 960px) {
+  /* no tab bar from here up */
+  .pick-card {
+    right: 24px;
+    bottom: 24px;
+  }
+}
+@keyframes pick-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pick-card {
+    animation: none;
+  }
+}
+.pick-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.pick-card__what {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  color: var(--chalk-2);
+}
+.pick-card__what b {
+  color: var(--chalk);
+}
+.pick-card__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: -6px -8px 0 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--chalk-3);
+  cursor: pointer;
+}
+.pick-card__close:hover {
+  color: var(--chalk);
+  background: var(--stand-3);
+}
+.pick-card__close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.pick-card__lean {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--chalk);
+}
+.pick-card.is-for .pick-card__lean b {
+  color: var(--turf);
+}
+.pick-card.is-against .pick-card__lean b {
+  color: var(--flag);
+}
+.pick-card.is-mixed .pick-card__lean b {
+  color: var(--gold);
+}
+.pick-card__why {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.pick-card__why li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: baseline;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--chalk-2);
+}
+.pick-card__mark {
+  font: 800 17px/1 var(--font-num);
+}
+.pick-card__why .is-for .pick-card__mark {
+  color: var(--turf);
+}
+.pick-card__why .is-against .pick-card__mark {
+  color: var(--flag);
+}
+.pick-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+.pick-card__undo {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}

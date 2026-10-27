@@ -168,6 +168,9 @@ export function createViews(engine) {
       // the bottom line and the most telling note, for lists (the prop page has them all)
       read: r.read || null,
       note: r.notes?.[0] || null,
+      // when someone picks it: the strongest reason for it and the biggest one against
+      pro: r.notes?.find((n) => n.tone === 'for') || null,
+      con: r.notes?.find((n) => n.tone === 'against') || null,
     }
 
   function strip() {

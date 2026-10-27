@@ -180,6 +180,24 @@ export function SlipPanel({ open, onClose }) {
                         )}
                         {mode === 'singles' && d && <span className={k > 0 ? 'is-plus' : 'is-minus'}> {k > 0 ? `edge ${pct(l.prob * d - 1, 1)}` : 'no edge at that price'}</span>}
                       </span>
+                      {(l.pro || l.con) && (
+                        <span className="slip-leg__why">
+                          {l.pro && (
+                            <span className="is-for">
+                              <span aria-hidden="true">+ </span>
+                              <span className="sr-only">For it: </span>
+                              {l.pro.text}
+                            </span>
+                          )}
+                          {l.con && (
+                            <span className="is-against">
+                              <span aria-hidden="true">− </span>
+                              <span className="sr-only">Against it: </span>
+                              {l.con.text}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
                     <span className="odds-field">
                       <OddsInput value={l.price} onChange={(n) => setLegPrice(legRef(l), n)} label={`Your odds for ${l.name} ${l.shortLabel || l.label}`} />

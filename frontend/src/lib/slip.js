@@ -38,7 +38,17 @@ export function onSlip(fn) {
 export function snapshot(c) {
   const kickoff = typeof c.kickoff === 'number' ? new Date(c.kickoff).toISOString() : c.kickoff
   const oneSided = c.oneSided ?? (c.market === 'anyTd' || c.market === 'td2')
-  return { id: c.id, sport: c.sport || 'nfl', name: c.name, short: c.short, label: c.label, shortLabel: c.shortLabel || c.label, prob: c.prob, fair: c.fair, headshot: c.headshot || null, logo: c.logo || null, teamAbbr: c.teamAbbr, oppAbbr: c.oppAbbr, gameId: c.gameId, kickoff, market: c.market, side: c.side, line: c.line, oneSided: Boolean(oneSided), playerId: c.playerId || null, teamId: c.teamId || null, kind: c.kind || (c.teamId && !c.playerId ? 'team' : 'player') }
+  // the read travels with the leg: its bottom line, and the best reason for it and against it
+  const pro = c.pro ?? c.notes?.find((n) => n.tone === 'for') ?? null
+  const con = c.con ?? c.notes?.find((n) => n.tone === 'against') ?? null
+  return { id: c.id, sport: c.sport || 'nfl', name: c.name, short: c.short, label: c.label, shortLabel: c.shortLabel || c.label, prob: c.prob, fair: c.fair, headshot: c.headshot || null, logo: c.logo || null, teamAbbr: c.teamAbbr, oppAbbr: c.oppAbbr, gameId: c.gameId, kickoff, market: c.market, side: c.side, line: c.line, oneSided: Boolean(oneSided), playerId: c.playerId || null, teamId: c.teamId || null, kind: c.kind || (c.teamId && !c.playerId ? 'team' : 'player'), read: c.read || null, pro, con }
+}
+
+// Someone just picked a prop (one tap, not a bulk add): the pick card says why it's good or not.
+const pickSubs = new Set()
+export function onPick(fn) {
+  pickSubs.add(fn)
+  return () => pickSubs.delete(fn)
 }
 
 export const inSlip = (id) => state.legs.some((l) => l.id === id)
@@ -57,9 +67,14 @@ export function addLeg(card) {
   return { ok: true, replaced }
 }
 
-export function toggleLeg(card) {
+export function toggleLeg(card, { quiet = false } = {}) {
   if (inSlip(card.id)) return removeLeg(card.id)
-  return addLeg(card)
+  const out = addLeg(card)
+  if (out.ok && !quiet) {
+    const leg = state.legs.find((l) => l.id === card.id)
+    if (leg) for (const fn of pickSubs) fn({ leg, replaced: Boolean(out.replaced) })
+  }
+  return out
 }
 
 /** Remove by prop id or by ref ("nba:<id>", as the API names legs). */

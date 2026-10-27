@@ -88,6 +88,9 @@ test('every board row carries its bottom line and most telling reason; the prop 
     assert.deepEqual(full.notes[0], r.note, 'the list shows the first of the full read')
     for (const n of full.notes) assert.ok(!/undefined|NaN|null/.test(n.text), n.text)
     if (r.read) assert.ok(['for', 'against', 'mixed'].includes(r.read.lean) && r.read.label && r.read.text)
+    // the pick card: the strongest reason each way
+    assert.deepEqual(r.pro, full.notes.find((n) => n.tone === 'for') || null)
+    assert.deepEqual(r.con, full.notes.find((n) => n.tone === 'against') || null)
   }
   assert.ok(rows.some((r) => engine.views.findProp(r.id).notes.some((n) => n.key === 'split')), 'splits against defenses like tonight’s show up on real data')
 })

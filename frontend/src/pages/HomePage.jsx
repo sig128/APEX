@@ -344,7 +344,7 @@ export function ParlayCard({ p }) {
         type="button"
         className="btn btn--quiet btn--block"
         onClick={() => {
-          for (const c of p.cards) if (!slip.legs.some((l) => l.id === c.id)) toggleLeg(c)
+          for (const c of p.cards) if (!slip.legs.some((l) => l.id === c.id)) toggleLeg(c, { quiet: true })
           window.dispatchEvent(new Event('apex:open-slip'))
         }}
         disabled={all}
