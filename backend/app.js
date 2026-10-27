@@ -22,6 +22,8 @@ import { defaultAuthInstance, authMode } from './src/security/auth.js'
 import { createLimiter } from './src/security/rateLimit.js'
 import { parseChatBody, handleChatStream, setGameContextProvider } from './streamChat.js'
 import { registerAdminSportsRoutes } from './adminSportsRoutes.js'
+import { createAdminMetrics } from './src/admin/metrics.js'
+import { adminRoutes, cronHandler } from './src/admin/routes.js'
 import { getDisabledSportKeys } from './sportsConfig.js'
 import {
   handleMlbPlayerPropsShowcaseRequest,
@@ -62,6 +64,36 @@ async function lookupUidByEmail(email) {
     const u = await getAuth().getUserByEmail(email)
     return u?.uid || null
   } catch {
+    return null
+  }
+}
+
+/** Everyone who has signed in (Firebase Auth), for the admin page. null when there's no Firebase. */
+async function listAuthUsers(max = 5000) {
+  try {
+    const { getAuth } = await import('firebase-admin/auth')
+    const { getApps, initializeApp } = await import('firebase-admin/app')
+    if (!getApps().length) initializeApp()
+    const out = []
+    let token
+    do {
+      const page = await getAuth().listUsers(1000, token)
+      for (const u of page.users) {
+        out.push({
+          uid: u.uid,
+          email: u.email || null,
+          name: u.displayName || null,
+          photo: u.photoURL || null,
+          created: Date.parse(u.metadata?.creationTime) || null,
+          lastSeen: Date.parse(u.metadata?.lastRefreshTime || u.metadata?.lastSignInTime) || null,
+          disabled: Boolean(u.disabled),
+        })
+      }
+      token = page.pageToken
+    } while (token && out.length < max)
+    return out
+  } catch (e) {
+    log.warn('listing sign-ins failed', { err: errText(e) })
     return null
   }
 }
@@ -122,6 +154,8 @@ export function createApexApp({
   anthropicKey = () => process.env.ANTHROPIC_API_KEY,
   ai: aiIn,
   adminKey = () => process.env.ADMIN_SPORTS_KEY,
+  // who has signed in, for the admin page (tests pass their own)
+  listUsers = listAuthUsers,
   // THE_ODDS_API_KEY, then THE_ODDS_API_KEY_BACKUP for when the first is refused or out of credits
   oddsKey = () => oddsKeys().join(','),
   now,
@@ -175,6 +209,10 @@ export function createApexApp({
   })
   app.use('/api/billing', billingRoutes({ billing, access, getDb: () => (typeof getFirestore === 'function' ? getFirestore() || null : null), now: now || Date.now }))
   app.use('/api/picks', picksRoutes({ picks, access }))
+  // the admin page's numbers, and the daily run that keeps the board's record without visitors
+  const metrics = createAdminMetrics({ engines, store: engineStore, billing, listUsers, ...(now ? { now } : {}) })
+  app.use('/api/admin', adminRoutes({ access, metrics, sports: Object.keys(engines) }))
+  app.get('/api/cron/daily', cronHandler({ metrics }))
 
   // ---- the AI analyzer (chat) ---------------------------------------------------------------
   const chatHourly = createLimiter({ burst: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }), perSec: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) / 3600 })
@@ -471,5 +509,5 @@ export function createApexApp({
     const t = setInterval(() => picks.maybeGrade(), 3 * 60_000)
     t.unref?.()
   }
-  return { app, engine, engines, billing, picks, hub, access }
+  return { app, engine, engines, billing, picks, hub, access, metrics }
 }

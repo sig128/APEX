@@ -9,6 +9,7 @@ import { createOddsApi, ODDS_SPORTS } from '../providers/oddsapi/props.js'
 import { oddsKeys } from '../providers/oddsapi/keys.js'
 import { createWarehouse } from './warehouse.js'
 import { createScheduler } from '../lib/scheduler.js'
+import { createPropLog } from './proplog.js'
 import { createViews } from './services/views.js'
 import { log, errText } from '../lib/log.js'
 import { mapLimit } from '../lib/util.js'
@@ -308,6 +309,8 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     logs: { run: () => logsTask(), every: () => (wantedPlayers().some((p) => !wh.logMeta.get(p)) || staleLogs.size ? 15_000 : 10 * MIN) },
     odds: { run: oddsTask, every: () => 30 * MIN },
     persist: { run: () => persist(), every: () => (mode === 'lazy' ? 20_000 : 60_000), runAtStart: false },
+    // what the board backed before each game, and how it came out (the admin page's record)
+    proplog: { run: () => engine.proplog?.maybeTick(), every: () => 5 * MIN, runAtStart: false },
   }
 
   function runTask(name) {
@@ -404,6 +407,11 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
       wh.at.persist = now()
       await Promise.race([runTask('persist'), settle()])
     }
+    if (engine.proplog && left === 0) {
+      let timer
+      await Promise.race([engine.proplog.maybeTick(), new Promise((r) => (timer = setTimeout(r, Math.max(0, until - Date.now()))))])
+      clearTimeout(timer)
+    }
     const out = { rounds, left, logs: wh.logs.size, ms: Date.now() - (until - budgetMs) }
     if (rounds || left) log.info('caught up', { sport: S.key, ...out })
     return out
@@ -492,5 +500,6 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
   }
   const views = createViews(engine)
   engine.views = views
+  engine.proplog = createPropLog({ engine, store, now })
   return engine
 }
