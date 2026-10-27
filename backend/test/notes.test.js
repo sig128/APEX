@@ -78,6 +78,24 @@ test('no notes from a matchup the data can not back yet, and plain grammar for o
   assert.equal(short.read.text, 'a thin sample works against it.')
 })
 
+test('recent form gets its own line when it leans, so the bottom line always has a stat behind it', () => {
+  // tonight's defense is mid-table and he has no games against defenses like it: no split note
+  const mid = { ...matchup, rank: 16 }
+  const L10 = (hits) => [{ key: 'L10', label: 'L10', hits, n: 10 }]
+  const under = propNotes({ ...base, line: 1.5, side: 'u', matchup: mid, windows: L10(7), proj: 1.3 })
+  assert.equal(note(under, 'split'), undefined)
+  assert.equal(note(under, 'form').text, 'Recent form: under 1.5 in 7 of the last 10 games.')
+  assert.equal(note(under, 'form').tone, 'for')
+  assert.deepEqual(under.read, { lean: 'for', label: 'Leans yes', text: 'recent form backs it.' })
+  const cold = propNotes({ ...base, matchup: mid, windows: L10(3), proj: null })
+  assert.equal(note(cold, 'form').text, 'Recent form: over 2.5 in only 3 of the last 10 games.')
+  assert.equal(cold.read.text, 'recent form works against it.')
+  assert.equal(note(propNotes({ ...base, oneSided: true, line: 0.5, matchup: mid, windows: L10(7), proj: null }), 'form').text, 'Recent form: cashed in 7 of the last 10 games.')
+  // a coin-flip run is not a reason either way; and when the split already says "7 of 10 lately", once is enough
+  assert.equal(note(propNotes({ ...base, matchup: mid, windows: L10(5), proj: null }), 'form'), undefined)
+  assert.equal(note(propNotes({ ...base, proj: 2.4 }), 'form'), undefined)
+})
+
 let engine
 after(() => engine?.stop())
 

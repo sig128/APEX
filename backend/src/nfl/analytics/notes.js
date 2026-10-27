@@ -58,6 +58,8 @@ export function propNotes({ rows, line, side, oneSided = false, matchup, dvp, op
   const win = (k) => windows.find((w) => w.key === k)
   const form = win('L10')?.n >= 6 ? win('L10') : win('L5')
   const formRate = form?.n ? form.hits / form.n : null
+  const formTone = form?.n >= 5 ? rateTone(form.hits, form.n) : 'info'
+  let splitSaysForm = false
   const trusted = matchup && matchup.games >= 3
 
   // 1. against defenses like tonight's: the hit rate split by how the opponents defend this stat
@@ -73,7 +75,8 @@ export function propNotes({ rows, line, side, oneSided = false, matchup, dvp, op
       const against = `${like.hits} of ${like.n} against ${TIER_WORDS[tonight](statNoun)}, like ${opp.abbr}`
       const gap = formRate == null ? 0 : rate - formRate
       // the point of the note: a good hit rate built on easy matchups, or a poor one on hard ones
-      const text = form && Math.abs(gap) >= 0.25 ? `${form.hits} of ${form.n} lately, ${gap < 0 ? 'but only' : 'and'} ${against}.` : `${against[0].toUpperCase()}${against.slice(1)}.`
+      splitSaysForm = Boolean(form) && Math.abs(gap) >= 0.25
+      const text = splitSaysForm ? `${form.hits} of ${form.n} lately, ${gap < 0 ? 'but only' : 'and'} ${against}.` : `${against[0].toUpperCase()}${against.slice(1)}.`
       // a split that says the same as the season's numbers matters less in the middle tier
       add('split', rateTone(like.hits, like.n), text, (tonight === 'mid' ? 3.5 : 6) + Math.abs(gap) * 6)
     }
@@ -131,13 +134,20 @@ export function propNotes({ rows, line, side, oneSided = false, matchup, dvp, op
   // 9. not much to go on
   if (rows.length < 6) add('sample', 'against', `Only ${rows.length} games of history for this stat.`, 2)
 
+  // 10. recent form, when it leans one way: the stat behind "recent form backs it" (unless the
+  // split already said it)
+  if (formTone !== 'info' && !splitSaysForm) {
+    const what = oneSided ? 'cashed' : `${side === 'u' ? 'under' : 'over'} ${line}`
+    add('form', formTone, `Recent form: ${what} in ${formTone === 'against' ? 'only ' : ''}${form.hits} of the last ${form.n} games.`, 2)
+  }
+
   notes.sort((a, b) => b.weight - a.weight)
   const out = notes.map(({ key, tone, text }) => ({ key, tone, text }))
 
-  // the bottom line, counting recent form as one more voice; the matchup and the record against
-  // defenses like it are one voice when they agree
+  // the bottom line, with recent form as one voice; the matchup and the record against defenses
+  // like it are one voice when they agree
   const voices = out.filter((n) => !(n.key === 'split' && out.some((m) => m.key === 'matchup' && m.tone === n.tone)))
-  if (form?.n >= 5) voices.push({ key: 'form', tone: rateTone(form.hits, form.n) })
+  if (splitSaysForm && formTone !== 'info') voices.push({ key: 'form', tone: formTone })
   const pros = voices.filter((n) => n.tone === 'for').map((n) => TAGS[n.key])
   const cons = voices.filter((n) => n.tone === 'against').map((n) => TAGS[n.key])
   let read = null
