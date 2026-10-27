@@ -45,7 +45,7 @@ export function SlipPage() {
         <h1 className="page-title">{ids.length > 1 ? `${ids.length}-leg slip` : 'Shared pick'}</h1>
         {math && found.length > 1 && (
           <p className="page-sub">
-            APEX gives it <b className="num">{pct(math.prob, 1)}</b>, fair <b className="num">{odds(math.fair)}</b>
+            Propify gives it <b className="num">{pct(math.prob, 1)}</b>, fair <b className="num">{odds(math.fair)}</b>
             {math.book ? `, shared at ${odds(math.book)}` : ''}
           </p>
         )}

@@ -1,4 +1,4 @@
-// The APEX ruleset. One place for the numbers (the lock engine, the stake caps and the parlay
+// The Propify ruleset. One place for the numbers (the lock engine, the stake caps and the parlay
 // check all read them) and one block of prompt text every AI answer is held to.
 
 export const RULES = {
@@ -6,7 +6,7 @@ export const RULES = {
   legMin: 0.65,
   /** the three legs multiplied, before any correlation bonus */
   comboMin: 0.45,
-  /** APEX probability over the price's implied probability (vig included), in points */
+  /** Propify probability over the price's implied probability (vig included), in points */
   edgeMin: 0.02,
   /** legs priced shorter than this carry too much juice to beat reliably */
   maxFavorite: -500,
@@ -31,10 +31,10 @@ export const RULES = {
 /** Weights for the recency-weighted hit rate: the last 15 days count most. */
 export const RECENCY_WEIGHTS = { d15: 0.5, l5: 0.3, season: 0.2 }
 
-export const RULES_PROMPT = `APEX RULES (every answer follows them):
+export const RULES_PROMPT = `PROPIFY RULES (every answer follows them):
 - Run the numbers on every edge you are given before giving an opinion. Every leg you back must be defensible on its own with statistics you can point to (hit rates with their sample sizes, projection vs the line, matchup rank, line movement).
 - The 3-Leg Lock comes first: three legs, each at least ${RULES.legMin * 100}% to win, combined over ${RULES.comboMin * 100}% before any correlation bonus. If nothing meets that, say there is no lock.
-- Edge or Pass: no bet without a calculable edge over the vig (APEX probability above the probability the price implies). No edge, or no price to measure it against, means Pass or "only at <price> or better". Nothing priced shorter than ${RULES.maxFavorite}: at that juice a small miss in the estimate wipes out the edge.
+- Edge or Pass: no bet without a calculable edge over the vig (Propify probability above the probability the price implies). No edge, or no price to measure it against, means Pass or "only at <price> or better". Nothing priced shorter than ${RULES.maxFavorite}: at that juice a small miss in the estimate wipes out the edge.
 - Sample size integrity: say how many games a number rests on. Under ${RULES.sampleMin} games is thin; say so.
 - Sharp money over public money: a line that moved toward a side since it opened is where the respected money went. Don't fight it without a reason.
 - Correlation intelligence: legs that win together are a plus; legs that pull against each other get cut.

@@ -112,7 +112,7 @@ export function importLegs(cards, prices = {}) {
 }
 
 /**
- * Parlay math. APEX probabilities multiply (legs treated as independent; legs from the same
+ * Parlay math. Propify probabilities multiply (legs treated as independent; legs from the same
  * game are flagged because they usually move together). With your book's price: expected
  * value and the Kelly stake.
  */
@@ -157,7 +157,7 @@ export function parseShare(search) {
 /** Plain text for a group chat, a note, or to type into a sportsbook. */
 export function slipText(legs, parlayPrice) {
   const m = parlayMath(legs, parlayPrice)
-  const head = legs.length > 1 ? `APEX ${legs.length}-leg parlay: ${pct(m.prob)} to hit, fair ${fmtOdds(m.fair)}${m.book ? `, book ${fmtOdds(m.book)}` : ''}` : 'APEX pick'
-  const rows = legs.map((l) => `- ${l.name}: ${l.label}${Number.isFinite(l.price) ? ` (${fmtOdds(l.price)})` : ''}, APEX ${pct(l.prob)}`)
+  const head = legs.length > 1 ? `Propify ${legs.length}-leg parlay: ${pct(m.prob)} to hit, fair ${fmtOdds(m.fair)}${m.book ? `, book ${fmtOdds(m.book)}` : ''}` : 'Propify pick'
+  const rows = legs.map((l) => `- ${l.name}: ${l.label}${Number.isFinite(l.price) ? ` (${fmtOdds(l.price)})` : ''}, Propify ${pct(l.prob)}`)
   return [head, ...rows, shareUrl(legs)].join('\n')
 }

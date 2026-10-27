@@ -17,7 +17,7 @@ export function PricingPage() {
         <h1 className="page-title">Plans</h1>
         <p className="page-sub">The stats are free. Passes run 30 days, paid in USDC on {config?.networkName || 'Base'}, with no card and no auto-renew.</p>
       </header>
-      {!paywall && config && <p className="notice">Passes aren't on sale yet, so everything is open while APEX is in beta.</p>}
+      {!paywall && config && <p className="notice">Passes aren't on sale yet, so everything is open while Propify is in beta.</p>}
       <div className="plans">
         <section className="plan">
           <h2 className="plan__name">Free</h2>
@@ -67,13 +67,13 @@ export function PricingPage() {
         <h2 className="section__title">How passes work</h2>
         <dl>
           <dt>How do I pay?</dt>
-          <dd>Each payment request has an exact USDC amount, down to the last digit, so it can only match your payment. Send it from any wallet or exchange on Base, or connect a wallet and approve it there. APEX confirms it on-chain, usually within a minute.</dd>
+          <dd>Each payment request has an exact USDC amount, down to the last digit, so it can only match your payment. Send it from any wallet or exchange on Base, or connect a wallet and approve it there. Propify confirms it on-chain, usually within a minute.</dd>
           <dt>What happens when 30 days are up?</dt>
           <dd>You get 7 days of grace with everything still on. Renew during those days and the new 30 start where your pass ended. After that, AI reads and Kelly tools lock (and Elite showcase features hide) until you renew. Stats, your picks and your record stay.</dd>
           <dt>Can I renew early or switch plans?</dt>
           <dd>Renewing adds 30 days to the end of your current pass. Switching from Pro to Elite converts your unused Pro days into Elite days at the price ratio.</dd>
-          <dt>Does APEX take bets?</dt>
-          <dd>No. APEX is research: stats, probabilities and AI reads. You place bets with your own sportsbook.</dd>
+          <dt>Does Propify take bets?</dt>
+          <dd>No. Propify is research: stats, probabilities and AI reads. You place bets with your own sportsbook.</dd>
         </dl>
       </section>
     </div>

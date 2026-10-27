@@ -819,7 +819,7 @@ export function ApexApp() {
     if (!t || t.length === 0) {
       mountApexBetCards(root, null)
       chatLog.innerHTML =
-        '<div class="chat-placeholder" id="chat-placeholder">Run Analyze to generate the full APEX breakdown. Then ask questions about that game here.</div>'
+        '<div class="chat-placeholder" id="chat-placeholder">Run Analyze to generate the full Propify breakdown. Then ask questions about that game here.</div>'
       const chatIn = root.querySelector('#chat-input')
       const sendBtn = root.querySelector('#sendbtn')
       if (chatIn) chatIn.disabled = true
@@ -831,7 +831,7 @@ export function ApexApp() {
       d.className = `chat-msg ${m.role === 'user' ? 'u' : 'a'}`
       const lab = document.createElement('div')
       lab.className = 'who'
-      lab.textContent = m.role === 'user' ? 'You' : 'APEX AI'
+      lab.textContent = m.role === 'user' ? 'You' : 'Propify AI'
       const body = document.createElement('div')
       body.textContent = m.content
       d.appendChild(lab)
@@ -1633,7 +1633,7 @@ export function ApexApp() {
           const data = await postChatStream(gamePayload, {
             onEvent(ev) {
               if (ev.type === 'start' && statusEl) {
-                statusEl.textContent = ev.webSearch ? 'APEX AI with web search' : 'APEX AI'
+                statusEl.textContent = ev.webSearch ? 'Propify AI with web search' : 'Propify AI'
               }
               if (ev.type === 'activity' && statusEl) {
                 statusEl.textContent = ev.detail || ev.phase || '…'
@@ -1756,7 +1756,7 @@ export function ApexApp() {
           {
           onEvent(ev) {
             if (ev.type === 'start' && statusEl) {
-              statusEl.textContent = ev.webSearch ? 'APEX AI with web search' : 'APEX AI'
+              statusEl.textContent = ev.webSearch ? 'Propify AI with web search' : 'Propify AI'
             }
             if (ev.type === 'activity' && statusEl) {
               statusEl.textContent = ev.detail || ev.phase || '…'

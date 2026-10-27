@@ -16,7 +16,7 @@ const WINDOWS = [
   { key: 'venue', label: 'Home/away' },
 ]
 const SORTS = [
-  { key: 'score', label: 'APEX score' },
+  { key: 'score', label: 'Propify score' },
   { key: 'hit', label: 'Hit rate' },
   { key: 'prob', label: 'Probability' },
   { key: 'edge', label: 'Edge over the book' },

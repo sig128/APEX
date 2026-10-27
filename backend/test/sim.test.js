@@ -1,4 +1,4 @@
-// The parlay Monte Carlo: legs hit as often as APEX says, stacked legs move together, and the
+// The parlay Monte Carlo: legs hit as often as Propify says, stacked legs move together, and the
 // price math is right.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -15,7 +15,7 @@ test('normal helpers', () => {
   assert.ok(Math.abs(phiInv(phi(-0.7)) + 0.7) < 1e-4)
 })
 
-test('every leg hits as often as APEX says', () => {
+test('every leg hits as often as Propify says', () => {
   const r = simulateSlip([qb, wr, rb, td], { iterations: 100_000, seed: 3 })
   for (const l of r.legs) assert.ok(Math.abs(l.hitRate - l.apex) < 0.01, `${l.id} ${l.hitRate}`)
   assert.equal(r.iterations, 100_000)

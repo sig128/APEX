@@ -14,12 +14,12 @@ export function renderUserHead(html, view, origin) {
   const p = view.profile
   const d30 = recordLine(p.record?.d30)
   const all = recordLine(p.record?.all)
-  const title = `${p.name} (@${p.handle}) on APEX`
+  const title = `${p.name} (@${p.handle}) on Propify`
   const parts = [d30 ? `Last 30 days: ${d30}.` : null, all && all !== d30 ? `All time: ${all}.` : null, p.bio || null, 'Every pick posted before kickoff and graded from the box score.']
   const desc = parts.filter(Boolean).join(' ').slice(0, 280)
   const url = `${origin}/u/${p.handle}`
   // their Google picture when the page shows one (asked for big enough for a card), else the logo
-  const image = p.avatar ? p.avatar.replace(/=s\d+(-c)?$/, '=s400-c') : `${origin}/logo.png`
+  const image = p.avatar ? p.avatar.replace(/=s\d+(-c)?$/, '=s400-c') : `${origin}/logo.png?v=propify`
   const tags = [
     `<title>${esc(title)}</title>`,
     `<meta name="description" content="${esc(desc)}" />`,

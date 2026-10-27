@@ -6,7 +6,7 @@ import {
 } from './prompts/resolveApexSystemPrompt.js'
 
 /**
- * Optional live APEX data for NFL game analyses. app.js installs a provider that returns a
+ * Optional live Propify data for NFL game analyses. app.js installs a provider that returns a
  * short text block (top props with hit rates, injuries, odds) for the game being analyzed.
  */
 let gameContextProvider = null
@@ -18,7 +18,7 @@ function applyGameContext(game, sportKey) {
   if (!gameContextProvider || sportKey !== 'americanfootball_nfl') return ''
   try {
     const text = gameContextProvider(game)
-    return typeof text === 'string' && text.trim() ? `\n\n===== APEX LIVE DATA (use it, cite hit rates) =====\n${text.slice(0, CONTEXT_CAP)}` : ''
+    return typeof text === 'string' && text.trim() ? `\n\n===== PROPIFY LIVE DATA (use it, cite hit rates) =====\n${text.slice(0, CONTEXT_CAP)}` : ''
   } catch {
     return ''
   }

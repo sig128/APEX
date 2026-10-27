@@ -14,7 +14,7 @@ const PRESETS = [0.1, 0.25, 0.5, 1]
 
 /**
  * The Kelly calculator (free): your sportsbook's odds and the fair win chance in, the stake out,
- * with any Kelly multiplier and the APEX caps. Below it, the bankroll simulator (Pro).
+ * with any Kelly multiplier and the Propify caps. Below it, the bankroll simulator (Pro).
  */
 export function KellyPage() {
   useTitle('Kelly calculator and simulator')
@@ -38,7 +38,7 @@ export function KellyPage() {
   })
   const [bets, setBets] = useState('250')
   const [mult, setMult] = useState('0.25')
-  const [kind, setKind] = useState('single') // single | parlay: which APEX cap applies
+  const [kind, setKind] = useState('single') // single | parlay: which Propify cap applies
   const [capped, setCapped] = useState(true)
   const [humble, setHumble] = useState(false)
 
@@ -146,7 +146,7 @@ export function KellyPage() {
             </div>
             <label className="check">
               <input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} />
-              APEX caps: {RULES.stake.single * 100}% of bankroll on a single, {RULES.stake.lock * 100}% on a parlay ({RULES.stake.daily * 100}% a day in all)
+              Propify caps: {RULES.stake.single * 100}% of bankroll on a single, {RULES.stake.lock * 100}% on a parlay ({RULES.stake.daily * 100}% a day in all)
             </label>
             {fromSlip && fromSlip.priced && (
               <button
@@ -199,7 +199,7 @@ export function KellyPage() {
                 </dl>
                 <p className="kcalc__say">
                   {ev > 0
-                    ? `The odds say ${pct(implied, 1)}; you have it at ${pct(pp, 1)}. Full Kelly bets ${pct(full, 1)} of your bankroll; at ${m}x that's ${pct(full * m, 2)}${capped && full * m > cap ? `, capped at ${pct(cap, 0)} by the APEX rules` : ''}.`
+                    ? `The odds say ${pct(implied, 1)}; you have it at ${pct(pp, 1)}. Full Kelly bets ${pct(full, 1)} of your bankroll; at ${m}x that's ${pct(full * m, 2)}${capped && full * m > cap ? `, capped at ${pct(cap, 0)} by the Propify rules` : ''}.`
                     : `No edge: the odds say ${pct(implied, 1)} and you have it at ${pct(pp, 1)}. Kelly says don't bet. Edge or Pass.`}
                 </p>
               </>

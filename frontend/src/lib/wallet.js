@@ -1,6 +1,6 @@
-// Paying with a wallet: a plain USDC transfer on Base to the APEX wallet, for the exact amount
+// Paying with a wallet: a plain USDC transfer on Base to the Propify wallet, for the exact amount
 // on the payment request. Works with any EIP-1193 provider (a browser wallet, or the wallet
-// Privy gives the user). APEX never signs anything; the wallet asks the user.
+// Privy gives the user). Propify never signs anything; the wallet asks the user.
 export const BASE_CHAINS = {
   8453: { chainId: '0x2105', chainName: 'Base', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://mainnet.base.org'], blockExplorerUrls: ['https://basescan.org'] },
   84532: { chainId: '0x14a34', chainName: 'Base Sepolia', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://sepolia.base.org'], blockExplorerUrls: ['https://sepolia.basescan.org'] },

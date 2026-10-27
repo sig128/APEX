@@ -161,7 +161,7 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
           </label>
         )}
         {data?.spread > 0.02 && <p className="shopsheet__note">The best book pays {(data.spread * 100).toFixed(0)}% more than the worst on this exact slip. That’s line shopping.</p>}
-        <p className="shopsheet__fine">21+. Sports betting is legal only in some states. APEX doesn’t take bets and isn’t paid by these books. If gambling stops being fun, call 1-800-GAMBLER.</p>
+        <p className="shopsheet__fine">21+. Sports betting is legal only in some states. Propify doesn’t take bets and isn’t paid by these books. If gambling stops being fun, call 1-800-GAMBLER.</p>
       </div>
     </Dialog>
   )

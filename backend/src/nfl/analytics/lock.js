@@ -1,9 +1,9 @@
-// The 3-Leg Lock: every prop on the board run through the APEX rules, then the one three-leg
+// The 3-Leg Lock: every prop on the board run through the Propify rules, then the one three-leg
 // parlay most likely to cash among the combinations that pass all of them, or a Pass.
 //
 // A leg is certified on seven checks, each traceable to a number on the prop:
-//   probability  APEX win probability of at least 65%
-//   edge         APEX beats the price's implied probability (vig included) by 2+ points
+//   probability  Propify win probability of at least 65%
+//   edge         Propify beats the price's implied probability (vig included) by 2+ points
 //   sample       8+ games behind the numbers
 //   recency      the last 15 days weighted most: recency-weighted hit rate of 60%+, and not a
 //                miss in every game of the last 15 days
@@ -83,7 +83,7 @@ export function certifyLeg(row, { now = Date.now(), injury = null } = {}) {
   const add = (key, label, state, detail) => checks.push({ key, label, state, detail })
   const p = row.prob
 
-  add('prob', 'Win probability', p >= RULES.legMin ? 'pass' : 'fail', `APEX ${pctTxt(p)} (needs ${pctTxt(RULES.legMin)})`)
+  add('prob', 'Win probability', p >= RULES.legMin ? 'pass' : 'fail', `Propify ${pctTxt(p)} (needs ${pctTxt(RULES.legMin)})`)
 
   const price = priceOf(row)
   const implied = price != null ? americanToProb(price) : null
@@ -92,7 +92,7 @@ export function certifyLeg(row, { now = Date.now(), injury = null } = {}) {
   if (price == null && playableAt(p) <= RULES.maxFavorite) add('edge', 'Edge over the vig', 'fail', `Even a fair price would be ${fmt(playableAt(p))}: too short to beat the vig (the cap is ${fmt(RULES.maxFavorite)})`)
   else if (price == null) add('edge', 'Edge over the vig', 'pending', `No sportsbook price posted. Playable at ${fmt(playableAt(p))} or better`)
   else if (price <= RULES.maxFavorite) add('edge', 'Edge over the vig', 'fail', `${fmt(price)} is too short: at ${fmt(RULES.maxFavorite)} or shorter the book's margin swamps any edge`)
-  else add('edge', 'Edge over the vig', edge >= RULES.edgeMin && ev > 0 ? 'pass' : 'fail', `${fmt(price)} implies ${pctTxt(implied)}; APEX ${pctTxt(p)}, edge ${(edge * 100).toFixed(1)} pts, EV ${ev >= 0 ? '+' : ''}${(ev * 100).toFixed(1)}%`)
+  else add('edge', 'Edge over the vig', edge >= RULES.edgeMin && ev > 0 ? 'pass' : 'fail', `${fmt(price)} implies ${pctTxt(implied)}; Propify ${pctTxt(p)}, edge ${(edge * 100).toFixed(1)} pts, EV ${ev >= 0 ? '+' : ''}${(ev * 100).toFixed(1)}%`)
 
   const sample = row.sample ?? 0
   const l10 = row.windows?.find((w) => w.key === 'L10')

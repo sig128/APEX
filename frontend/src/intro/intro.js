@@ -1,8 +1,8 @@
 /*
- * APEX intro: "Under the lights".
+ * Propify intro: "Under the lights".
  *
  * About 4.7 seconds, drawn with WebGL. The stadium lights clank on one bank at a
- * time, the camera rushes down a night field past live stat chips, and the APEX
+ * time, the camera rushes down a night field past live stat chips, and the Propify
  * logo painted at midfield peels off the turf as thousands of particles. They
  * stand up, the logo ignites (flash, shockwave, flare, sparks), the tagline
  * decodes, then a gold triangle portal opens onto the site while the logo flies
@@ -60,7 +60,7 @@ const CHIP_SPOTS = [
 ]
 
 const GENERIC_CHIPS = [
-  ['L5', '5/5', 'green'], ['APEX SCORE', '92', 'gold'], ['L10', '9/10', 'green'], ['FAIR ODDS', '-341', 'gold'],
+  ['L5', '5/5', 'green'], ['PROPIFY SCORE', '92', 'gold'], ['L10', '9/10', 'green'], ['FAIR ODDS', '-341', 'gold'],
   ['HIT RATE', '80%', 'green'], ['VS DEFENSE', '#3', 'chalk'], ['PROJECTION', '74.5', 'gold'], ['L20', '17/20', 'green'],
 ]
 

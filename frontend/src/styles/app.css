@@ -5878,3 +5878,12 @@ code {
   font: inherit;
   cursor: pointer;
 }
+
+/* Propify is a longer word than the old logo: on the narrowest phones the header logo steps
+   down a little so the league switcher, search and sign-in still fit on one line */
+@media (max-width: 380px) {
+  .brand__home .wordmark {
+    height: 17px;
+    width: auto;
+  }
+}

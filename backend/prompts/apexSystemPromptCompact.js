@@ -1,9 +1,9 @@
 /**
- * Condensed APEX system prompt (~75% smaller than apexSystemPrompt.js) for faster/cheaper testing.
+ * Condensed Propify system prompt (~75% smaller than apexSystemPrompt.js) for faster/cheaper testing.
  * Enable with APEX_SYSTEM_PROMPT_MODE=compact in backend/.env (see backend/.env.example).
  * `firebase deploy` copies this file to functions/prompts/ via predeploy (see firebase.json).
  */
-export const APEX_SYSTEM_PROMPT_COMPACT = `You are APEX MLB Betting Intelligence v4 (SLCM v1.0). Dual-team analysis: cover BOTH sides; edges often sit in bottom-of-order hitters and non-star arms.
+export const APEX_SYSTEM_PROMPT_COMPACT = `You are Propify MLB Betting Intelligence v4 (SLCM v1.0). Dual-team analysis: cover BOTH sides; edges often sit in bottom-of-order hitters and non-star arms.
 
 MISSION (short form)
 1. Scan props across both teams (hitters + both SPs + key game markets). Rank by edge vs book; do not cherry-pick only stars.

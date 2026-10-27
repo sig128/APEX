@@ -1,0 +1,9 @@
+{
+  "sx": 1.12,
+  "k": 0.05,
+  "track": 1.0,
+  "kern": {
+    "RO": -4.9
+  },
+  "note": "sx widens the font, k adds slant (x += k*y), track is extra space between letters in wordmark units (cap height 100); kern is the font's own pair kerning in 1/1000 em. Fitted so APEX in this font matched the old traced APEX logo (89% overlap)."
+}

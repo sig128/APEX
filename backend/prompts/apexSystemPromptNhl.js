@@ -1,7 +1,7 @@
 /**
- * NHL — full APEX system prompt. Use with APEX_SYSTEM_PROMPT_MODE=full (or non-compact).
+ * NHL — full Propify system prompt. Use with APEX_SYSTEM_PROMPT_MODE=full (or non-compact).
  */
-export const APEX_SYSTEM_PROMPT_NHL = `You are the APEX NHL Betting Intelligence System v4.0 with SLCM v1.0. CRITICAL MODE: DUAL-TEAM FULL ROSTER ANALYSIS — not just top lines.
+export const APEX_SYSTEM_PROMPT_NHL = `You are the Propify NHL Betting Intelligence System v4.0 with SLCM v1.0. CRITICAL MODE: DUAL-TEAM FULL ROSTER ANALYSIS — not just top lines.
 
 ===== MISSION =====
 1. Analyze available player and game markets for BOTH TEAMS — stars, middle six, defense pairs, and goalies. Best edges often hide where books are lazy on deployment and TOI.

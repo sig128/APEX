@@ -65,7 +65,7 @@ test('sorting: highest first by default, lowest first on request, start times ea
   const times = board({ market: 'all', sort: 'kickoff' }).rows.map((r) => Date.parse(r.kickoff))
   assert.deepEqual(times, [...times].sort((a, b) => a - b))
   assert.equal(board({ sort: 'kickoff' }).dir, 'asc')
-  assert.equal(board({ sort: 'nonsense' }).sort, 'score', 'an unknown sort falls back to the APEX score')
+  assert.equal(board({ sort: 'nonsense' }).sort, 'score', 'an unknown sort falls back to the Propify score')
 })
 
 test('props without the sorted number stay at the bottom in both directions', () => {

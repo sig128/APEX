@@ -6,9 +6,9 @@ import path from 'node:path'
 import { renderUserHead } from '../src/picks/og.js'
 
 const HTML = `<!DOCTYPE html><html><head>
-<title>APEX NFL</title>
+<title>Propify NFL</title>
 <meta name="description" content="generic" />
-<meta property="og:title" content="APEX NFL" />
+<meta property="og:title" content="Propify NFL" />
 <meta name="twitter:card" content="summary" />
 <link rel="icon" href="/logo.png" />
 </head><body><div id="root"></div></body></html>`
@@ -17,7 +17,7 @@ const view = (over = {}) => ({ profile: { handle: 'sharpside', name: 'Sharp <Sid
 
 test('link preview: name, record and links, escaped, generic tags replaced', () => {
   const out = renderUserHead(HTML, view(), 'https://apex.web.app')
-  assert.match(out, /<title>Sharp &lt;Side&gt; \(@sharpside\) on APEX<\/title>/)
+  assert.match(out, /<title>Sharp &lt;Side&gt; \(@sharpside\) on Propify<\/title>/)
   assert.match(out, /Last 30 days: 10-3-1, \+10.65u\. All time: 30-20, \+12.1u\./)
   assert.match(out, /Props &quot;only&quot;/)
   assert.match(out, /<meta property="og:url" content="https:\/\/apex.web.app\/u\/sharpside" \/>/)
@@ -28,7 +28,7 @@ test('link preview: name, record and links, escaped, generic tags replaced', () 
   assert.ok(out.includes('<link rel="icon"'), 'other head tags stay')
   const fresh = renderUserHead(HTML, view({ record: null, bio: '' }), 'https://apex.web.app')
   assert.match(fresh, /Every pick posted before kickoff/)
-  assert.match(fresh, /og:image" content="https:\/\/apex.web.app\/logo.png"/, 'the logo without a picture')
+  assert.match(fresh, /og:image" content="https:\/\/apex.web.app\/logo.png\?v=propify"/, 'the logo without a picture')
   const pic = renderUserHead(HTML, view({ avatar: 'https://lh3.googleusercontent.com/a/abcdefghijklmnop=s96-c' }), 'https://apex.web.app')
   assert.match(pic, /og:image" content="https:\/\/lh3.googleusercontent.com\/a\/abcdefghijklmnop=s400-c"/, 'their own picture, card sized')
 })
@@ -52,7 +52,7 @@ test('route: /u/:handle serves the app with its own card when the build is prese
     const r = await api.get('/u/pat_picks', { headers: { 'x-forwarded-host': 'apex-test.firebaseapp.com' } })
     assert.equal(r.status, 200)
     assert.match(r.headers.get('content-type'), /html/)
-    assert.match(r.text, /<title>Pat \(@pat_picks\) on APEX<\/title>/)
+    assert.match(r.text, /<title>Pat \(@pat_picks\) on Propify<\/title>/)
     assert.match(r.text, /https:\/\/apex-test.firebaseapp.com\/u\/pat_picks/, 'this project’s own domains are used as asked')
     const forged = await api.get('/u/pat_picks', { headers: { 'x-forwarded-host': 'evil.example.com' } })
     assert.ok(!forged.text.includes('evil.example.com'), 'a forged host never reaches the card')
@@ -61,7 +61,7 @@ test('route: /u/:handle serves the app with its own card when the build is prese
     assert.ok(!otherSite.text.includes('someone-else'), 'anyone can have a web.app site; only ours count')
     const missing = await api.get('/u/nobody_here')
     assert.equal(missing.status, 200, 'unknown handles still get the app, which shows its own not-found')
-    assert.match(missing.text, /<title>APEX NFL<\/title>/)
+    assert.match(missing.text, /<title>Propify NFL<\/title>/)
   } finally {
     await api.close()
     made.engine.stop()

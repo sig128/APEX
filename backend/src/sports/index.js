@@ -1,4 +1,4 @@
-// The sports APEX covers. Each league runs its own engine on the same analytics; a family holds
+// The sports Propify covers. Each league runs its own engine on the same analytics; a family holds
 // what's specific to the sport (markets, positions, roles, how ESPN writes its stats).
 import * as football from './football.js'
 import * as basketball from './basketball.js'

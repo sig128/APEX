@@ -98,7 +98,7 @@ test('OpenAI request: Responses API, system as instructions, images as data URLs
   const ai = createAi({ openaiKey: 'sk-test-openai-123456', anthropicKey: null, env: {}, fetchImpl })
   const out = await ai.complete({
     feature: 'intel',
-    system: 'You are APEX Intel.',
+    system: 'You are Propify Intel.',
     messages: [{ role: 'user', content: [{ type: 'image', mediaType: 'image/png', data: 'iVBORw0KGgo=' }, { type: 'text', text: 'Read this.' }] }],
     maxTokens: 2500,
     webSearch: { maxUses: 6, domains: ['espn.com', 'nfl.com'] },
@@ -107,7 +107,7 @@ test('OpenAI request: Responses API, system as instructions, images as data URLs
   assert.equal(url, OPENAI_URL)
   assert.equal(headers.authorization, 'Bearer sk-test-openai-123456')
   assert.equal(body.model, 'gpt-6-sol')
-  assert.equal(body.instructions, 'You are APEX Intel.')
+  assert.equal(body.instructions, 'You are Propify Intel.')
   assert.equal(body.store, false, 'answers are not kept on OpenAI’s side')
   assert.deepEqual(body.reasoning, { effort: 'low' })
   assert.equal(body.max_output_tokens, 2500 + 4000, 'room for the model’s thinking on top of the answer')
@@ -242,8 +242,8 @@ test('on OpenAI: a prop read and the analyzer stream through, and health says wh
   assert.equal(ev.at(-1).type, 'complete')
   assert.equal(ev.at(-1).stop_reason, 'end_turn')
   const sent = calls.at(-1).body
-  assert.match(sent.instructions, /APEX NFL Betting Intelligence/)
-  assert.match(sent.input[0].content, /PROP:/, 'the model gets the APEX brief')
+  assert.match(sent.instructions, /Propify NFL Betting Intelligence/)
+  assert.match(sent.input[0].content, /PROP:/, 'the model gets the Propify brief')
   const game = { homeTeam: 'Detroit Lions', awayTeam: 'Green Bay Packers', date: '2026-10-25' }
   const chat = await api.post('/api/chat/stream', { game }, { headers: bearer('u_pro') })
   assert.equal(chat.status, 200, chat.text)

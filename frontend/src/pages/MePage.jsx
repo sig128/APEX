@@ -51,7 +51,7 @@ export function MePage() {
     <div className="container page narrow">
       <header className="page-head">
         <h1 className="page-title">{p ? 'Your page' : 'Make your picks page'}</h1>
-        <p className="page-sub">{p ? `apex/u/${p.handle}` : 'Post picks before kickoff and APEX grades them from the box score. Your record builds itself, and nobody can fake one.'}</p>
+        <p className="page-sub">{p ? `propify/u/${p.handle}` : 'Post picks before kickoff and Propify grades them from the box score. Your record builds itself, and nobody can fake one.'}</p>
       </header>
       {p && (
         <div className="me-card">

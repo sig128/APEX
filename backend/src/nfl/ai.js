@@ -1,4 +1,4 @@
-// "AI picks": a short APEX read of one prop, streamed as NDJSON (same framing as /api/chat/stream).
+// "AI picks": a short Propify read of one prop, streamed as NDJSON (same framing as /api/chat/stream).
 import { log, errText } from '../lib/log.js'
 import { RULES, RULES_PROMPT } from './rules.js'
 import { certifyLeg } from './analytics/lock.js'
@@ -18,11 +18,11 @@ const LENS = {
 - Script: the total implies run environment; bullpens decide late innings.`,
 }
 
-/** The APEX read of one prop, in the sport's terms. */
+/** The Propify read of one prop, in the sport's terms. */
 export function propSystem(sport = { title: 'NFL', family: 'football' }) {
-  return `You are APEX ${sport.title} Betting Intelligence (SLCM v1.0), reading ONE player or team prop.
+  return `You are Propify ${sport.title} Betting Intelligence (SLCM v1.0), reading ONE player or team prop.
 
-Use only the data you are given plus general ${sport.family === 'football' ? 'football' : sport.family} knowledge. Apply the APEX ruleset:
+Use only the data you are given plus general ${sport.family === 'football' ? 'football' : sport.family} knowledge. Apply the Propify ruleset:
 ${LENS[sport.family] || LENS.football}
 - Injuries: teammates out change usage (say who and how much the numbers moved without them).
 - Line: compare the line to the player's recent median and projection; note line moves from open.
@@ -32,7 +32,7 @@ Answer in this exact shape, plain text, no markdown headings, under 170 words:
 VERDICT: PRIME | STANDARD | MONITOR | NO PLAY — <side and line>
 WHY: 3 short bullets starting with "• "
 RISKS: 2 short bullets starting with "• "
-SIZING: one line. If a book price is given: no edge over the vig means "Pass at this price"; otherwise quarter Kelly on the APEX probability, capped at ${RULES.stake.single * 100}% of bankroll for a single. With no price, say "no price: playable at <fair minus 2 points> or better".
+SIZING: one line. If a book price is given: no edge over the vig means "Pass at this price"; otherwise quarter Kelly on the Propify probability, capped at ${RULES.stake.single * 100}% of bankroll for a single. With no price, say "no price: playable at <fair minus 2 points> or better".
 
 Never promise a win. This is analysis, not advice.
 
@@ -45,18 +45,18 @@ function brief(ctx) {
   const lines = []
   lines.push(`PROP: ${r.name} (${r.pos || 'team'}, ${r.teamAbbr}) ${r.label}${r.home === true ? ' at home' : r.home === false ? ' on the road' : ''} vs ${r.oppAbbr || '?'}`)
   if (ctx.game) lines.push(`GAME: ${ctx.game.shortName} ${ctx.game.date}${ctx.game.odds ? ` | ${ctx.game.odds.details || ''} total ${ctx.game.odds.total ?? '?'}` : ''}`)
-  lines.push(`APEX: probability ${(r.prob * 100).toFixed(1)}%, fair ${r.fair > 0 ? `+${r.fair}` : r.fair}, score ${r.score}/100, projection ${r.proj ?? '?'}, recent average ${r.avg ?? '?'}, median ${r.median ?? '?'}`)
+  lines.push(`Propify: probability ${(r.prob * 100).toFixed(1)}%, fair ${r.fair > 0 ? `+${r.fair}` : r.fair}, score ${r.score}/100, projection ${r.proj ?? '?'}, recent average ${r.avg ?? '?'}, median ${r.median ?? '?'}`)
   if (r.price) lines.push(`PRICE (${r.price.book || 'book'}): over ${r.price.over ?? '-'} / under ${r.price.under ?? '-'}${r.price.yes != null ? ` / yes ${r.price.yes}` : ''}${r.edge != null ? ` | edge ${(r.edge * 100).toFixed(1)} pts` : ''}`)
   else lines.push('PRICE: none (DraftKings line, no price)')
   lines.push(`HIT RATES: ${r.windows.map((w) => `${w.label} ${w.hits}/${w.n}`).join(', ')}${r.streak ? ` | current streak ${r.streak}` : ''}`)
   if (r.matchup) lines.push(`MATCHUP: ${r.matchup.text} (${r.matchup.perGame} per game vs ${r.matchup.avg} league average)`)
   if (r.boost) lines.push(`INJURY CONTEXT: ${r.boost.teammate} (${r.boost.status}). In ${r.boost.games} games without him this player averaged ${r.boost.withoutAvg} vs ${r.boost.avg}.`)
   if (r.move) lines.push(`LINE MOVE: opened ${r.move.open}, now ${r.line} (${r.move.delta > 0 ? '+' : ''}${r.move.delta})`)
-  if (r.notes?.length) lines.push(`APEX NOTES (hit rate weighed against this matchup): ${r.notes.map((n) => `[${n.tone}] ${n.text}`).join(' ')}`)
+  if (r.notes?.length) lines.push(`PROPIFY NOTES (hit rate weighed against this matchup): ${r.notes.map((n) => `[${n.tone}] ${n.text}`).join(' ')}`)
   if (ctx.injury) lines.push(`PLAYER STATUS: ${ctx.injury.status}`)
   if (ctx.logs?.length) lines.push(`LAST GAMES (newest last): ${ctx.logs.map((l) => `${l.date} ${l.home ? 'vs' : '@'}${l.opp}: ${l.v}`).join(' | ')}`)
   const cert = certifyLeg(r, { now: Date.now(), injury: ctx.injury })
-  lines.push(`APEX RULE CHECKS: ${cert.checks.map((c) => `${c.label} ${c.state.toUpperCase()} (${c.detail})`).join('; ')}`)
+  lines.push(`PROPIFY RULE CHECKS: ${cert.checks.map((c) => `${c.label} ${c.state.toUpperCase()} (${c.detail})`).join('; ')}`)
   return lines.join('\n')
 }
 

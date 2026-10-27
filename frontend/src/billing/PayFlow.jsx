@@ -11,7 +11,7 @@ const POLL_MAX = 75 // five minutes
 
 /**
  * Buy or renew a pass: get a payment request with an exact USDC amount, pay it (Privy, a
- * browser wallet, or by hand from anywhere), then APEX checks the chain until it's confirmed.
+ * browser wallet, or by hand from anywhere), then Propify checks the chain until it's confirmed.
  */
 export function PayFlow({ plan, onDone }) {
   const { refresh, config } = useBilling()

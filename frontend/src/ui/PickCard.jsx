@@ -34,7 +34,7 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
     }
   }
   const status = pick.status === 'graded' ? pick.result : locked ? 'live' : 'open'
-  const shareText = `${pick.legs.length > 1 ? `${pick.legs.length}-leg parlay` : pick.legs[0].label}${pick.legs.length === 1 ? ` (${pick.legs[0].name})` : ''} ${odds(pick.price)}, ${pick.units}u. Graded live on APEX.`
+  const shareText = `${pick.legs.length > 1 ? `${pick.legs.length}-leg parlay` : pick.legs[0].label}${pick.legs.length === 1 ? ` (${pick.legs[0].name})` : ''} ${odds(pick.price)}, ${pick.units}u. Graded live on Propify.`
   const pageUrl = `${SITE_URL}/u/${pick.handle}`
   return (
     <article className={`pick is-${status}`}>
@@ -64,7 +64,7 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
                 <b>{l.name}</b> {l.label}
               </Link>
               <span className="muted">
-                {l.teamAbbr} {l.oppAbbr ? `vs ${l.oppAbbr}` : ''}, APEX {pct(l.prob)} when posted, {Number.isFinite(l.price) ? `${odds(l.price)} (${pct(impliedOf(l.price), 1)})${l.book ? ` at ${bookName(l.book)}` : ''}` : 'no price listed (graded at -110)'}
+                {l.teamAbbr} {l.oppAbbr ? `vs ${l.oppAbbr}` : ''}, Propify {pct(l.prob)} when posted, {Number.isFinite(l.price) ? `${odds(l.price)} (${pct(impliedOf(l.price), 1)})${l.book ? ` at ${bookName(l.book)}` : ''}` : 'no price listed (graded at -110)'}
               </span>
             </span>
             <span className="pick-leg__res">{l.result ? `${RESULT[l.result] || l.result}${l.value != null ? ` (${l.value})` : ''}` : ''}</span>

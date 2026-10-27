@@ -1,4 +1,4 @@
-// APEX on Vercel: the whole API as one function. api/index.js (repo root) and
+// Propify on Vercel: the whole API as one function. api/index.js (repo root) and
 // frontend/api/index.js (when the project's Root Directory is frontend/) both re-export this.
 // It's the same Express app the Firebase function and the local server run, with the lazy
 // engine. Firebase only provides sign-in and the database:

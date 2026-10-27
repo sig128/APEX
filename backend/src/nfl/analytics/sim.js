@@ -1,11 +1,11 @@
 // Monte Carlo for a slip: play the legs out 10,000-100,000 times.
 //
-// Each leg's chance is the APEX probability (the number people see). What the simulation adds is
+// Each leg's chance is the Propify probability (the number people see). What the simulation adds is
 // how legs move together: a shared factor per game (pace, a shootout), per team (the offense
 // has a good day), per team's pass/run tilt (a passing script feeds the QB and his receivers and
 // starves the running back), and per player (two stats of the same player). Every leg is a
 // latent normal built from those factors; its stat is drawn from a distribution centered so the
-// line hits exactly as often as APEX says, so the correlations change the parlay, never a leg.
+// line hits exactly as often as Propify says, so the correlations change the parlay, never a leg.
 import { MARKETS } from '../markets.js'
 import * as football from '../../sports/football.js'
 import * as basketball from '../../sports/basketball.js'
@@ -265,7 +265,7 @@ export function simulateSlip(rows, { iterations = 10_000, seed = 7, price = null
 }
 
 /**
- * Luck vs skill: many bettors place the same bet again and again. With APEX's chance (skill)
+ * Luck vs skill: many bettors place the same bet again and again. With Propify's chance (skill)
  * and with the book's own chance (no edge, all luck), at 1 unit a bet.
  */
 export function luckVsSkill({ p, push = 0, dec, bets = 100, bettors = 2000, seed = 11 }) {

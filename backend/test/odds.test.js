@@ -1,5 +1,5 @@
 // Sportsbook prices from The Odds API (optional): matching events and players, the headline
-// book, the daily credit budget, and what prices do to the APEX read.
+// book, the daily credit budget, and what prices do to the Propify read.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createOddsApi } from '../src/providers/oddsapi/props.js'
@@ -122,7 +122,7 @@ test('a fresh serverless instance starts from the prices another one saved, even
   b.stop()
 })
 
-test('every league: NBA and NHL props map to APEX markets, each league spends its own budget', async () => {
+test('every league: NBA and NHL props map to Propify markets, each league spends its own budget', async () => {
   const NBA = 'https://api.the-odds-api.com/v4/sports/basketball_nba'
   const NHL = 'https://api.the-odds-api.com/v4/sports/icehockey_nhl'
   const g = { id: 'g1', date: '2026-10-26T00:00Z', home: { id: '26', name: 'Utah Jazz' }, away: { id: '13', name: 'Los Angeles Lakers' } }

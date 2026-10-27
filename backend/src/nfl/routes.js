@@ -202,7 +202,7 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
     return RAW
   })
 
-  // Parlay simulator: 10,000-100,000 runs of the slip on the APEX distributions. Pro.
+  // Parlay simulator: 10,000-100,000 runs of the slip on the Propify distributions. Pro.
   const simLimiter = createLimiter({ burst: 12, perSec: 1 / 3 })
   r.post('/sim', { tier: t('sim') }, (ctx) => {
     ctx.cache = null
@@ -307,7 +307,7 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
   const ledger = createLedger({ engine, store: engine.store, now: engine.now })
   const tickLedger = () => ledger.maybeTick().catch(() => {})
 
-  /** This week's lock under the APEX rules (or a Pass, with the reason). Pro. */
+  /** This week's lock under the Propify rules (or a Pass, with the reason). Pro. */
   r.get('/lock', { tier: t('lock'), cache: C(30, 30, 120) }, async () => {
     const out = views.lock()
     await ledger.record(out).catch(() => {})

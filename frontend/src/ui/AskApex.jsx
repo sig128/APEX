@@ -97,7 +97,7 @@ function useRead(key) {
   return useSyncExternalStore(subscribe, get, get)
 }
 
-/** The AI read of one prop, written with the APEX ruleset. Pro and Elite. */
+/** The AI read of one prop, written with the Propify ruleset. Pro and Elite. */
 export function AskApex({ propId }) {
   const sport = useSport()
   const { user, firebaseConfigured } = useAuth()
@@ -117,7 +117,7 @@ export function AskApex({ propId }) {
     <Locked need="pro" title="AI read of this prop">
       <div className={`ask ${tone}`}>
         <div className="ask__head">
-          <p className="ask__title">APEX AI read</p>
+          <p className="ask__title">Propify AI read</p>
           {state !== 'streaming' &&
             (needsSignIn ? (
               <Link className="btn btn--quiet" to="/login">
@@ -134,7 +134,7 @@ export function AskApex({ propId }) {
             </button>
           )}
         </div>
-        {state === 'idle' && <p className="muted">Runs this prop through the APEX ruleset: verdict, the reasons, the risks, and how much to stake.</p>}
+        {state === 'idle' && <p className="muted">Runs this prop through the Propify ruleset: verdict, the reasons, the risks, and how much to stake.</p>}
         {err && (
           <p className="ask__err" role="alert">
             {err.code === 'quota' ? `${err.message}` : err.code === 'invite' ? 'Redeem an invite code on your account page to use AI reads.' : err.message}

@@ -235,7 +235,7 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     const v = await chain({ ...cfg, network: inv.network, chainId: inv.chainId, rpcUrl: inv.network === cfg.network ? cfg.rpcUrl : NETWORKS[inv.network].rpc }).verifyTransfer({ txHash: hash, token: inv.token, to: inv.treasury, amount: inv.units, minConfirmations: cfg.confirmations })
     if (v.status === 'pending' || v.status === 'confirming') return { status: v.status, confirmations: v.confirmations || 0, needed: cfg.confirmations, invoice: invoiceView(inv, cfg) }
     if (v.status === 'failed') throw new ApiError(400, 'tx_failed', 'That transaction failed on-chain, so nothing was sent.')
-    if (v.status !== 'ok') throw new ApiError(400, 'tx_mismatch', `That transaction is not a transfer of exactly ${formatUnits(inv.units)} USDC to the APEX wallet on ${NETWORKS[inv.network].name}.`)
+    if (v.status !== 'ok') throw new ApiError(400, 'tx_mismatch', `That transaction is not a transfer of exactly ${formatUnits(inv.units)} USDC to the Propify wallet on ${NETWORKS[inv.network].name}.`)
     if (v.timestamp && (v.timestamp < inv.createdAt - SKEW_MS || v.timestamp > inv.expiresAt + LATE_MS)) throw new ApiError(400, 'tx_window', 'That transfer was made outside this payment request’s window.')
     const t = now()
     const claimId = `${inv.network}_${hash}`

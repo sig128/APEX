@@ -71,7 +71,7 @@ export function computeEffectivePromptMode(resolvedSportKey, clientRaw) {
  * @returns {string}
  */
 export function getApexSystemPrompt(sportKey, promptMode, mlbBettingScope) {
-  // every sport and every prompt size answers to the same APEX rules
+  // every sport and every prompt size answers to the same Propify rules
   return `${basePrompt(sportKey, promptMode, mlbBettingScope)}\n\n${RULES_PROMPT}`
 }
 

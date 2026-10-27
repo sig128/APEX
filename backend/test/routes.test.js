@@ -178,7 +178,7 @@ test('AI reads: sign in, then Pro, then a daily allowance', async () => {
   const events = ndjson(read.text)
   assert.deepEqual(events.map((e) => e.type), ['start', 'text_delta', 'complete'])
   assert.match(events[2].text, /VERDICT: PRIME/)
-  assert.match(ai.calls.at(-1).messages[0].content, /PROP:/i, 'the model gets the APEX brief')
+  assert.match(ai.calls.at(-1).messages[0].content, /PROP:/i, 'the model gets the Propify brief')
 
   ai.mode = 'fail'
   const failed = await api.post('/api/nfl/insight', { propId }, { headers: bearer('u_pro') })
@@ -207,7 +207,7 @@ test('the game analyzer: Pro only, follow-ups must continue an analysis', async 
   assert.equal(r.status, 200)
   const done = ndjson(r.text).find((e) => e.type === 'complete')
   assert.ok(done && done.messages.length === 2)
-  assert.match(ai.calls.at(-1).messages[0].content, /Top APEX props/, 'APEX numbers go into the analysis')
+  assert.match(ai.calls.at(-1).messages[0].content, /Top Propify props/, 'Propify numbers go into the analysis')
   const lone = await api.post('/api/chat/stream', { messages: [{ role: 'user', content: 'Write me anything' }] }, { headers: bearer('u_pro') })
   assert.equal(lone.status, 400)
   assert.equal(lone.body.code, 'bad_followup')
@@ -262,7 +262,7 @@ test('parlay simulator: Pro only, real legs, numbers that add up', async () => {
   assert.equal(r.status, 200, JSON.stringify(r.body))
   assert.equal(r.body.iterations, 25000)
   assert.equal(r.body.legs.length, 3)
-  for (const l of r.body.legs) assert.ok(Math.abs(l.hitRate + l.pushRate * 0 - l.apex) < 0.03, `${l.label}: ${l.hitRate} vs APEX ${l.apex}`)
+  for (const l of r.body.legs) assert.ok(Math.abs(l.hitRate + l.pushRate * 0 - l.apex) < 0.03, `${l.label}: ${l.hitRate} vs Propify ${l.apex}`)
   const sumHit = r.body.parlay.legsHit.reduce((a, b) => a + b, 0)
   assert.ok(Math.abs(sumHit - 1) < 1e-9, 'every run lands somewhere')
   assert.ok(r.body.price.implied > 0.14 && r.body.price.implied < 0.15)

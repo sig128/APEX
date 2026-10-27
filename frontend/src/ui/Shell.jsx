@@ -15,7 +15,7 @@ import { Headshot } from './Img.jsx'
 
 export function Wordmark({ height = 20 }) {
   return (
-    <svg data-apex-logo className="wordmark" viewBox={`0 0 ${WORDMARK.w} ${WORDMARK.h}`} height={height} width={(height * WORDMARK.w) / WORDMARK.h} role="img" aria-label="APEX">
+    <svg data-apex-logo className="wordmark" viewBox={`0 0 ${WORDMARK.w} ${WORDMARK.h}`} height={height} width={(height * WORDMARK.w) / WORDMARK.h} role="img" aria-label="Propify">
       <path fillRule="evenodd" d={WORDMARK.d} fill="currentColor" />
     </svg>
   )
@@ -144,7 +144,7 @@ function Header({ onSlip, slipCount, onSearch }) {
     <header className="header">
       <div className="header__inner">
         <div className="brand">
-          <Link to={sp(sport, '')} className="brand__home" aria-label="APEX home">
+          <Link to={sp(sport, '')} className="brand__home" aria-label="Propify home">
             <Wordmark height={20} />
           </Link>
           <SportPicker />
@@ -275,7 +275,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer__inner">
         <Wordmark height={14} />
-        <p className="footer__note">Stats and probabilities for research. APEX doesn't take bets. Bet within your means; if gambling stops being fun, call 1-800-GAMBLER.</p>
+        <p className="footer__note">Stats and probabilities for research. Propify doesn't take bets. Bet within your means; if gambling stops being fun, call 1-800-GAMBLER.</p>
         <nav className="footer__links" aria-label="More">
           <Link to="/pricing">Plans</Link>
           <Link to={sp(sport, '/dvp')}>Defense vs position</Link>

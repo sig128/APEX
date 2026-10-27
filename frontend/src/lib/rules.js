@@ -1,4 +1,4 @@
-// The APEX rules, as the pages show them. The server (backend/src/nfl/rules.js) is the source
+// The Propify rules, as the pages show them. The server (backend/src/nfl/rules.js) is the source
 // of truth for the lock; these mirror its numbers for the price checks done in the browser.
 import { decimalOf, impliedOf } from './format.js'
 

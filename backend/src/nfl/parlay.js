@@ -1,5 +1,5 @@
 // Parlay check: a slip (from the board, typed out, or a screenshot of a betslip) read leg by
-// leg. The legs are matched to the APEX board, played out in the simulator, scored, and then
+// leg. The legs are matched to the Propify board, played out in the simulator, scored, and then
 // the AI says which to keep, which to cut and why, grounded in those numbers.
 import { MARKETS, FOOTBALL_MARKETS, marketOf } from './markets.js'
 import { parsePropId } from './analytics/core.js'
@@ -32,9 +32,9 @@ Rules:
 - Skip moneylines, spreads and game totals; mention them in notes.
 - If it isn't a betslip, return {"legs":[],"parlayOdds":null,"notes":"not a betslip"}.`
 
-export const checkSystem = (sport = NFL_SPORT) => `You are APEX ${sport.title} Betting Intelligence (SLCM v1.0) reviewing a parlay before it's placed, leg by leg.
+export const checkSystem = (sport = NFL_SPORT) => `You are Propify ${sport.title} Betting Intelligence (SLCM v1.0) reviewing a parlay before it's placed, leg by leg.
 
-For every leg decide, holding it to the APEX rules and the rule checks you are given:
+For every leg decide, holding it to the Propify rules and the rule checks you are given:
 - KEEP: it passes the rules (65%+ to win, an edge over the price or a price to beat, a real sample, recent form that agrees, a projection that backs it, a steady role, the market not against it).
 - CUT: it fails a rule that matters (under 65%, no edge at this price, thin sample, cold recent form, a streak the projection doesn't back, role or injury doubt, the line moving against it, or it pulls against another leg).
 - SWAP: the player is fine but this exact bet isn't; name the better bet from the alternatives given (an easier line, the other side, or another prop on him).
@@ -42,7 +42,7 @@ Use only the data given plus general football knowledge. Cite the numbers. One r
 
 Then:
 OVERALL: two sentences: is this parlay worth playing, and what's the biggest risk.
-BEST: the version to play, e.g. "Legs 1 + 3 as a 2-leg (APEX 41%, fair +144)". If none, say "Pass".
+BEST: the version to play, e.g. "Legs 1 + 3 as a 2-leg (Propify 41%, fair +144)". If none, say "Pass".
 
 Answer in exactly this shape, plain text, no markdown:
 LEG 1: KEEP | <reason>
@@ -123,7 +123,7 @@ export function matchLegs(extracted, engine) {
   return { matched: out, unmatched }
 }
 
-/** The APEX rule checks for one leg at the slip's price, plus a quick lean before the AI weighs in. */
+/** The Propify rule checks for one leg at the slip's price, plus a quick lean before the AI weighs in. */
 export function scoreLeg(row, odds, sim, { now = Date.now(), injury = null } = {}) {
   const priced = Number.isFinite(odds) ? { ...row, price: row.oneSided ? { yes: odds } : row.side === 'u' ? { under: odds } : { over: odds } } : row
   const c = certifyLeg(priced, { now, injury })
@@ -134,14 +134,14 @@ export function scoreLeg(row, odds, sim, { now = Date.now(), injury = null } = {
 
 function legBrief(i, ctx, odds, s, sim) {
   const r = ctx.prop
-  const alts = (ctx.others || []).slice(0, 3).map((o) => `${o.label} (APEX ${(o.prob * 100).toFixed(0)}%)`)
-  const altLines = (ctx.alts || []).slice(0, 3).map((a) => `line ${a.line} (APEX ${(a.prob * 100).toFixed(0)}%)`)
+  const alts = (ctx.others || []).slice(0, 3).map((o) => `${o.label} (Propify ${(o.prob * 100).toFixed(0)}%)`)
+  const altLines = (ctx.alts || []).slice(0, 3).map((a) => `line ${a.line} (Propify ${(a.prob * 100).toFixed(0)}%)`)
   return [
     `LEG ${i + 1}`,
     _brief(ctx),
-    odds != null && s.implied != null ? `SLIP PRICE: ${odds > 0 ? `+${odds}` : odds} (implies ${(s.implied * 100).toFixed(1)}%, APEX edge ${(s.edge * 100).toFixed(1)} pts)` : 'SLIP PRICE: none shown',
+    odds != null && s.implied != null ? `SLIP PRICE: ${odds > 0 ? `+${odds}` : odds} (implies ${(s.implied * 100).toFixed(1)}%, Propify edge ${(s.edge * 100).toFixed(1)} pts)` : 'SLIP PRICE: none shown',
     `SIMULATED: hits ${(sim.hitRate * 100).toFixed(1)}% of runs; the only miss that sinks the parlay in ${(sim.onlyMiss * 100).toFixed(1)}%`,
-    `APEX RULE CHECKS: ${s.checks.map((c) => `${c.label} ${c.state.toUpperCase()} (${c.detail})`).join('; ')}`,
+    `PROPIFY RULE CHECKS: ${s.checks.map((c) => `${c.label} ${c.state.toUpperCase()} (${c.detail})`).join('; ')}`,
     alts.length || altLines.length ? `ALTERNATIVES: ${[...altLines, ...alts].join('; ')}` : '',
   ]
     .filter(Boolean)

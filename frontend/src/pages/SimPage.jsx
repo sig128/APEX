@@ -15,7 +15,7 @@ const RUNS = [10_000, 25_000, 50_000, 100_000]
 const BETS = [50, 100, 250, 500]
 const k = (n) => (n >= 1000 ? `${n / 1000}k` : String(n))
 
-/** Play the slip out tens of thousands of times on the APEX distributions. */
+/** Play the slip out tens of thousands of times on the Propify distributions. */
 export function SimPage() {
   const sport = useSport()
   useTitle('Parlay simulator')
@@ -47,7 +47,7 @@ export function SimPage() {
     <div className="container page">
       <header className="page-head">
         <h1 className="page-title">Parlay simulator</h1>
-        <p className="page-sub">Your slip, played out {k(runs)} times on the APEX numbers: how often each leg comes in, how often the whole thing cashes, and how much of a winning run is just luck.</p>
+        <p className="page-sub">Your slip, played out {k(runs)} times on the Propify numbers: how often each leg comes in, how often the whole thing cashes, and how much of a winning run is just luck.</p>
       </header>
       <Locked need="pro" title="The parlay simulator">
         {!legs.length ? (
@@ -68,7 +68,7 @@ export function SimPage() {
                     <span>
                       <b>{l.short || l.name}</b> {l.shortLabel || l.label}
                     </span>
-                    <span className="num muted">APEX {pct(l.prob)}</span>
+                    <span className="num muted">Propify {pct(l.prob)}</span>
                   </li>
                 ))}
               </ul>
@@ -133,7 +133,7 @@ function Results({ out }) {
             <p className="sim-head__k">At {odds(pr.price)}</p>
             <p className="num sim-head__mid">{pct(pr.implied, 1)}</p>
             <p className="sim-head__sub">
-              is what the book thinks. {pr.ev > 0 ? `APEX has it ${((p.hitRate - pr.implied) * 100).toFixed(1)} points higher: about $${(pr.ev * 100).toFixed(2)} back per $100 over time.` : `APEX has it ${((pr.implied - p.hitRate) * 100).toFixed(1)} points lower: you'd lose about $${(-pr.ev * 100).toFixed(2)} per $100 over time.`}
+              is what the book thinks. {pr.ev > 0 ? `Propify has it ${((p.hitRate - pr.implied) * 100).toFixed(1)} points higher: about $${(pr.ev * 100).toFixed(2)} back per $100 over time.` : `Propify has it ${((pr.implied - p.hitRate) * 100).toFixed(1)} points lower: you'd lose about $${(-pr.ev * 100).toFixed(2)} per $100 over time.`}
             </p>
           </div>
         )}
@@ -193,7 +193,7 @@ function LegResult({ l, multi }) {
         </svg>
       </div>
       <p className="sim-leg__facts">
-        Usually {l.p10}–{l.p90}, middle {l.median}. APEX says {pct(l.apex, 1)}
+        Usually {l.p10}–{l.p90}, middle {l.median}. Propify says {pct(l.apex, 1)}
         {multi && l.onlyMiss > 0.005 ? `. The only leg that misses in ${pct(l.onlyMiss, 1)} of runs` : ''}
         {l.pushRate > 0.005 ? `. Lands exactly on ${l.line} in ${pct(l.pushRate, 1)}` : ''}.
       </p>
@@ -235,9 +235,9 @@ function Luck({ luck }) {
   return (
     <section className="sim-luck" aria-label="Luck versus skill">
       <h2 className="section__title">Luck vs skill over {luck.bets} bets</h2>
-      <p className="muted">Two thousand bettors each place this bet {luck.bets} times at 1 unit. Gold bets with the APEX chance; grey wins exactly as often as the price says, so whatever it shows is pure luck.</p>
+      <p className="muted">Two thousand bettors each place this bet {luck.bets} times at 1 unit. Gold bets with the Propify chance; grey wins exactly as often as the price says, so whatever it shows is pure luck.</p>
       <div ref={ref}>
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`After ${luck.bets} bets, ${pct(luck.skill.up)} are up with the APEX edge versus ${pct(luck.luck.up)} on luck alone`}>
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`After ${luck.bets} bets, ${pct(luck.skill.up)} are up with the Propify edge versus ${pct(luck.luck.up)} on luck alone`}>
           <line x1={pad.l} x2={W - pad.r} y1={y(0)} y2={y(0)} stroke="var(--seat-2)" />
           <text x={pad.l - 6} y={y(0) + 4} textAnchor="end" className="sim-luck__tick">0u</text>
           <text x={pad.l - 6} y={y(hi) + 10} textAnchor="end" className="sim-luck__tick">{Math.round(hi)}u</text>

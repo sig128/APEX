@@ -27,7 +27,7 @@ export function formatUnits(units) {
 }
 
 const FEATURES = {
-  pro: ['AI picks on every prop (your APEX ruleset)', 'AI game analyzer', 'Kelly stake sizing on every pick', 'Bankroll simulator'],
+  pro: ['AI picks on every prop (your Propify ruleset)', 'AI game analyzer', 'Kelly stake sizing on every pick', 'Bankroll simulator'],
   elite: ['Everything in Pro', 'Public picks page with your X and Instagram', 'Verified, auto-graded record', 'Elite badge and a spot in the picks feed', 'Leaderboard'],
 }
 

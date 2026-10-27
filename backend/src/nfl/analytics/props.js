@@ -1,4 +1,4 @@
-// Prop rows: everything a card needs (hit rates, APEX probability and score, fair odds,
+// Prop rows: everything a card needs (hit rates, Propify probability and score, fair odds,
 // matchup, injury boosts, line moves), plus parlays and cheatsheets built from them.
 import { MARKETS, marketOf, propLabel, shortLabel, POS_GROUP } from '../markets.js'
 import { marketRows, windows, bestWindow, apexOverProb, apexScore, fairOdds, propId, streakOf, outcome, summarize, marketAnchor } from './core.js'

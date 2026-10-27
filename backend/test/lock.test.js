@@ -60,13 +60,13 @@ test('a leg is certified on seven traceable checks', () => {
   assert.equal(state(c, 'edge'), 'pending', 'no price: the edge waits on one')
   assert.match(c.checks.find((x) => x.key === 'edge').detail, /Playable at -/)
   assert.equal(c.playable, playableAt(0.8))
-  assert.equal(playableAt(0.78), -317, 'implied 76% (2 points under APEX)')
+  assert.equal(playableAt(0.78), -317, 'implied 76% (2 points under Propify)')
   for (const x of c.checks) assert.ok(x.detail.length > 8, `${x.key} explains itself`)
 })
 
 test('each rule can fail a leg on its own', () => {
   assert.equal(state(certifyLeg(row({ prob: 0.64 }), { now: NOW }), 'prob'), 'fail')
-  // -400 implies 80%: no edge over the vig at APEX 80%
+  // -400 implies 80%: no edge over the vig at Propify 80%
   assert.equal(state(certifyLeg(row({ price: { over: -400, under: 300 } }), { now: NOW }), 'edge'), 'fail')
   const priced = certifyLeg(row({ price: { over: -250, under: 200 } }), { now: NOW })
   assert.equal(state(priced, 'edge'), 'pass')

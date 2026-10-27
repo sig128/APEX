@@ -1,6 +1,6 @@
 // Game intel: the official injury report plus what reputable outlets are reporting this week
 // (practice participation, role changes, game-plan notes coaches said in public), read by the AI
-// with web search limited to established news sources, then tied back to the APEX props it moves.
+// with web search limited to established news sources, then tied back to the Propify props it moves.
 //
 // Public reporting only. The prompt rules out leaked, confidential or insider material, anonymous
 // social posts and betting touts, and every item has to carry the link it came from.
@@ -72,7 +72,7 @@ const allowedUrl = (u) => {
   }
 }
 
-export const intelSystem = (sport = { title: 'NFL', calendar: 'week' }) => `You are APEX Intel. You brief ${sport.title} bettors on what changed ${sport.calendar === 'day' ? 'since the last game' : 'this week'} for ONE game, using web search.
+export const intelSystem = (sport = { title: 'NFL', calendar: 'week' }) => `You are Propify Intel. You brief ${sport.title} bettors on what changed ${sport.calendar === 'day' ? 'since the last game' : 'this week'} for ONE game, using web search.
 
 Sources: only established news outlets, the league's and the teams' own sites, and the official injury report. Use ONLY public, on-the-record reporting: injury reports, practice participation, coach and player press conferences, depth chart moves, reported role or snap-share changes, weather, and game-plan comments coaches or coordinators made publicly.
 Never use or repeat leaked, stolen, confidential or "insider" material, private team documents, anonymous social media accounts, betting touts or rumors with no named outlet. If something is only rumored, leave it out.
@@ -103,17 +103,17 @@ function parseJsonLoose(text) {
 
 const str = (v, n) => (v == null ? '' : String(v).replace(/\s+/g, ' ').trim().slice(0, n))
 
-/** What APEX already knows about the game, so the model looks for what's new. */
+/** What Propify already knows about the game, so the model looks for what's new. */
 export function intelBrief(data) {
   const g = data.game
   const side = (s) => `${s.team.name} (${s.team.abbr}${s.team.record ? `, ${s.team.record}` : ''}). Official injury list: ${s.injuries.length ? s.injuries.map((i) => `${i.name || i.athleteName || i.athleteId} ${i.status}`).join(', ') : 'none listed'}.`
-  const props = (data.props || []).slice(0, 10).map((p) => `${p.name} ${p.label} (APEX ${(p.prob * 100).toFixed(0)}%)`)
+  const props = (data.props || []).slice(0, 10).map((p) => `${p.name} ${p.label} (Propify ${(p.prob * 100).toFixed(0)}%)`)
   return [
     `GAME: ${g.away?.name} at ${g.home?.name}, kickoff ${g.date}.`,
     data.venue ? `VENUE: ${typeof data.venue === 'string' ? data.venue : data.venue.name || ''}` : '',
     `AWAY: ${side(data.away)}`,
     `HOME: ${side(data.home)}`,
-    props.length ? `TOP APEX PROPS: ${props.join('; ')}` : '',
+    props.length ? `TOP PROPIFY PROPS: ${props.join('; ')}` : '',
     `TODAY: ${new Date().toISOString().slice(0, 10)}. Find this week's reporting for this game.`,
   ]
     .filter(Boolean)

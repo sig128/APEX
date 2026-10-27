@@ -1,4 +1,4 @@
-// The APEX API as one Express app, shared by backend/server.js (always-on daemon) and
+// The Propify API as one Express app, shared by backend/server.js (always-on daemon) and
 // functions/index.js (Cloud Functions, lazy engine).
 import crypto from 'node:crypto'
 import express from 'express'
@@ -80,7 +80,7 @@ function corsOptions() {
   }
 }
 
-/** Plain-text APEX data for the AI game analyzer (NFL only). */
+/** Plain-text Propify data for the AI game analyzer (NFL only). */
 /** APEX_SPORTS=nfl,nba,... picks the leagues (all of them by default). */
 function enabledSports() {
   const raw = String(process.env.APEX_SPORTS || '').trim()
@@ -104,7 +104,7 @@ function gameContextFrom(engine) {
       if (inj.length) lines.push(`  Out/doubtful: ${inj.map((i) => `${i.name} (${i.pos}, ${i.status})`).join(', ')}`)
       for (const t of side.trends.slice(0, 3)) lines.push(`  Trend: ${t.text}`)
     }
-    lines.push('Top APEX props (probability, fair odds, recent hit rates):')
+    lines.push('Top Propify props (probability, fair odds, recent hit rates):')
     for (const p of view.props.slice(0, 18)) lines.push(`  ${p.name} (${p.pos} ${p.teamAbbr}) ${p.label}: ${(p.prob * 100).toFixed(0)}%, fair ${p.fair}, L5 ${p.l5 ? `${p.l5.hits}/${p.l5.n}` : '-'}, L10 ${p.l10 ? `${p.l10.hits}/${p.l10.n}` : '-'}, score ${p.score}`)
     return lines.join('\n')
   }

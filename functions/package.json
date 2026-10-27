@@ -1,6 +1,6 @@
 {
   "name": "apex-functions",
-  "description": "Firebase Cloud Functions: the APEX API (synced from backend/) and invite codes",
+  "description": "Firebase Cloud Functions: the Propify API (synced from backend/) and invite codes",
   "type": "module",
   "engines": {
     "node": "22"

@@ -31,7 +31,7 @@ engine.ensureStarted().catch((e) => log.error('engine failed to start', { err: e
 
 const PORT = Number.parseInt(process.env.PORT || '8787', 10)
 const server = app.listen(PORT, () => {
-  log.info(`APEX API listening on http://localhost:${PORT}`)
+  log.info(`Propify API listening on http://localhost:${PORT}`)
 })
 // Live streams stay open for up to 30 minutes; don't let Node cut them.
 server.requestTimeout = 0
@@ -40,7 +40,7 @@ server.keepAliveTimeout = 65_000
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`\nPort ${PORT} is already in use (another APEX API still running?).\n  Fix:  lsof -ti :${PORT} | xargs kill -9\n  Or:   set PORT=8788 in backend/.env and the same port in frontend/vite.config.js proxy target.\n`)
+    console.error(`\nPort ${PORT} is already in use (another Propify API still running?).\n  Fix:  lsof -ti :${PORT} | xargs kill -9\n  Or:   set PORT=8788 in backend/.env and the same port in frontend/vite.config.js proxy target.\n`)
     process.exit(1)
   }
   throw err

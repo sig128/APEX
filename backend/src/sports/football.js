@@ -1,4 +1,4 @@
-// Football (NFL and college): the original APEX markets, roles and positions.
+// Football (NFL and college): the original Propify markets, roles and positions.
 import { FOOTBALL_MARKETS, FOOTBALL_CORE, footballPos } from '../nfl/markets.js'
 import { mean } from '../lib/util.js'
 

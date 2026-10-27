@@ -9,7 +9,7 @@ import { useSlip } from '../lib/useSlip.js'
 import { useSport, sp } from '../lib/sport.js'
 
 /**
- * One prop in a list: who, what line, how often it has hit, the APEX probability and fair
+ * One prop in a list: who, what line, how often it has hit, the Propify probability and fair
  * price, and a button to put it on the slip. `live` adds the in-game progress bar.
  */
 export const PropRow = memo(function PropRow({ c, rank, showGame = false, win, live, compact = false, bare = false }) {

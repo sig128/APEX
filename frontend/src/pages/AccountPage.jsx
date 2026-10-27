@@ -175,7 +175,7 @@ function Redeem({ redeem, after, verified, paywall }) {
     <section className="acct-list">
       <p className="acct-plan__k">{paywall ? 'Have a code?' : 'Invite code'}</p>
       <form className="row" onSubmit={submit}>
-        <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="APEX-XXXX-XXXX-XXXX-XXXX" aria-label="Code" autoCapitalize="characters" spellCheck="false" />
+        <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="PROPIFY-XXXX-XXXX-XXXX-XXXX" aria-label="Code" autoCapitalize="characters" spellCheck="false" />
         <button type="submit" className="btn btn--quiet" disabled={busy || code.trim().length < 4}>
           {busy ? 'Checking' : 'Redeem'}
         </button>

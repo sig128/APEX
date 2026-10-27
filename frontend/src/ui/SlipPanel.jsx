@@ -112,7 +112,7 @@ export function SlipPanel({ open, onClose }) {
     const url = shareUrl(legs)
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'APEX slip', text: slipText(legs, slip.parlayPrice), url })
+        await navigator.share({ title: 'Propify slip', text: slipText(legs, slip.parlayPrice), url })
         return
       } catch (e) {
         if (e?.name === 'AbortError') return
@@ -149,7 +149,7 @@ export function SlipPanel({ open, onClose }) {
         {!legs.length ? (
           <div className="slip__empty">
             <p>Your slip is empty.</p>
-            <p className="muted">Tap + on any prop to add it. APEX multiplies the probabilities, prices the parlay fairly, and sizes your stake.</p>
+            <p className="muted">Tap + on any prop to add it. Propify multiplies the probabilities, prices the parlay fairly, and sizes your stake.</p>
             <Link to={sp(sport, '/props')} className="btn btn--quiet" onClick={onClose}>
               Find props
             </Link>
@@ -171,7 +171,7 @@ export function SlipPanel({ open, onClose }) {
                       </Link>
                       <span className="slip-leg__label">{l.label}</span>
                       <span className="slip-leg__read">
-                        APEX <b className="num">{pct(l.prob)}</b> fair {odds(l.fair)}
+                        Propify <b className="num">{pct(l.prob)}</b> fair {odds(l.fair)}
                         {l.book && Number.isFinite(l.price) && <span className="slip-leg__book">, best at {bookName(l.book)}</span>}
                         {lv && (
                           <span className="slip-leg__live">
@@ -216,7 +216,7 @@ export function SlipPanel({ open, onClose }) {
             {mode === 'parlay' && legs.length > 1 && math && (
               <div className="slip__math">
                 <div className="slip__row">
-                  <span>APEX chance all {legs.length} hit</span>
+                  <span>Propify chance all {legs.length} hit</span>
                   <b className="num">{pct(math.prob, 1)}</b>
                 </div>
                 <div className="slip__row">
@@ -259,7 +259,7 @@ export function SlipPanel({ open, onClose }) {
                     ) : (
                       legs.filter((l) => Number.isFinite(l.price)).map((l) => <StakeLine key={l.id} p={l.prob} d={decimalOf(l.price)} bankroll={bankroll} frac={frac} cap={RULES.stake.single} label={l.short || l.name} />)
                     )}
-                    <p className="muted small">Kelly sizes each bet by your edge at your price. APEX caps a parlay at {RULES.stake.lock * 100}% of bankroll, a single at {RULES.stake.single * 100}%, and a whole day at {RULES.stake.daily * 100}%.</p>
+                    <p className="muted small">Kelly sizes each bet by your edge at your price. Propify caps a parlay at {RULES.stake.lock * 100}% of bankroll, a single at {RULES.stake.single * 100}%, and a whole day at {RULES.stake.daily * 100}%.</p>
                   </>
                 ) : (
                   <p className="slip__locked">

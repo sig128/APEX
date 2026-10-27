@@ -141,7 +141,7 @@ test('posting: frozen prices, limits, duplicates, conflicts, kickoff lock', asyn
   assert.equal(pk.units, 2.3)
   assert.equal(pk.legs.length, 2)
   assert.equal(pk.locked, false)
-  assert.equal(pk.legs[0].prob, two[0].prob, 'the APEX read is frozen at posting time')
+  assert.equal(pk.legs[0].prob, two[0].prob, 'the Propify read is frozen at posting time')
   assert.equal(pk.legs[0].posted, undefined, 'internal fields stay private')
   assert.ok(Number.isInteger(pk.price))
   await rejectsWith(picks.post(free, { legs: [ids[1], ids[0]] }), 'dup_pick')

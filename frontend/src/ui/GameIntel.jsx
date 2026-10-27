@@ -50,7 +50,7 @@ export function GameIntel({ gameId, official }) {
             <div>
               <p className="intel__title">What changed this week</p>
               <p className="muted">
-                APEX reads the official injury report, practice participation, depth charts and what coaches said on the record, from ESPN, NFL.com, AP and each team’s beat writers, then tells you which props it moves. Public reporting only, every item linked.
+                Propify reads the official injury report, practice participation, depth charts and what coaches said on the record, from ESPN, NFL.com, AP and each team’s beat writers, then tells you which props it moves. Public reporting only, every item linked.
               </p>
             </div>
             <button type="button" className="btn btn--gold" onClick={() => scan(false)}>
@@ -158,7 +158,7 @@ export function GameIntel({ gameId, official }) {
             )}
 
             {official > 0 && <p className="muted intel__fine">The full official list for both teams is on the Injuries tab.</p>}
-            <p className="muted intel__fine">From public reporting by established outlets, read by AI; check the link before you rely on it. APEX never uses leaked or insider information.</p>
+            <p className="muted intel__fine">From public reporting by established outlets, read by AI; check the link before you rely on it. Propify never uses leaked or insider information.</p>
           </>
         )}
       </div>

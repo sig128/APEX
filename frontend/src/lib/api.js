@@ -1,4 +1,4 @@
-// fetch() for the APEX API: JSON in and out, the signed-in user's token attached, errors that
+// fetch() for the Propify API: JSON in and out, the signed-in user's token attached, errors that
 // carry the server's code (signin, upgrade, quota...) so screens can react to them.
 import { DATA_BASE } from './config.js'
 
@@ -41,7 +41,7 @@ export async function api(path, { method = 'GET', body, signal, base = DATA_BASE
       res = await fetch(url, { method, headers: h, body: body === undefined ? undefined : JSON.stringify(body), signal })
     } catch (e) {
       if (e?.name === 'AbortError') throw e
-      throw new ApiError(0, null, 'Could not reach APEX. Check your connection.')
+      throw new ApiError(0, null, 'Could not reach Propify. Check your connection.')
     }
     if (raw && res.ok) return res
     let data = null

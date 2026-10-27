@@ -420,7 +420,7 @@ export { kickoff }
 
 /**
  * The matchup lens: every prop on this game ranked by how the player has done against this
- * opponent, weighted with the APEX probability. Meetings are few, so every line shows its sample.
+ * opponent, weighted with the Propify probability. Meetings are few, so every line shows its sample.
  */
 function HeadToHead({ data }) {
   const sport = useSport()
@@ -460,7 +460,7 @@ function HeadToHead({ data }) {
         </section>
       )}
       <p className="h2h__note">
-        Ranked by each player’s record against this opponent over the last two seasons, weighted with the APEX probability. Teams meet once or twice a year, so every line shows how many games it rests on. Two of two is a lean, not a lock.
+        Ranked by each player’s record against this opponent over the last two seasons, weighted with the Propify probability. Teams meet once or twice a year, so every line shows how many games it rests on. Two of two is a lean, not a lock.
       </p>
       <div className="filters filters--tight">
         <Pills
@@ -508,7 +508,7 @@ function HeadToHead({ data }) {
                 </div>
                 <div className="h2hrow__apex">
                   <span className="num">{pct(r.prob)}</span>
-                  <span className="h2hrow__k">APEX</span>
+                  <span className="h2hrow__k">Propify</span>
                 </div>
                 <button type="button" className={`btn btn--s ${on ? 'btn--quiet' : 'btn--gold'}`} aria-pressed={on} onClick={() => toggleLeg(r)}>
                   {on ? 'On slip' : 'Add'}

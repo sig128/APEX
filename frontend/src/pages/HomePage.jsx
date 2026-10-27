@@ -15,7 +15,7 @@ import { RateChip, Tabs, Section, Skeleton, ErrorBox, Empty, Warming } from '../
 import { useSport, apiOf, sp, sportInfo, slateDay, slateLabel } from '../lib/sport.js'
 
 const TABS = [
-  { key: 'apex', label: 'APEX picks' },
+  { key: 'apex', label: 'Propify picks' },
   { key: 'streaks', label: 'Streaks' },
   { key: 'matchups', label: 'Matchups' },
   { key: 'moves', label: 'Line moves' },
@@ -23,7 +23,7 @@ const TABS = [
 // the last tab is each league's own: touchdowns, threes, home runs, goal scorers
 const SPECIAL = { nfl: { key: 'tds', label: 'Touchdowns' }, ncaaf: { key: 'tds', label: 'Touchdowns' }, nba: { key: 'threes', label: '3-pointers' }, ncaab: { key: 'threes', label: '3-pointers' }, wnba: { key: 'threes', label: '3-pointers' }, mlb: { key: 'hr', label: 'Home runs' }, nhl: { key: 'goals', label: 'Goal scorers' } }
 const TAB_NOTE = {
-  apex: 'The highest APEX scores on the slate: hit rate, projection, matchup and role together.',
+  apex: 'The highest Propify scores on the slate: hit rate, projection, matchup and role together.',
   streaks: 'Starters who have cleared this line five or more games in a row.',
   matchups: 'Props facing a defense ranked top or bottom six against the position.',
   moves: 'Lines that moved since they opened. The market is telling you something.',
@@ -63,7 +63,7 @@ export function HomePage() {
   const [tab, setTab] = useState('apex')
   const top = data?.tabs?.apex?.[0]
   const tabs = [...TABS, data?.special || SPECIAL[sport] || SPECIAL.nfl]
-  // a tab another league has (touchdowns on the NBA board) falls back to APEX picks
+  // a tab another league has (touchdowns on the NBA board) falls back to Propify picks
   const cur = tabs.some((t) => t.key === tab) ? tab : 'apex'
 
   const meta = useApi('/api/sports', { maxAgeMs: 10 * 60_000 }).data
@@ -259,7 +259,7 @@ function Hero({ card }) {
       <div className="hero__who">
         <Headshot src={card.headshot} name={card.name} size={88} className="hero__img" />
         <div>
-          <p className="hero__rank">No. 1 on the APEX board</p>
+          <p className="hero__rank">No. 1 on the Propify board</p>
           <h2 className="hero__name" id="hero-name">
             <Link to={sp(sport, `/player/${card.playerId}`)}>{card.name}</Link>
           </h2>

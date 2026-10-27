@@ -1,4 +1,4 @@
-// Hit rates, projections and the APEX probability for one player prop.
+// Hit rates, projections and the Propify probability for one player prop.
 import { MARKETS, marketOf } from '../markets.js'
 import { wilsonLower, ewma, normalOver, poissonAtLeast, shrink } from '../../lib/stats.js'
 import { probToAmerican, americanToProb } from '../../lib/odds.js'
@@ -184,7 +184,7 @@ export function marketAnchor(proj, market, mainLine, line) {
 }
 
 /**
- * APEX probability: 55% empirical (recent hit rate, shrunk toward the model) and 45% model.
+ * Propify probability: 55% empirical (recent hit rate, shrunk toward the model) and 45% model.
  * Returns the probability of the OVER (yes for one-sided markets).
  */
 export function apexOverProb(rows, market, line, ctx = {}) {

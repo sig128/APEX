@@ -82,7 +82,7 @@ export function useTitle(title) {
   useEffect(() => {
     if (!title) return
     const prev = document.title
-    document.title = `${title} | APEX`
+    document.title = `${title} | Propify`
     return () => {
       document.title = prev
     }

@@ -10,7 +10,7 @@
  *   INVITE_PLAN=elite        make them plan codes: pro or elite (leave unset for plain invites)
  *   INVITE_DAYS=30           length of the pass for plan codes (1-3650, or "lifetime")
  *   INVITE_EXPIRES_DAYS=14   the code itself stops working after this many days (optional)
- *   INVITE_PREFIX=APEX       code prefix
+ *   INVITE_PREFIX=PROPIFY    code prefix (codes made before the rename start with APEX and still work)
  */
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
@@ -43,7 +43,7 @@ const plan = ['pro', 'elite'].includes(String(process.env.INVITE_PLAN || '').toL
 const daysRaw = String(process.env.INVITE_DAYS || '30').toLowerCase()
 const days = daysRaw === 'lifetime' ? 'lifetime' : Math.min(3650, Math.max(1, parseInt(daysRaw, 10) || 30))
 const expiresDays = parseInt(process.env.INVITE_EXPIRES_DAYS || '', 10)
-const prefix = String(process.env.INVITE_PREFIX || 'APEX').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'APEX'
+const prefix = String(process.env.INVITE_PREFIX || 'PROPIFY').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'PROPIFY'
 
 const codes = new Set()
 // 10 bytes = 80 random bits, written as 16 base32 characters in groups of four: long enough

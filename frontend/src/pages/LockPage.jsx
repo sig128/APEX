@@ -21,7 +21,7 @@ const STATUS = {
 }
 const isDaily = (sport) => sportInfo(sport).calendar === 'day'
 
-/** The 3-Leg Lock: the board run through the APEX rules, the one parlay that survives, and its record. */
+/** The 3-Leg Lock: the board run through the Propify rules, the one parlay that survives, and its record. */
 export function LockPage() {
   const sport = useSport()
   const daily = isDaily(sport)
@@ -36,7 +36,7 @@ export function LockPage() {
     <div className="container page lockpage">
       <header className="page-head">
         <h1 className="page-title">The {sportInfo(sport).name} 3-Leg Lock</h1>
-        <p className="page-sub">Every prop on the board, run through the APEX rules. Three legs that each clear 65%, together over 45% before any correlation bonus, with an edge over the price. If nothing survives, it’s a pass.</p>
+        <p className="page-sub">Every prop on the board, run through the Propify rules. Three legs that each clear 65%, together over 45% before any correlation bonus, with an edge over the price. If nothing survives, it’s a pass.</p>
       </header>
 
       <Locked need="pro" title={daily ? 'Today’s 3-Leg Lock' : 'This week’s 3-Leg Lock'}>
@@ -410,7 +410,7 @@ function Principles() {
   return (
     <section className="principles" aria-labelledby="pr-h">
       <h2 className="section-h" id="pr-h">
-        The rules every APEX answer follows
+        The rules every Propify answer follows
       </h2>
       <dl>
         {PRINCIPLES.map((p) => (
