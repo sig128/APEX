@@ -2,7 +2,7 @@
 // (the board's leans, its top 10, edge 3+, the 3-Leg Lock, your own bets or everyone's), and
 // the day's bets underneath when you open one.
 import { useEffect, useMemo, useState } from 'react'
-import { api } from '../lib/api.js'
+import { adminApi } from './adminApi.js'
 import { odds, bookName } from '../lib/format.js'
 import { stats, unitsTxt, record, dayKey, shiftDay, dayLong, pctTxt, signedPct, LEAGUE } from './numbers.js'
 
@@ -73,7 +73,7 @@ export function SeasonCalendar({ data: loaded, series, onSeries, sport = '' }) {
     if (covered || paged[pk]) return undefined
     let live = true
     setPaging(true)
-    api(`/api/admin/overview?from=${start}&to=${end}${sport ? `&sport=${sport}` : ''}&parts=board`)
+    adminApi(`/api/admin/overview?from=${start}&to=${end}${sport ? `&sport=${sport}` : ''}&parts=board`)
       .then((d) => live && setPaged((p) => ({ ...p, [pk]: d })))
       .catch(() => {})
       .finally(() => live && setPaging(false))
@@ -186,7 +186,7 @@ function DayDetail({ data, series, day, onClose }) {
     let live = true
     setRows(null)
     setErr(null)
-    Promise.all(leagues.map((s) => api(`/api/admin/day?sport=${s}&day=${day}`).then((d) => d.rows.map((r) => ({ ...r, sport: s }))).catch(() => [])))
+    Promise.all(leagues.map((s) => adminApi(`/api/admin/day?sport=${s}&day=${day}`).then((d) => d.rows.map((r) => ({ ...r, sport: s }))).catch(() => [])))
       .then((all) => live && setRows(all.flat()))
       .catch((e) => live && setErr(e.message))
     return () => {

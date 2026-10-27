@@ -30,6 +30,20 @@ const MARKET_LABELS = marketLabels()
 
 const DAY = 86_400_000
 const zero = () => ACC.map(() => 0)
+const list = (v) => String(v || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)
+
+/**
+ * Whose picks are "your bets": the accounts on the admin list (APEX_ADMIN_EMAILS or
+ * APEX_ADMIN_UIDS). The admin page opens with a password, not a Google account, so the list
+ * says which picks pages are the admin's.
+ */
+export function adminUidsOf(users, admin) {
+  const emails = new Set(list(process.env.APEX_ADMIN_EMAILS))
+  const uids = new Set(list(process.env.APEX_ADMIN_UIDS))
+  if (admin?.uid && !admin.viaKey) uids.add(String(admin.uid).toLowerCase())
+  for (const m of users?.list || []) if (m.email && emails.has(String(m.email).toLowerCase())) uids.add(String(m.uid).toLowerCase())
+  return uids
+}
 const r2 = (x) => Math.round(x * 100) / 100
 
 /** Days between two YYYY-MM-DD keys, both ends included. */
@@ -135,7 +149,8 @@ export function createAdminMetrics({ engines, store, billing, listUsers = async 
   }
 
   /** Every pick posted on the site (the admin's own among them), by game day. */
-  async function picksBook(adminUid, t) {
+  async function picksBook(adminUids, t) {
+    const isAdmin = (p) => adminUids.has(String(p.uid).toLowerCase())
     if (!docs) return null
     const all = await pageAll(docs, 'picks', 'createdAt', 1500).catch(() => [])
     const crowd = {}
@@ -155,10 +170,10 @@ export function createAdminMetrics({ engines, store, billing, listUsers = async 
     for (const p of all) {
       if (p.status === 'open') open++
       add(crowd, p)
-      if (p.uid === adminUid) add(mine, p)
+      if (isAdmin(p)) add(mine, p)
     }
     const myPicks = all
-      .filter((p) => p.uid === adminUid)
+      .filter(isAdmin)
       .slice(0, 60)
       .map((p) => ({ id: p.id, at: p.createdAt, lockAt: p.lockAt, status: p.status, result: p.result, units: p.units, profit: p.profit ?? null, price: p.price, legs: (p.legs || []).map((l) => ({ name: l.short || l.name, label: l.label, sport: l.sport || 'nfl', result: l.result || null, price: l.price ?? null })) }))
     return { posted: all.length, open, crowd, mine, myPicks }
@@ -237,10 +252,11 @@ export function createAdminMetrics({ engines, store, billing, listUsers = async 
       if (cache.size > 30) cache.delete(cache.keys().next().value)
       return value
     }
+    const usersP = members(t).catch((e) => (log.warn('admin members failed', { err: errText(e) }), null))
     const [users, cash, book, lockList, model] = await Promise.all([
-      members(t).catch((e) => (log.warn('admin members failed', { err: errText(e) }), null)),
+      usersP,
       money(admin).catch(() => null),
-      picksBook(admin?.uid, t).catch(() => null),
+      usersP.then((u) => picksBook(adminUidsOf(u, admin), t)).catch(() => null),
       locks().catch(() => []),
       board(days, sport),
     ])

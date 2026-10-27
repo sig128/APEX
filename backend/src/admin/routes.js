@@ -1,4 +1,4 @@
-// /api/admin/* for the admin page (signed-in admins only, every response no-store), and the
+// /api/admin/* for the admin page (behind the admin password, every response no-store), and the
 // daily run Vercel's cron calls: every league saves its lines and grades yesterday's.
 import express from 'express'
 import crypto from 'node:crypto'
@@ -7,7 +7,7 @@ import { log, errText } from '../lib/log.js'
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 
-export function adminRoutes({ access, metrics, sports }) {
+export function adminRoutes({ lock, metrics, sports, billing = null, picks = null }) {
   const r = express.Router()
   const wrap = (fn) => async (req, res) => {
     res.set('Cache-Control', 'no-store')
@@ -15,19 +15,22 @@ export function adminRoutes({ access, metrics, sports }) {
       const out = await fn(req, res)
       if (!res.headersSent) res.json(out ?? { ok: true })
     } catch (e) {
-      if (e instanceof ApiError) return res.status(e.status).json({ error: e.message, code: e.code })
+      if (e instanceof ApiError) {
+        if (e.extra?.retryAfter) res.set('Retry-After', String(e.extra.retryAfter))
+        return res.status(e.status).json({ error: e.message, code: e.code })
+      }
       log.error('admin route failed', { path: req.path, err: errText(e) })
       res.status(500).json({ error: 'The admin numbers could not be loaded. Try again in a minute.', code: 'internal' })
     }
   }
-  const admin = async (req) => {
-    const a = await access.resolve(req)
-    if (!a.user) throw new ApiError(401, 'signin', 'Sign in first.')
-    if (!a.user.admin) throw new ApiError(403, 'admin', 'Admins only.')
-    return a.user
-  }
+  // the password is the only way in (a Google admin account alone doesn't open it)
+  const admin = async (req) => lock.require(req)
   const dayParam = (v) => (typeof v === 'string' && DAY_RE.test(v) ? v : null)
   const sportParam = (v) => (sports.includes(v) ? v : null)
+
+  r.get('/session', wrap(async (req) => lock.status(req)))
+  r.post('/login', wrap(async (req, res) => lock.login(req, res)))
+  r.post('/logout', wrap(async (req, res) => lock.logout(req, res)))
 
   r.get(
     '/overview',
@@ -49,6 +52,31 @@ export function adminRoutes({ access, metrics, sports }) {
       const out = await metrics.day({ sport, day })
       if (!out) throw new ApiError(404, 'not_found', 'Nothing on file for that day.')
       return out
+    }),
+  )
+  // the Tools tab: passes by hand and hiding a picks page, under the same lock
+  r.post(
+    '/grant',
+    wrap(async (req) => {
+      const a = await admin(req)
+      if (!billing) throw new ApiError(503, 'no_billing', 'Passes aren’t set up on this server.')
+      return billing.grant(a, req.body || {})
+    }),
+  )
+  r.post(
+    '/revoke',
+    wrap(async (req) => {
+      const a = await admin(req)
+      if (!billing) throw new ApiError(503, 'no_billing', 'Passes aren’t set up on this server.')
+      return billing.revoke(a, req.body || {})
+    }),
+  )
+  r.post(
+    '/hide',
+    wrap(async (req) => {
+      const a = await admin(req)
+      if (!picks) throw new ApiError(503, 'no_picks', 'Picks pages aren’t set up on this server.')
+      return picks.setHidden(a, req.body || {})
     }),
   )
   // "Update now" on the admin page: the same run as the daily cron, shorter

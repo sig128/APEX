@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate, Link } from 'react-router-dom'
-import { api } from '../lib/api.js'
-import { useBilling } from '../context/BillingContext.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
+import { adminApi } from '../admin/adminApi.js'
 import { useTitle } from '../lib/hooks.js'
 import { Skeleton } from '../ui/Bits.jsx'
 import { SPORTS } from '../lib/leagues.js'
@@ -34,8 +31,8 @@ const tabFromHash = () => {
 
 /** The admin page: is the board making money at real prices, where, and how the business is doing. */
 export function AdminPage() {
-  const { isAdmin, loading, me, refresh } = useBilling()
-  const { user, signOutUser } = useAuth()
+  // checking | locked | open | unset: the admin password is the only way in, checked by the server
+  const [gate, setGate] = useState('checking')
   const [period, setPeriod] = useState(30)
   const [sport, setSport] = useState('')
   const [tab, setTab] = useState(tabFromHash)
@@ -47,17 +44,28 @@ export function AdminPage() {
   useTitle('Admin')
   const to = dayKey(Date.now())
   const from = shiftDay(to, -(period - 1))
+  useEffect(() => {
+    adminApi('/api/admin/session')
+      .then((s) => setGate(!s?.configured ? 'unset' : s.open ? 'open' : 'locked'))
+      .catch(() => setGate('locked'))
+  }, [])
+  const locked = (e) => {
+    if (e?.code !== 'admin_password') return false
+    setData(null)
+    setGate('locked')
+    return true
+  }
   const load = useCallback(() => {
     setBusy(true)
     setErr(null)
-    return api(`/api/admin/overview?from=${from}&to=${to}${sport ? `&sport=${sport}` : ''}`)
+    return adminApi(`/api/admin/overview?from=${from}&to=${to}${sport ? `&sport=${sport}` : ''}`)
       .then(setData)
-      .catch((e) => setErr(e.message))
+      .catch((e) => locked(e) || setErr(e.message))
       .finally(() => setBusy(false))
   }, [from, to, sport])
   useEffect(() => {
-    if (isAdmin) load()
-  }, [isAdmin, load])
+    if (gate === 'open') load()
+  }, [gate, load])
   useEffect(() => {
     const on = () => setTab(tabFromHash())
     window.addEventListener('hashchange', on)
@@ -70,19 +78,22 @@ export function AdminPage() {
   const runNow = async () => {
     setRunning(true)
     try {
-      await api('/api/admin/run', { method: 'POST', body: {} })
+      await adminApi('/api/admin/run', { method: 'POST', body: {} })
       await load()
     } catch (e) {
-      setErr(e.message)
+      if (!locked(e)) setErr(e.message)
     } finally {
       setRunning(false)
     }
   }
+  const lockNow = async () => {
+    await adminApi('/api/admin/logout', { method: 'POST', body: {} }).catch(() => {})
+    setData(null)
+    setGate('locked')
+  }
 
-  if (loading) return <div className="container page"><Skeleton rows={6} /></div>
-  // not signed in: sign in, then come straight back here (the tab too)
-  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(`/admin${window.location.hash || ''}`)}`} replace />
-  if (!isAdmin) return <NotAdmin email={user.email} checked={Boolean(me)} onRetry={refresh} onSwitch={signOutUser} />
+  if (gate === 'checking') return <div className="container page"><Skeleton rows={6} /></div>
+  if (gate !== 'open') return <PasswordGate unset={gate === 'unset'} onOpen={() => setGate('open')} />
   return (
     <div className="container page adm">
       <header className="adm-head">
@@ -90,9 +101,14 @@ export function AdminPage() {
           <h1 className="page-title">Admin</h1>
           <p className="page-sub">How the board does against real prices, where it makes money and where it leaks, and how the site is doing.</p>
         </div>
-        <button type="button" className="btn btn--quiet adm-run" onClick={runNow} disabled={running}>
-          {running ? 'Updating…' : 'Update now'}
-        </button>
+        <div className="adm-head__actions">
+          <button type="button" className="btn btn--quiet adm-run" onClick={runNow} disabled={running}>
+            {running ? 'Updating…' : 'Update now'}
+          </button>
+          <button type="button" className="btn btn--quiet adm-run" onClick={lockNow} title="Close the admin page on this device until the password is entered again">
+            Lock
+          </button>
+        </div>
       </header>
       <nav className="adm-tabs" aria-label="Admin sections">
         {TABS.map((t) => (
@@ -140,41 +156,74 @@ export function AdminPage() {
           {tab === 'calendar' && <SeasonCalendar data={data} series={series} onSeries={setSeries} sport={sport} />}
           {tab === 'members' && <Members users={data.users} />}
           {tab === 'money' && <Money cash={data.money} users={data.users} />}
-          {tab === 'tools' && <Tools data={data} onChanged={load} />}
+          {tab === 'tools' && <Tools data={data} onChanged={load} onLocked={locked} />}
         </div>
       )}
     </div>
   )
 }
 
-/** Signed in, but not as an admin (or the account check failed): say which, and what to do. */
-function NotAdmin({ email, checked, onRetry, onSwitch }) {
+/** The lock screen: one password, checked by the server; a right one opens this device for 7 days. */
+function PasswordGate({ unset, onOpen }) {
+  const [pw, setPw] = useState('')
+  const [show, setShow] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!pw.trim() || busy) return
+    setBusy(true)
+    setErr(null)
+    try {
+      await adminApi('/api/admin/login', { method: 'POST', body: { password: pw } })
+      setPw('')
+      onOpen()
+    } catch (e2) {
+      setErr(e2.code === 'admin_password_wrong' ? 'That password isn’t right.' : e2.code === 'admin_locked' ? 'Too many wrong passwords. Try again in 15 minutes.' : e2.message)
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
     <div className="container page">
-      <section className="adm-panel adm-gate">
-        <h1 className="adm-h2">This page is for the site’s admin</h1>
-        {checked ? (
-          <p>
-            You’re signed in as <b>{email || 'an account without an email'}</b>, which isn’t on the admin list. Sign in with the Google account that runs the site.
-          </p>
-        ) : (
-          <p>Your account couldn’t be checked just now, so the admin page stays closed. Try again in a moment.</p>
-        )}
-        <div className="row">
-          {checked ? (
-            <button type="button" className="btn btn--gold" onClick={() => onSwitch()}>
-              Sign in with another account
+      <form className="adm-panel adm-gate" onSubmit={submit}>
+        <h1 className="page-title">Admin</h1>
+        <p>{unset ? 'The admin password isn’t set up on the server yet.' : 'Enter the admin password to open the dashboard.'}</p>
+        {/* lets a password manager save and fill it */}
+        <input className="sr-only" type="text" name="username" autoComplete="username" value="Propify admin" readOnly tabIndex={-1} aria-hidden="true" />
+        <div className="field">
+          <label htmlFor="adm-password">Password</label>
+          <div className="adm-pw">
+            <input
+              id="adm-password"
+              type={show ? 'text' : 'password'}
+              name="password"
+              autoComplete="current-password"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              disabled={unset}
+              aria-invalid={err ? 'true' : undefined}
+              aria-describedby={err ? 'adm-password-err' : undefined}
+              autoFocus
+            />
+            <button type="button" className="adm-pw__show" onClick={() => setShow(!show)} aria-pressed={show} disabled={unset}>
+              {show ? 'Hide' : 'Show'}
             </button>
-          ) : (
-            <button type="button" className="btn btn--gold" onClick={() => onRetry()}>
-              Try again
-            </button>
-          )}
-          <Link to="/" className="btn btn--quiet">
-            Back to props
-          </Link>
+          </div>
         </div>
-      </section>
+        {err && (
+          <p className="form-err" id="adm-password-err" role="alert">
+            {err}
+          </p>
+        )}
+        <button type="submit" className="btn btn--gold btn--block" disabled={busy || unset || !pw.trim()}>
+          {busy ? 'Checking…' : 'Unlock'}
+        </button>
+        <p className="adm-note">You stay unlocked on this device for 7 days, or until you press Lock.</p>
+      </form>
     </div>
   )
 }

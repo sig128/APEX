@@ -1,22 +1,22 @@
 // Passes by hand, hiding a picks page, and how each league's log is doing.
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../lib/api.js'
+import { adminApi } from './adminApi.js'
 import { ago } from '../lib/format.js'
 import { LEAGUE, dayLabel } from './numbers.js'
 
-export function Tools({ data, onChanged }) {
+export function Tools({ data, onChanged, onLocked }) {
   const [form, setForm] = useState({ email: '', plan: 'pro', days: '30', note: '' })
   const [msg, setMsg] = useState(null)
   const [hide, setHide] = useState('')
   const act = async (path, body, ok) => {
     setMsg(null)
     try {
-      await api(path, { method: 'POST', body })
+      await adminApi(path, { method: 'POST', body })
       setMsg({ ok: true, text: ok })
       onChanged?.()
     } catch (e) {
-      setMsg({ ok: false, text: e.message })
+      if (!onLocked?.(e)) setMsg({ ok: false, text: e.message })
     }
   }
   const status = data?.model?.status || {}
@@ -28,7 +28,7 @@ export function Tools({ data, onChanged }) {
           className="admin-form"
           onSubmit={(e) => {
             e.preventDefault()
-            act('/api/billing/admin/grant', { email: form.email.trim(), plan: form.plan, days: form.days === 'lifetime' ? 'lifetime' : Number(form.days), note: form.note }, `Gave ${form.email} ${form.plan === 'elite' ? 'Elite' : 'Pro'} for ${form.days === 'lifetime' ? 'life' : `${form.days} days`}.`)
+            act('/api/admin/grant', { email: form.email.trim(), plan: form.plan, days: form.days === 'lifetime' ? 'lifetime' : Number(form.days), note: form.note }, `Gave ${form.email} ${form.plan === 'elite' ? 'Elite' : 'Pro'} for ${form.days === 'lifetime' ? 'life' : `${form.days} days`}.`)
           }}
         >
           <label className="field">
@@ -60,7 +60,7 @@ export function Tools({ data, onChanged }) {
             <button type="submit" className="btn btn--gold">
               Give pass
             </button>
-            <button type="button" className="btn btn--quiet" onClick={() => form.email && window.confirm(`Take away ${form.email}'s pass?`) && act('/api/billing/admin/revoke', { email: form.email.trim() }, `Took away ${form.email}'s pass.`)}>
+            <button type="button" className="btn btn--quiet" onClick={() => form.email && window.confirm(`Take away ${form.email}'s pass?`) && act('/api/admin/revoke', { email: form.email.trim() }, `Took away ${form.email}'s pass.`)}>
               Take it away
             </button>
           </div>
@@ -73,14 +73,14 @@ export function Tools({ data, onChanged }) {
           className="row"
           onSubmit={(e) => {
             e.preventDefault()
-            act('/api/picks/admin/hide', { handle: hide.trim().replace(/^@/, ''), hidden: true }, `Hid @${hide.replace(/^@/, '')}.`)
+            act('/api/admin/hide', { handle: hide.trim().replace(/^@/, ''), hidden: true }, `Hid @${hide.replace(/^@/, '')}.`)
           }}
         >
           <input className="input" value={hide} onChange={(e) => setHide(e.target.value)} placeholder="@handle" aria-label="Handle to hide" />
           <button type="submit" className="btn btn--quiet">
             Hide page
           </button>
-          <button type="button" className="btn btn--quiet" onClick={() => act('/api/picks/admin/hide', { handle: hide.trim().replace(/^@/, ''), hidden: false }, `Showed @${hide.replace(/^@/, '')} again.`)}>
+          <button type="button" className="btn btn--quiet" onClick={() => act('/api/admin/hide', { handle: hide.trim().replace(/^@/, ''), hidden: false }, `Showed @${hide.replace(/^@/, '')} again.`)}>
             Show it again
           </button>
         </form>

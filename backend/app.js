@@ -24,6 +24,7 @@ import { parseChatBody, handleChatStream, setGameContextProvider } from './strea
 import { registerAdminSportsRoutes } from './adminSportsRoutes.js'
 import { createAdminMetrics } from './src/admin/metrics.js'
 import { adminRoutes, cronHandler } from './src/admin/routes.js'
+import { createAdminLock } from './src/admin/session.js'
 import { getDisabledSportKeys } from './sportsConfig.js'
 import {
   handleMlbPlayerPropsShowcaseRequest,
@@ -211,7 +212,8 @@ export function createApexApp({
   app.use('/api/picks', picksRoutes({ picks, access }))
   // the admin page's numbers, and the daily run that keeps the board's record without visitors
   const metrics = createAdminMetrics({ engines, store: engineStore, billing, listUsers, ...(now ? { now } : {}) })
-  app.use('/api/admin', adminRoutes({ access, metrics, sports: Object.keys(engines) }))
+  const lock = createAdminLock({ store: engineStore, ...(now ? { now } : {}) })
+  app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks }))
   app.get('/api/cron/daily', cronHandler({ metrics }))
 
   // ---- the AI analyzer (chat) ---------------------------------------------------------------

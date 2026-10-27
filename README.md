@@ -95,8 +95,8 @@ The site and the API both run on Vercel; Firebase only does Google sign-in and t
    | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | Google sign-in on the site (Firebase console > Project settings > Your apps > Web app) |
    | `FIREBASE_SERVICE_ACCOUNT` | The database: paste the whole JSON from Project settings > Service accounts > Generate new private key. Without it, stats and live tracking work, but passes, picks pages and codes stay off, and every new server instance reloads its data from ESPN, so the first visit after a quiet spell takes a few seconds longer. |
    | `OPENAI_API_KEY` | The AI: prop reads, the parlay check, game intel and the analyzer. `ANTHROPIC_API_KEY` works instead; with both set, OpenAI answers. `OPENAI_MODEL` picks the model (default `gpt-6-sol`) |
-   | `APEX_ADMIN_EMAILS` | Your Google account(s): the admin page and every plan |
-   | `ADMIN_SPORTS_KEY` | 24+ random characters, for scripts and `/adminn` |
+   | `APEX_ADMIN_EMAILS` | Your Google account(s): every plan, and whose picks count as yours on the admin page |
+   | `ADMIN_SPORTS_KEY` | 24+ random characters: the admin password for `/admin`, `/adminn` and scripts |
    | `THE_ODDS_API_KEY` | Optional: sportsbook prices |
    | `THE_ODDS_API_KEY_BACKUP` | Optional: a second Odds API key, used when the first is refused or out of credits |
    | `APEX_TREASURY_ADDRESS`, `APEX_BILLING_NETWORK` | Payments (see below; start with `base-sepolia`) |
@@ -193,9 +193,12 @@ ledger. NFL is the site's root (`/`, `/nfl/props`); the others live under their 
 
 ## Running it
 
-- **Admin:** signed in with an `APEX_ADMIN_EMAILS` account, the footer shows Admin: comp a pass
-  to someone by email (or for life), revoke one, hide a page, see every payment. `/adminn` still
-  turns sports on and off for the analyzer (with the admin key).
+- **Admin:** `/admin` opens with one password, the admin key (`ADMIN_SPORTS_KEY`), checked on
+  the server: a right one keeps that device unlocked for 7 days (a signed HttpOnly cookie), and
+  wrong ones lock guessing out for 15 minutes. A Google account alone doesn't open it. Inside:
+  the board's record at real prices (edge finder, calendar), members, money, and the tools (comp
+  a pass by email or for life, revoke one, hide a page). Changing the key in Vercel closes every
+  open admin session. `/adminn` still turns sports on and off for the analyzer (same key).
 - **Codes:** invite codes and plan codes (e.g. 30 days of Elite) are explained in
   `firestore/inviteCodes.template.txt`; create them with `npm run seed-invites` in functions/.
 - **Picks:** picks on any league lock when their first game starts and grade themselves from

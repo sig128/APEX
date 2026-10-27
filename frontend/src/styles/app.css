@@ -5905,15 +5905,61 @@ code {
   flex: none;
   margin-top: 6px;
 }
+.adm-head__actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+@media (max-width: 599px) {
+  /* on a phone the buttons go under the intro instead of squeezing it */
+  .adm-head {
+    flex-wrap: wrap;
+    gap: 6px 16px;
+  }
+  .adm-head > div:first-child {
+    flex: 1 1 100%;
+  }
+}
 .adm-gate {
-  max-width: 560px;
+  max-width: 420px;
   margin: 48px auto;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
-.adm-gate p {
+.adm-gate .page-title {
+  margin: 0;
+}
+.adm-gate > p {
   margin: 0;
   color: var(--chalk-2);
+}
+.adm-gate .field > label {
+  font-weight: 600;
+}
+.adm-pw {
+  position: relative;
+}
+.adm-pw input {
+  padding-right: 64px;
+}
+.adm-pw__show {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-s);
+  background: none;
+  color: var(--chalk-2);
+  font: 600 13px/1 var(--font-ui);
+  cursor: pointer;
+}
+.adm-pw__show:hover,
+.adm-pw__show:focus-visible {
+  color: var(--chalk);
+  background: var(--seat);
 }
 .adm-filters {
   display: flex;
