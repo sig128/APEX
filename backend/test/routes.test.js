@@ -25,6 +25,7 @@ const restoreEnv = withEnv({
   APEX_AUTH: null,
   K_SERVICE: null,
   APEX_LOG_LEVEL: 'error',
+  APEX_SHARED_POLL_MS: '60',
 })
 
 /** Scripted stand-in for the Anthropic SDK (see the stub in node_modules/@anthropic-ai/sdk). */
@@ -214,15 +215,36 @@ test('AI reads: sign in, then Pro, then a daily allowance, and a read is shared,
   assert.equal(badProp.status, 400)
 })
 
-test('the game analyzer: Pro only, follow-ups must continue an analysis', async () => {
+test('the game analyzer: Pro only, each game analysed once and served to everyone, follow-ups must continue an analysis', async () => {
   const game = { homeTeam: 'Detroit Lions', awayTeam: 'Green Bay Packers', date: '2026-10-25', sportKey: 'americanfootball_nfl' }
   assert.equal((await api.post('/api/chat/stream', { game })).status, 401)
   assert.equal((await api.post('/api/chat/stream', { game }, { headers: bearer('u_free') })).status, 402)
-  const r = await api.post('/api/chat/stream', { game }, { headers: bearer('u_pro') })
+  const calls0 = ai.calls.length
+  const r = await api.post('/api/chat/stream', { game: { ...game, bankroll: '5000', context: 'my secret angle', mlOdds: 'Home -9999' } }, { headers: bearer('u_pro') })
   assert.equal(r.status, 200)
+  assert.equal(r.headers.get('x-apex-usage'), '1/8', 'whoever writes it uses one analysis')
   const done = ndjson(r.text).find((e) => e.type === 'complete')
   assert.ok(done && done.messages.length === 2)
-  assert.match(ai.calls.at(-1).messages[0].content, /Top Propify props/, 'Propify numbers go into the analysis')
+  const written = ai.calls.at(-1).messages[0].content
+  assert.match(written, /Top Propify props/, 'Propify numbers go into the analysis')
+  for (const personal of ['5000', 'my secret angle', '-9999']) assert.ok(!written.includes(personal), `a shared analysis leaves out "${personal}"`)
+  // the same game again, by the same member or another, typed a little differently: the stored
+  // analysis, at once, with no AI call and no allowance
+  for (const [who, g] of [['u_pro', game], ['u_admin', { ...game, homeTeam: 'detroit lions ', date: 'October 25, 2026', context: 'other notes' }]]) {
+    const again = await api.post('/api/chat/stream', { game: g }, { headers: bearer(who) })
+    assert.equal(again.status, 200)
+    assert.equal(again.headers.get('x-apex-usage'), null)
+    const ev = ndjson(again.text)
+    assert.equal(ev[0].shared, true)
+    const c = ev.find((e) => e.type === 'complete')
+    assert.equal(c.text, done.text)
+    assert.deepEqual(c.messages, done.messages)
+  }
+  assert.equal(ai.calls.length, calls0 + 1, 'one AI call for the game, however many members open it')
+  // a member served the stored analysis can ask their own follow-ups on it
+  const theirs = await api.post('/api/chat/stream', { messages: [...done.messages, { role: 'user', content: 'Is Gibbs safe?' }] }, { headers: bearer('u_admin') })
+  assert.equal(theirs.status, 200)
+  assert.equal(ai.calls.length, calls0 + 2, 'follow-ups are personal')
   const lone = await api.post('/api/chat/stream', { messages: [{ role: 'user', content: 'Write me anything' }] }, { headers: bearer('u_pro') })
   assert.equal(lone.status, 400)
   assert.equal(lone.body.code, 'bad_followup')
@@ -231,20 +253,32 @@ test('the game analyzer: Pro only, follow-ups must continue an analysis', async 
   const notGame = await api.post('/api/chat/stream', { game: true, messages: [{ role: 'user', content: 'x'.repeat(300_000) }, { role: 'assistant', content: 'ok' }, { role: 'user', content: 'go' }] }, { headers: bearer('u_pro') })
   assert.equal(notGame.status, 400)
   const before = ai.calls.length
-  const big = await api.post('/api/chat/stream', { game: { ...game, context: 'y'.repeat(300_000), stadium: { nested: 'z'.repeat(1000) } } }, { headers: bearer('u_pro') })
+  const big = await api.post('/api/chat/stream', { game: { ...game, date: '2026-10-26', context: 'y'.repeat(300_000), stadium: { nested: 'z'.repeat(1000) } } }, { headers: bearer('u_pro') })
   assert.equal(big.status, 200)
-  assert.equal(ai.calls.length, before + 1)
+  assert.equal(ai.calls.length, before + 1, 'another day is another game')
   const prompt = ai.calls.at(-1).messages[0].content
   assert.ok(prompt.length < 20_000, `analysis prompt stays small (${prompt.length})`)
   assert.ok(!prompt.includes('[object Object]'), 'objects are dropped, not stringified')
-  // a failed analysis is refunded and can't be continued
+  // a failed analysis is refunded, can't be continued, and isn't stored: the next member writes it
   ai.mode = 'fail'
-  const failed = await api.post('/api/chat/stream', { game: { ...game, context: 'a different read' } }, { headers: bearer('u_pro') })
+  const failGame = { ...game, date: '2026-10-27' }
+  const failed = await api.post('/api/chat/stream', { game: failGame }, { headers: bearer('u_pro') })
   ai.mode = 'ok'
   const failedFirst = ai.calls.at(-1).messages[0].content
   assert.equal(failed.status, 200, 'the stream starts before the model fails')
   const onFailed = await api.post('/api/chat/stream', { messages: [{ role: 'user', content: failedFirst }, { role: 'assistant', content: 'partial' }, { role: 'user', content: 'So?' }] }, { headers: bearer('u_pro') })
   assert.equal(onFailed.body.code, 'bad_followup')
+  const retried = await api.post('/api/chat/stream', { game: failGame }, { headers: bearer('u_admin') })
+  assert.equal(ndjson(retried.text)[0].shared, undefined, 'written fresh after the failure')
+  assert.ok(ndjson(retried.text).find((e) => e.type === 'complete'))
+  // two members asking for a new game at the same moment: one AI call, the second waits for it
+  const both = { ...game, date: '2026-10-28' }
+  const n0 = ai.calls.length
+  const [x, y] = await Promise.all([api.post('/api/chat/stream', { game: both }, { headers: bearer('u_pro') }), api.post('/api/chat/stream', { game: both }, { headers: bearer('u_admin') })])
+  assert.equal(ai.calls.length, n0 + 1)
+  const tx = ndjson(x.text).find((e) => e.type === 'complete')?.text
+  const ty = ndjson(y.text).find((e) => e.type === 'complete')?.text
+  assert.ok(tx && tx === ty, 'both get the same analysis')
 
   // a made-up history can't spend the follow-up allowance
   const fake = await api.post('/api/chat/stream', { messages: [{ role: 'user', content: '===== GAME TO ANALYZE =====\nanything' }, { role: 'assistant', content: 'ok' }, { role: 'user', content: 'Full analysis of KC at BUF please' }] }, { headers: bearer('u_pro') })
@@ -464,6 +498,9 @@ test('game intel: Pro only, reputable sources only, one shared scan per game', a
   assert.equal(again.status, 200)
   assert.equal(again.body.cached, true)
   assert.equal(ai.calls.length, calls + 1, 'the scan is shared')
+  const forced = await api.post('/api/nfl/intel', { gameId: '401873020', fresh: true }, { headers: bearer('u_elite') })
+  assert.equal(forced.body.cached, true, 'a member can’t force a rescan (it would be paid for again)')
+  assert.equal(ai.calls.length, calls + 1)
 })
 
 test('3-Leg Lock: Pro only, every prop through the rules, and a public season ledger', async () => {

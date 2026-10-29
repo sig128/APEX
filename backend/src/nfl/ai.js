@@ -1,6 +1,7 @@
 // "AI picks": a short Propify read of one prop, streamed as NDJSON (same framing as /api/chat/stream).
-// Reads are shared: the same prop with the same line and prices on the same day gets the same
-// read back from the cache, so the AI is paid for once per prop, not once per member.
+// Reads are shared: a prop is read once a day and every member gets that read back from the
+// store, so the AI is paid for once per prop, not once per member. A moved line or price (or a
+// change in the player's status) is a different bet, so that gets a new read.
 import crypto from 'node:crypto'
 import { log, errText } from '../lib/log.js'
 import { dayET } from './proplog.js'
@@ -64,16 +65,17 @@ function brief(ctx) {
   return lines.join('\n')
 }
 
-export const READ_TTL_MS = 3 * 3600_000
+// the key carries the day, so a read lasts the day it was written
+export const READ_TTL_MS = 26 * 3600_000
 
 /**
- * What makes two reads the same: the prop, its line, every price shown, the board's probability
- * (to the point), the player's status, the model and the day. Any of those moving writes a new one.
+ * What makes two reads the same: the prop, its line, every price shown, the player's status,
+ * the model and the day. Any of those changing writes a new one.
  */
 export function readKey(ctx, sport, model) {
   const r = ctx?.prop
   if (!r) return null
-  const parts = [sport?.key || sport?.title || 'nfl', model || '', r.id, r.line ?? null, r.price?.book ?? null, r.price?.over ?? null, r.price?.under ?? null, r.price?.yes ?? null, Math.round((Number(r.prob) || 0) * 100), ctx.injury?.status || null, dayET(Date.now())]
+  const parts = [sport?.key || sport?.title || 'nfl', model || '', r.id, r.line ?? null, r.price?.book ?? null, r.price?.over ?? null, r.price?.under ?? null, r.price?.yes ?? null, ctx.injury?.status || null, dayET(Date.now())]
   return crypto.createHash('sha256').update(JSON.stringify(parts)).digest('hex').slice(0, 40)
 }
 

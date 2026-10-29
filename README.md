@@ -202,8 +202,15 @@ ledger. NFL is the site's root (`/`, `/nfl/props`); the others live under their 
 - **The AI costs money per use**, so it's for the admin and members holding a real Pro or Elite
   pass (paid, given in the admin page's Tools tab, or from a plan code), whether passes are on
   sale or not, always with the daily allowances (`APEX_*_PER_DAY`). An invite code alone doesn't
-  unlock it. A prop's AI read is written once and shared: the next member who opens the same prop
-  (same line and prices, same day) gets it back without a new AI call or using their allowance.
+  unlock it. And nothing is paid for twice:
+  - **The game analyzer:** each game is analysed once, stored, and served to every member as many
+    times as they like, without the AI or their allowance (the first member to ask uses one
+    analysis). It's written from the game alone, on the server's settings, so nobody's bankroll
+    or notes end up in everyone's copy; those go in follow-up questions, which stay personal. Two
+    members asking at the same moment get the same one: the second waits for the first.
+  - **Game intel:** one scan per game per day, stored for everyone. Only the admin can rescan.
+  - **Prop reads:** one per prop per day, redone only when the line, the price or the player's
+    status changes.
 - **Codes:** invite codes and plan codes (e.g. 30 days of Elite) are explained in
   `firestore/inviteCodes.template.txt`; create them with `npm run seed-invites` in functions/.
   Only plan codes open the AI.

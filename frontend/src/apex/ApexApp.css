@@ -4085,3 +4085,11 @@
   border-radius: 12px;
   font-weight: 500;
 }
+
+/* every game is analysed once and shared: the line under the Analyze row says so */
+.apex-html-root .apex-shared-note {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text2);
+}

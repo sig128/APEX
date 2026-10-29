@@ -260,11 +260,12 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
     }
   }
   const AI_OFF = 'AI is not configured on this server (OPENAI_API_KEY).'
-  const intel = createIntel({ engine, ai })
+  const intel = createIntel({ engine, ai, store: engine.store })
 
   /**
    * Game intel: official injuries plus this week's reputable public reporting, tied to the props
-   * it moves. One shared scan per game (cached); a fresh scan uses one AI read.
+   * it moves. One scan per game per day, stored and served to every member; the member whose
+   * request writes it uses one AI read. Only the admin can force a rescan.
    */
   r.post('/intel', { selfAuth: true }, async (ctx) => {
     const { req, res } = ctx
@@ -272,12 +273,10 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
     const gameId = String(req.body?.gameId || '')
     if (!/^\d{6,12}$/.test(gameId)) throw new ApiError(400, 'bad_game', 'That game id is not valid.')
     if (!views.game(gameId)) throw new ApiError(404, 'not_found', 'That game is not on the schedule.')
-    const hit = intel.cachedFor(gameId)
-    const wantFresh = req.body?.fresh === true && (!hit || Date.now() - hit.at > 15 * 60e3)
-    if (hit && !wantFresh) {
-      await aiGate(req, res, { what: 'game intel', charge: false })
-      return { ...hit.data, at: hit.at, cached: true }
-    }
+    const who = await aiGate(req, res, { what: 'game intel', charge: false })
+    const wantFresh = req.body?.fresh === true && Boolean(who.user?.admin)
+    const hit = wantFresh ? null : await intel.cachedFor(gameId)
+    if (hit) return { ...hit.data, at: hit.at, cached: true }
     if (!ai.ready()) throw new ApiError(503, 'ai_off', AI_OFF)
     const gate = await aiGate(req, res, { what: 'game intel', limiterFor: intelLimiter })
     try {

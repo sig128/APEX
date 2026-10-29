@@ -20,7 +20,8 @@ import { picksRoutes } from './src/picks/routes.js'
 import { createAccess } from './src/security/access.js'
 import { defaultAuthInstance, authMode } from './src/security/auth.js'
 import { createLimiter } from './src/security/rateLimit.js'
-import { parseChatBody, handleChatStream, setGameContextProvider } from './streamChat.js'
+import { parseChatBody, handleChatStream, setGameContextProvider, openNdjson, writeStoredAnalysis, sendStoredAnalysis } from './streamChat.js'
+import { createSharedAnalyses, gameKey } from './src/ai/shared.js'
 import { registerAdminSportsRoutes } from './adminSportsRoutes.js'
 import { createAdminMetrics } from './src/admin/metrics.js'
 import { adminRoutes, cronHandler } from './src/admin/routes.js'
@@ -217,6 +218,8 @@ export function createApexApp({
   app.get('/api/cron/daily', cronHandler({ metrics }))
 
   // ---- the AI analyzer (chat) ---------------------------------------------------------------
+  // one analysis per game, written once and served to every member (see src/ai/shared.js)
+  const sharedAnalyses = createSharedAnalyses({ store: engineStore, pollMs: envInt('APEX_SHARED_POLL_MS', 2500, { min: 20, max: 10_000 }) })
   const chatHourly = createLimiter({ burst: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }), perSec: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) / 3600 })
   const adminHourly = createLimiter({ burst: envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) * 10, perSec: (envInt('APEX_CHAT_PER_HOUR', 12, { min: 1, max: 1000 }) * 10) / 3600 })
 
@@ -293,27 +296,20 @@ export function createApexApp({
         if (!g.allowed) throw new ApiError(402, 'upgrade', 'The AI analyzer is for members with a Pro or Elite pass.', { need: 'pro', plan: g.ent?.plan || 'free', status: g.ent?.status || null })
         ent = g.ent
       }
-      if (user) {
-        const lim = (user.admin ? adminHourly : chatHourly).take(user.uid)
-        if (!lim.ok) throw new ApiError(429, 'slow_down', 'That is a lot of analyses this hour. Take a breather and try again soon.', { retryAfter: lim.retryAfter })
+      // Each game is analysed once and stored: a stored one (or one another member is writing
+      // right now) is served without the AI and without the allowance. Otherwise this member
+      // writes it for everyone, as one analysis off their allowance.
+      if (kind === 'analyses' && parsed.game) {
+        const key = gameKey(parsed.game, parsed.resolvedSportKey)
+        const c = await sharedAnalyses.claim(key)
+        req.apexShared = { key, token: c.mine || null, stored: c.stored || null, wait: Boolean(c.wait), uid: user?.uid || null }
+        if (!c.mine) return next()
       }
-      if (ent) {
-        if (kind === 'followups') {
-          const v = await thread(user.uid, first, 'use')
-          if (v === 'unknown') throw new ApiError(400, 'bad_followup', 'Follow-ups continue an analysis you ran in the last two days. Start a new analysis first.')
-          if (v === 'full') throw new ApiError(429, 'thread_full', `That analysis has had its ${followupsPerThread()} follow-ups. Start a new one to keep going.`)
-        }
-        let u
-        try {
-          u = await billing.useQuota(user, ent, kind)
-        } catch (e) {
-          if (kind === 'followups') await thread(user.uid, first, 'undo').catch(() => {})
-          throw e
-        }
-        if (u.limit != null) res.setHeader('X-Apex-Usage', `${u.used}/${u.limit}`)
-        req.apexQuota = { kind, user }
-        req.apexThread = { uid: user.uid, first, kind }
-        if (kind === 'analyses') await thread(user.uid, first, 'start')
+      try {
+        await chargeChat(req, res, { user, ent, kind, first })
+      } catch (e) {
+        if (req.apexShared?.token) await sharedAnalyses.release(req.apexShared.key, req.apexShared.token)
+        throw e
       }
       next()
     } catch (e) {
@@ -321,6 +317,49 @@ export function createApexApp({
       if (e instanceof ApiError && e.extra?.retryAfter) res.setHeader('Retry-After', String(e.extra.retryAfter))
       res.status(status).set('Cache-Control', 'no-store').json({ error: e.message || 'Error', code: e.code || 'internal', ...(e.extra || {}) })
     }
+  }
+
+  /** The hourly limit and the daily allowance, for a call that will reach the AI. */
+  async function chargeChat(req, res, { user, ent, kind, first }) {
+    if (user) {
+      const lim = (user.admin ? adminHourly : chatHourly).take(user.uid)
+      if (!lim.ok) throw new ApiError(429, 'slow_down', 'That is a lot of analyses this hour. Take a breather and try again soon.', { retryAfter: lim.retryAfter })
+    }
+    if (ent) {
+      if (kind === 'followups') {
+        const v = await thread(user.uid, first, 'use')
+        if (v === 'unknown') throw new ApiError(400, 'bad_followup', 'Follow-ups continue an analysis you ran in the last two days. Start a new analysis first.')
+        if (v === 'full') throw new ApiError(429, 'thread_full', `That analysis has had its ${followupsPerThread()} follow-ups. Start a new one to keep going.`)
+      }
+      let u
+      try {
+        u = await billing.useQuota(user, ent, kind)
+      } catch (e) {
+        if (kind === 'followups') await thread(user.uid, first, 'undo').catch(() => {})
+        throw e
+      }
+      if (u.limit != null) res.setHeader('X-Apex-Usage', `${u.used}/${u.limit}`)
+      req.apexQuota = { kind, user }
+      req.apexThread = { uid: user.uid, first, kind }
+      if (kind === 'analyses') await thread(user.uid, first, 'start')
+    }
+  }
+
+  /** A stored analysis for the asker (and their follow-ups start from it), or null. */
+  async function storedFor(req, { signal } = {}) {
+    const sh = req.apexShared
+    let stored = sh.stored
+    if (!stored && sh.wait) stored = await sharedAnalyses.waitFor(sh.key, { signal })
+    if (stored && sh.uid) await thread(sh.uid, stored.prompt, 'start').catch(() => {})
+    return stored
+  }
+  const NOT_FINISHED = 'This game’s analysis didn’t finish. Try again in a minute; it won’t use your allowance.'
+
+  /** Keeps a finished shared analysis for everyone (a cut-off or refused one isn't kept). */
+  const keepShared = (req) => async ({ prompt, text, model, stop }) => {
+    const sh = req.apexShared
+    if (!sh?.token || !text?.trim() || stop === 'max_tokens' || stop === 'refusal') return
+    await sharedAnalyses.save(sh.key, { prompt, text, model, stop, sport: req.apexParsed?.resolvedSportKey || null })
   }
 
   /** A call that produced nothing gives its allowance back, and a failed analysis can't be continued. */
@@ -331,11 +370,52 @@ export function createApexApp({
   }
 
   app.post('/api/chat/stream', chatGate, async (req, res) => {
-    const out = await handleChatStream(req, res, ai)
-    await refundIfEmpty(req, out)
+    const sh = req.apexShared
+    if (sh && !sh.token) {
+      if (sh.stored) {
+        await storedFor(req)
+        return sendStoredAnalysis(res, sh.stored)
+      }
+      // another member is writing this game's analysis: wait for it, free
+      const write = openNdjson(res)
+      const gone = new AbortController()
+      res.on?.('close', () => gone.abort())
+      write({ type: 'start', model: ai.model('chat'), shared: true, waiting: true })
+      write({ type: 'activity', phase: 'shared', detail: 'Another member is analysing this game right now. It’s yours the moment it’s done, free.' })
+      const keep = setInterval(() => write({ type: 'activity', phase: 'shared', detail: 'Still writing this game’s analysis…' }), 15_000)
+      try {
+        const stored = await storedFor(req, { signal: gone.signal })
+        if (stored) writeStoredAnalysis(write, stored, { start: false })
+        else write({ type: 'error', error: NOT_FINISHED })
+      } finally {
+        clearInterval(keep)
+        res.end()
+      }
+      return
+    }
+    try {
+      const out = await handleChatStream(req, res, ai, sh ? { keepGoing: true, onDone: keepShared(req) } : {})
+      await refundIfEmpty(req, out)
+    } finally {
+      if (sh?.token) await sharedAnalyses.release(sh.key, sh.token)
+    }
   })
 
   async function chatOnce(req, res) {
+    const sh = req.apexShared
+    if (sh && !sh.token) {
+      const stored = await storedFor(req)
+      if (!stored) return res.status(503).json({ error: NOT_FINISHED, code: 'not_finished' })
+      return res.json({ text: stored.text, messages: [{ role: 'user', content: stored.prompt }, { role: 'assistant', content: stored.text }], model: stored.model, id: null, usage: null, shared: true, at: stored.at })
+    }
+    try {
+      return await chatOnceFresh(req, res)
+    } finally {
+      if (sh?.token) await sharedAnalyses.release(sh.key, sh.token)
+    }
+  }
+
+  async function chatOnceFresh(req, res) {
     if (!ai.ready()) {
       await refundIfEmpty(req, null)
       return res.status(503).json({ error: 'AI is not configured on this server (OPENAI_API_KEY).' })
@@ -354,6 +434,7 @@ export function createApexApp({
     try {
       const out = await ai.complete({ feature: 'chat', system, messages: messagesForApi, maxTokens, webSearch: chatWebSearch() })
       const text = out.text
+      await keepShared(req)({ prompt: messagesForApi[0]?.content, text, model: out.model, stop: out.stop ?? null }).catch(() => {})
       await refundIfEmpty(req, { produced: text.trim().length > 0 })
       return res.json({ text, messages: [...messagesForApi, { role: 'assistant', content: text }], model: out.model, id: out.id, usage: out.usage })
     } catch (e) {

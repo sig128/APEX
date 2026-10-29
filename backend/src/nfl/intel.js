@@ -6,6 +6,8 @@
 // social posts and betting touts, and every item has to carry the link it came from.
 import { nameKey } from '../lib/util.js'
 import { log, errText } from '../lib/log.js'
+import { createShared } from '../ai/shared.js'
+import { dayET } from './proplog.js'
 
 /** Established outlets and the league's own sites. Search results outside these are not used. */
 export const INTEL_DOMAINS = [
@@ -170,23 +172,28 @@ export function cleanIntel(json, citations = []) {
 }
 
 /**
- * One shared scan per game, cached: everyone looking at the game sees the same brief and the
- * searches are paid for once. Fresher close to kickoff.
+ * One scan per game per day, shared by every member and every server: the brief and its web
+ * searches are paid for once, and everyone opening the game that day sees the same one. Only
+ * the admin can ask for a rescan.
  */
-export function createIntel({ engine, ai, now = () => Date.now() }) {
-  const cache = new Map() // gameId -> { at, data }
+export function createIntel({ engine, ai, store = null, now = () => Date.now() }) {
+  const mem = new Map() // key -> { at, data }
   const inflight = new Map()
-  const ttl = (kick) => {
-    const until = new Date(kick).getTime() - now()
-    return until < 6 * 3600e3 ? 30 * 60e3 : until < 48 * 3600e3 ? 2 * 3600e3 : 6 * 3600e3
-  }
+  const shared = createShared({ store, ns: `ai-intel-${engine.sport?.key || 'nfl'}`, ready: (v) => Boolean(v?.data) })
+  const keyOf = (gameId) => `${gameId}:${dayET(now())}`
 
-  function cachedFor(gameId) {
-    const hit = cache.get(gameId)
-    if (!hit) return null
-    const data = engine.views.game(gameId)
-    if (!data) return null
-    return now() - hit.at < ttl(data.game.date) ? hit : null
+  /** Today's scan for the game, from this server or the store, or null. */
+  async function cachedFor(gameId) {
+    if (!engine.views.game(gameId)) return null
+    const key = keyOf(gameId)
+    const hit = mem.get(key)
+    if (hit) return hit
+    const v = await shared.get(key)
+    if (!v) return null
+    const entry = { at: v.at, data: v.data }
+    mem.set(key, entry)
+    if (mem.size > 128) mem.delete(mem.keys().next().value)
+    return entry
   }
 
   async function scan(gameId) {
@@ -200,25 +207,45 @@ export function createIntel({ engine, ai, now = () => Date.now() }) {
     const out = linkPlayers(cleanIntel(json, reply.citations || []), data)
     for (const n of out.news) if (n.url && !out.sources.some((s) => s.url === n.url)) out.sources.push({ title: n.headline, url: n.url })
     const entry = { at: now(), data: { ...out, gameId, model: reply.model || ai.model('intel') } }
-    cache.set(gameId, entry)
-    if (cache.size > 64) cache.delete(cache.keys().next().value)
+    const key = keyOf(gameId)
+    mem.set(key, entry)
+    if (mem.size > 128) mem.delete(mem.keys().next().value)
+    await shared.save(key, entry).catch((e) => log.warn('saving game intel failed', { gameId, err: errText(e) }))
     return entry
   }
 
   return {
     cachedFor,
-    /** { at, data } | null. Joins a scan already running for the same game. */
+    /**
+     * { at, data, cached } | null. Joins a scan already running for the same game, here or on
+     * another server. `fresh` (the admin's rescan) writes over today's.
+     */
     async get(gameId, { fresh = false } = {}) {
       if (!fresh) {
-        const hit = cachedFor(gameId)
+        const hit = await cachedFor(gameId)
         if (hit) return { ...hit, cached: true }
       }
-      if (inflight.has(gameId)) return { ...(await inflight.get(gameId)), cached: true }
-      const p = scan(gameId).finally(() => inflight.delete(gameId))
-      inflight.set(gameId, p)
+      const key = keyOf(gameId)
+      if (inflight.has(key)) return { ...(await inflight.get(key)), cached: true }
+      const run = async () => {
+        const c = fresh ? { mine: null } : await shared.claim(key)
+        if (c.stored) return { at: c.stored.at, data: c.stored.data, joined: true }
+        if (c.wait) {
+          const v = await shared.waitFor(key)
+          if (v) return { at: v.at, data: v.data, joined: true }
+          throw new Error('intel: the scan running elsewhere did not finish')
+        }
+        try {
+          return await scan(gameId)
+        } finally {
+          if (c.mine) await shared.release(key, c.mine)
+        }
+      }
+      const p = run().finally(() => inflight.delete(key))
+      inflight.set(key, p)
       try {
         const e = await p
-        return e && { ...e, cached: false }
+        return e && { at: e.at, data: e.data, cached: Boolean(e.joined) }
       } catch (e) {
         log.warn('intel scan failed', { gameId, err: errText(e) })
         throw e

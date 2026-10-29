@@ -8,11 +8,11 @@ import { createStore } from '../src/lib/store.js'
 const ctx = (over = {}) => ({ prop: { id: '101.sog.o.2.5', line: 2.5, prob: 0.612, price: { book: 'fanduel', over: -120, under: 100 }, ...over }, injury: null })
 const SPORT = { key: 'nhl', title: 'NHL' }
 
-test('the same read twice has one key; a moved line, price, probability, model or status makes a new one', () => {
+test('the same read all day has one key; a moved line or price, another model or a status change makes a new one', () => {
   const k = readKey(ctx(), SPORT, 'gpt-x')
   assert.equal(readKey(ctx(), SPORT, 'gpt-x'), k)
-  assert.equal(readKey(ctx({ prob: 0.6149 }), SPORT, 'gpt-x'), k, 'probability counts to the point')
-  for (const other of [ctx({ line: 3.5 }), ctx({ price: { book: 'fanduel', over: -130, under: 100 } }), ctx({ prob: 0.65 }), { ...ctx(), injury: { status: 'Questionable' } }]) assert.notEqual(readKey(other, SPORT, 'gpt-x'), k)
+  assert.equal(readKey(ctx({ prob: 0.65 }), SPORT, 'gpt-x'), k, 'the board updating its probability is not a new read')
+  for (const other of [ctx({ line: 3.5 }), ctx({ price: { book: 'fanduel', over: -130, under: 100 } }), { ...ctx(), injury: { status: 'Questionable' } }]) assert.notEqual(readKey(other, SPORT, 'gpt-x'), k)
   assert.notEqual(readKey(ctx(), SPORT, 'gpt-y'), k)
   assert.notEqual(readKey(ctx(), { key: 'nba' }, 'gpt-x'), k)
   assert.equal(readKey({}, SPORT, 'gpt-x'), null)

@@ -1343,7 +1343,8 @@ export function ApexApp() {
       const popover = root.querySelector('#apex-mlb-scope-popover')
       const isMlb = readAnalyzeSportKey() === 'baseball_mlb'
       if (wrap) {
-        wrap.hidden = false
+        // every game is analysed once and shared, on the server's settings: no per-person line type
+        wrap.hidden = true
         wrap.classList.toggle('apex-line-reasoning--disabled', !isMlb)
       }
       if (btn instanceof HTMLButtonElement) {
@@ -1633,7 +1634,8 @@ export function ApexApp() {
           const data = await postChatStream(gamePayload, {
             onEvent(ev) {
               if (ev.type === 'start' && statusEl) {
-                statusEl.textContent = ev.webSearch ? 'Propify AI with web search' : 'Propify AI'
+                // each game is analysed once and shared: a stored one comes back at once
+                statusEl.textContent = ev.shared ? (ev.waiting ? 'Another member is analysing this game: it’s yours the moment it’s done' : 'This game’s shared analysis') : ev.webSearch ? 'Propify AI with web search' : 'Propify AI'
               }
               if (ev.type === 'activity' && statusEl) {
                 statusEl.textContent = ev.detail || ev.phase || '…'

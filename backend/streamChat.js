@@ -137,11 +137,16 @@ export function parseChatBody(req) {
     resolvedSportKey = bodySportKey.trim()
   }
 
-  const effectivePromptMode = computeEffectivePromptMode(resolvedSportKey, clientPromptRaw)
-  const mlbBettingScope = normalizeMlbBettingScope(apexMlbBettingScope)
+  // Every game is analysed once and shared, so every analysis (and its follow-ups) runs on the
+  // same settings: the server's depth and line type, never a per-person choice.
+  void clientPromptRaw
+  void apexMlbBettingScope
+  const effectivePromptMode = computeEffectivePromptMode(resolvedSportKey, undefined)
+  const mlbBettingScope = normalizeMlbBettingScope(undefined)
 
   let messagesForApi
   let kind
+  let shared = null
   if (game != null && (typeof game !== 'object' || Array.isArray(game))) {
     return { ok: false, status: 400, error: '`game` must be an object with homeTeam, awayTeam and date.' }
   }
@@ -169,10 +174,14 @@ export function parseChatBody(req) {
         }
       }
     }
+    // the shared analysis is written from the game alone: personal fields (bankroll, notes) and
+    // typed-in details (odds, starters, stadium) would end up in everyone's copy, so they're left
+    // out (the AI looks them up), and anything personal goes in a follow-up question
+    shared = { homeTeam: game.homeTeam.trim(), awayTeam: game.awayTeam.trim(), date: game.date.trim(), ...(game.sportKey ? { sportKey: game.sportKey } : {}), ...(ct ? { commenceTimeIso: ct } : {}) }
     messagesForApi = [
       {
         role: 'user',
-        content: buildGameUserMessage(game, effectivePromptMode, mlbBettingScope, resolvedSportKey),
+        content: buildGameUserMessage(shared, effectivePromptMode, mlbBettingScope, resolvedSportKey),
       },
     ]
   } else if (rawMessages != null) {
@@ -208,7 +217,49 @@ export function parseChatBody(req) {
     maxTokens,
     system: getApexSystemPrompt(resolvedSportKey, effectivePromptMode, mlbBettingScope),
     resolvedSportKey: typeof resolvedSportKey === 'string' && resolvedSportKey ? resolvedSportKey : undefined,
+    // the game an analysis is for (what makes it the same game for every member)
+    game: shared,
   }
+}
+
+/** Starts an NDJSON reply; returns write(event). */
+export function openNdjson(res) {
+  res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
+  res.setHeader('X-Accel-Buffering', 'no')
+  res.flushHeaders?.()
+  return (obj) => {
+    try {
+      res.write(`${JSON.stringify(obj)}\n`)
+    } catch {
+      /* the reader left */
+    }
+  }
+}
+
+/** A stored analysis, sent the way a fresh one streams (start, the text, complete). */
+export function writeStoredAnalysis(write, stored, { start = true } = {}) {
+  if (start) write({ type: 'start', model: stored.model, shared: true, at: stored.at })
+  write({ type: 'text_delta', text: stored.text })
+  write({
+    type: 'complete',
+    text: stored.text,
+    messages: [
+      { role: 'user', content: stored.prompt },
+      { role: 'assistant', content: stored.text },
+    ],
+    model: stored.model,
+    id: null,
+    usage: null,
+    stop_reason: stored.stop ?? null,
+    shared: true,
+    at: stored.at,
+  })
+}
+
+export function sendStoredAnalysis(res, stored) {
+  writeStoredAnalysis(openNdjson(res), stored)
+  res.end()
 }
 
 /**
@@ -217,7 +268,7 @@ export function parseChatBody(req) {
  * @param {import('express').Response} res
  * @param {ReturnType<typeof import('./src/ai/llm.js').createAi>} ai
  */
-export async function handleChatStream(req, res, ai) {
+export async function handleChatStream(req, res, ai, { keepGoing = false, onDone = null, before = null } = {}) {
   if (!ai?.ready()) {
     res.status(503).json({
       error: 'AI is not configured on this server (OPENAI_API_KEY).',
@@ -258,9 +309,12 @@ export async function handleChatStream(req, res, ai) {
   }
 
   const started = Date.now()
-  // a reader who leaves stops the analysis too
+  // a reader who leaves stops a follow-up; a shared analysis keeps going (it's stored for the
+  // next member, who would otherwise pay for it again)
   const stop = new AbortController()
-  res.on?.('close', () => stop.abort())
+  if (!keepGoing) res.on?.('close', () => stop.abort())
+  // e.g. "another member is writing this one": events to send before the AI starts
+  if (before) for (const ev of before) write(ev)
 
   try {
     const webSearch = chatWebSearch()
@@ -297,6 +351,7 @@ export async function handleChatStream(req, res, ai) {
       provider: ai.provider(),
     })
 
+    if (onDone) await onDone({ prompt: messagesForApi[0]?.content, text: assistantText, model: out.model || model, stop: out.stop ?? null }).catch(() => {})
     write({
       type: 'complete',
       text: assistantText,

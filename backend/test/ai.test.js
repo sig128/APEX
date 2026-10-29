@@ -254,7 +254,13 @@ test('on OpenAI: a prop read and the analyzer stream through, and health says wh
   assert.equal(done.messages.at(-1).role, 'assistant')
   assert.equal(done.id, 'resp_route')
   assert.equal(calls.at(-1).body.tools[0].type, 'web_search', 'the analyzer searches the web')
-  const once = await api.post('/api/chat', { game: { ...game, context: 'one shot' } }, { headers: bearer('u_pro') })
+  const once = await api.post('/api/chat', { game: { ...game, date: '2026-10-26' } }, { headers: bearer('u_pro') })
   assert.equal(once.status, 200, once.text)
   assert.equal(once.body.text, 'One-shot analysis.')
+  // the stored analysis for the first game comes back on the one-shot route too, without the AI
+  const n = calls.length
+  const again = await api.post('/api/chat', { game }, { headers: bearer('u_pro') })
+  assert.equal(again.body.shared, true)
+  assert.equal(again.body.text, 'VERDICT: STANDARD — over the line')
+  assert.equal(calls.length, n)
 })
