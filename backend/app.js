@@ -354,6 +354,11 @@ export function createApexApp({
     return stored
   }
   const NOT_FINISHED = 'This game’s analysis didn’t finish. Try again in a minute; it won’t use your allowance.'
+  // a league switched off in /adminn stays off for stored analyses too
+  const sportOff = async (req) => {
+    const k = req.apexParsed?.resolvedSportKey
+    return Boolean(k && (await getDisabledSportKeys()).includes(k))
+  }
 
   /** Keeps a finished shared analysis for everyone (a cut-off or refused one isn't kept). */
   const keepShared = (req) => async ({ prompt, text, model, stop }) => {
@@ -372,6 +377,7 @@ export function createApexApp({
   app.post('/api/chat/stream', chatGate, async (req, res) => {
     const sh = req.apexShared
     if (sh && !sh.token) {
+      if (await sportOff(req)) return res.status(403).json({ error: 'This sport is temporarily unavailable.' })
       if (sh.stored) {
         await storedFor(req)
         return sendStoredAnalysis(res, sh.stored)
@@ -404,6 +410,7 @@ export function createApexApp({
   async function chatOnce(req, res) {
     const sh = req.apexShared
     if (sh && !sh.token) {
+      if (await sportOff(req)) return res.status(403).json({ error: 'This sport is temporarily unavailable.' })
       const stored = await storedFor(req)
       if (!stored) return res.status(503).json({ error: NOT_FINISHED, code: 'not_finished' })
       return res.json({ text: stored.text, messages: [{ role: 'user', content: stored.prompt }, { role: 'assistant', content: stored.text }], model: stored.model, id: null, usage: null, shared: true, at: stored.at })
