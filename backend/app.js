@@ -12,7 +12,7 @@ import { ApiError, clientIp } from './src/lib/router.js'
 import { createEngine, oddsLeagues } from './src/nfl/engine.js'
 import { createNflRouter } from './src/nfl/routes.js'
 import { SPORTS, SPORT_KEYS } from './src/sports/index.js'
-import { createBilling, atLeast } from './src/billing/service.js'
+import { createBilling } from './src/billing/service.js'
 import { billingConfig } from './src/billing/config.js'
 import { billingRoutes } from './src/billing/routes.js'
 import { createPicks } from './src/picks/service.js'
@@ -281,17 +281,17 @@ export function createApexApp({
       const kind = parsed.kind === 'analysis' ? 'analyses' : 'followups'
       const first = parsed.messagesForApi[0].content
       if (kind === 'followups' && !followupShapeOk(req.body?.messages)) throw new ApiError(400, 'bad_followup', 'Start with a game analysis, then ask follow-ups. Keep each question under 4,000 characters.')
+      // the analyzer costs OpenAI money: the admin and members holding a real Pro or Elite pass,
+      // passes on sale or not (an invite code alone doesn't unlock it), always with the daily
+      // allowance. Open only in local dev without Firebase.
       let user = null
       let ent = null
-      if (billingConfig().paywall) {
-        const a = await access.resolve(req)
-        if (!a.user) throw new ApiError(401, 'signin', 'Sign in to use the AI analyzer.', { need: 'pro' })
-        if (!atLeast(a.tier, 'pro')) throw new ApiError(402, 'upgrade', 'The AI analyzer is part of Pro and Elite.', { need: 'pro', plan: a.tier, status: a.ent.status })
-        user = a.user
-        ent = a.ent
-      } else if (authMode() !== 'optional') {
-        user = await auth.authenticate(req)
-        if (!(await auth.inviteVerified(user))) throw new ApiError(403, 'invite', 'Redeem an invite code to use the AI analyzer.')
+      if (billingConfig().paywall || authMode() !== 'optional') {
+        user = await auth.identify(req)
+        if (!user) throw new ApiError(401, 'signin', 'Sign in to use the AI analyzer.', { need: 'pro' })
+        const g = billing?.aiAccess ? await billing.aiAccess(user) : { allowed: Boolean(user.admin), ent: null }
+        if (!g.allowed) throw new ApiError(402, 'upgrade', 'The AI analyzer is for members with a Pro or Elite pass.', { need: 'pro', plan: g.ent?.plan || 'free', status: g.ent?.status || null })
+        ent = g.ent
       }
       if (user) {
         const lim = (user.admin ? adminHourly : chatHourly).take(user.uid)

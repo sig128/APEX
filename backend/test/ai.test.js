@@ -217,6 +217,8 @@ before(async () => {
   const { http } = fixtureHttp()
   const made = createApexApp({ engineMode: 'lazy', http, store: createStore({ driver: 'memory' }), auth: testAuth(USERS, { invited: ['u_pro'] }), ai, oddsKey: () => null, now: clock() })
   engine = made.engine
+  // the AI takes a real pass (an invite code alone doesn't open it)
+  await made.billing.grant({ uid: 'admin', admin: true }, { uid: 'u_pro', plan: 'pro', days: 30 })
   await loadAll(engine)
   api = await serve(made.app)
 })

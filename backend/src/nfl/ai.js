@@ -1,5 +1,9 @@
 // "AI picks": a short Propify read of one prop, streamed as NDJSON (same framing as /api/chat/stream).
+// Reads are shared: the same prop with the same line and prices on the same day gets the same
+// read back from the cache, so the AI is paid for once per prop, not once per member.
+import crypto from 'node:crypto'
 import { log, errText } from '../lib/log.js'
+import { dayET } from './proplog.js'
 import { RULES, RULES_PROMPT } from './rules.js'
 import { certifyLeg } from './analytics/lock.js'
 
@@ -60,8 +64,50 @@ function brief(ctx) {
   return lines.join('\n')
 }
 
-/** Returns { ok, produced } so the caller can refund the allowance when nothing came out. */
-export async function streamPropInsight({ propId, views, res, ai, sport, maxTokens = 700 }) {
+export const READ_TTL_MS = 3 * 3600_000
+
+/**
+ * What makes two reads the same: the prop, its line, every price shown, the board's probability
+ * (to the point), the player's status, the model and the day. Any of those moving writes a new one.
+ */
+export function readKey(ctx, sport, model) {
+  const r = ctx?.prop
+  if (!r) return null
+  const parts = [sport?.key || sport?.title || 'nfl', model || '', r.id, r.line ?? null, r.price?.book ?? null, r.price?.over ?? null, r.price?.under ?? null, r.price?.yes ?? null, Math.round((Number(r.prob) || 0) * 100), ctx.injury?.status || null, dayET(Date.now())]
+  return crypto.createHash('sha256').update(JSON.stringify(parts)).digest('hex').slice(0, 40)
+}
+
+/** Shared reads: a small in-memory copy in front of the store (every server instance sees them). */
+export function createReadCache({ store = null, sport = null, ttlMs = READ_TTL_MS, max = 400 } = {}) {
+  const NS = `ai-reads-${sport?.key || 'nfl'}`
+  const mem = new Map()
+  const fresh = (v) => v && typeof v.text === 'string' && v.text.trim() && Date.now() - v.at < ttlMs
+  return {
+    async get(key) {
+      const m = mem.get(key)
+      if (fresh(m)) return m
+      if (!store) return null
+      const v = await store.get(NS, key).catch(() => null)
+      if (!fresh(v)) return null
+      mem.set(key, v)
+      return v
+    },
+    async set(key, text) {
+      if (!key || !text?.trim()) return
+      const v = { text, at: Date.now() }
+      mem.set(key, v)
+      if (mem.size > max) mem.delete(mem.keys().next().value)
+      if (store) await store.set(NS, key, v).catch((e) => log.warn('saving an AI read failed', { err: errText(e) }))
+    },
+  }
+}
+
+/**
+ * Returns { ok, produced, cached } so the caller can refund the allowance when nothing came out
+ * (or when a shared read was served). `cached` is a read to send as is; `onDone(text)` keeps a
+ * finished one for the next member.
+ */
+export async function streamPropInsight({ propId, views, res, ai, sport, maxTokens = 700, cached = null, onDone = null }) {
   const ctx = views.propContext(propId)
   if (!ctx) {
     res.status(404).set('Cache-Control', 'no-store').json({ error: 'That prop is not on the board.', code: 'not_found' })
@@ -90,6 +136,17 @@ export async function streamPropInsight({ propId, views, res, ai, sport, maxToke
     closed = true
     stop.abort()
   })
+  if (cached?.text) {
+    write({ type: 'start', model: ai.model('insight'), prop: ctx.prop.id, cached: true, at: cached.at })
+    write({ type: 'text_delta', text: cached.text })
+    write({ type: 'complete', text: cached.text, stop_reason: 'cached', cached: true, at: cached.at })
+    try {
+      res.end()
+    } catch {
+      /* gone */
+    }
+    return { ok: true, produced: true, cached: true }
+  }
   try {
     write({ type: 'start', model: ai.model('insight'), prop: ctx.prop.id })
     const out = await ai.stream({
@@ -104,6 +161,8 @@ export async function streamPropInsight({ propId, views, res, ai, sport, maxToke
       },
     })
     write({ type: 'complete', text, stop_reason: out.stop ?? null })
+    // only a whole answer is shared (a reader who left early stopped it part way)
+    if (onDone && !closed && text.trim() && out.stop !== 'max_tokens' && out.stop !== 'refusal') await onDone(text)
     return { ok: true, produced: text.trim().length > 0 }
   } catch (e) {
     log.warn('prop insight failed', { prop: propId, err: errText(e) })

@@ -119,6 +119,17 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
   /** The plan the user actually holds, paywall or not (what gets stored on their page). */
   const heldPlan = (user) => entitlement(user, { ignorePaywall: true })
 
+  /**
+   * Who may spend OpenAI money: the admin, and members holding a real Pro or Elite pass (paid,
+   * given by the admin, or from a plan code), whether passes are on sale or not. Everyone else,
+   * invite code or not, can't. `ent` is the held plan, so the daily allowances always apply.
+   */
+  async function aiAccess(user) {
+    if (!user?.uid) return { allowed: false, ent: null }
+    const ent = await heldPlan(user)
+    return { allowed: atLeast(ent.plan, 'pro'), ent }
+  }
+
   function invoiceView(inv, cfg = billingConfig()) {
     if (!inv) return null
     const net = NETWORKS[inv.network] || NETWORKS.base
@@ -395,6 +406,7 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     if (!user) throw new ApiError(401, 'signin', 'Sign in first.')
     const cfg = billingConfig()
     const ent = await entitlement(user)
+    const held = await heldPlan(user)
     const u = user.uid !== 'admin' ? (await d.get('billingUsers', user.uid)) || {} : {}
     const open = []
     for (const id of Object.values(u.open || {}).filter(Boolean)) {
@@ -410,7 +422,9 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     return {
       user: { uid: user.uid, email: user.email, name: user.name, picture: user.picture, admin: Boolean(user.admin) },
       entitlement: ent,
-      usage: await usage(user, ent),
+      // the AI follows the pass actually held, never the open site
+      ai: { allowed: atLeast(held.plan, 'pro'), plan: held.plan, status: held.status },
+      usage: await usage(user, held),
       open,
       payments,
       config: publicBillingConfig(cfg),
@@ -437,6 +451,7 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     },
     entitlement,
     heldPlan,
+    aiAccess,
     subscription,
     createInvoice,
     getInvoice,

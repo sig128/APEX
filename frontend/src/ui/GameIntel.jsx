@@ -16,7 +16,7 @@ const host = (u) => {
   }
 }
 
-/** Injuries and this week's reputable reporting for one game, tied to the props it moves. Pro. */
+/** Injuries and this week's reputable reporting for one game, tied to the props it moves. AI, so members with a pass. */
 export function GameIntel({ gameId, official }) {
   const sport = useSport()
   const { refresh } = useBilling()
@@ -43,7 +43,7 @@ export function GameIntel({ gameId, official }) {
 
   const d = st.data
   return (
-    <Locked need="pro" title="Game intel">
+    <Locked need="pro" ai title="Game intel">
       <div className="intel">
         {!d && !st.busy && (
           <div className="intel__start">
@@ -69,7 +69,7 @@ export function GameIntel({ gameId, official }) {
         )}
         {st.err && (
           <p className="ask__err" role="alert">
-            {st.err.code === 'invite' ? 'Redeem an invite code on your account page to use game intel.' : st.err.message}
+            {st.err.message}
           </p>
         )}
         {d && !st.busy && (

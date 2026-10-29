@@ -2,7 +2,7 @@
 // sport engine; NFL was first, so the file keeps its name.
 import { createRouter, ApiError, RAW, clientIp } from '../lib/router.js'
 import { ROUTE_TIER, TOPIC_RE, topicAllowed } from './gate.js'
-import { streamPropInsight } from './ai.js'
+import { streamPropInsight, readKey, createReadCache } from './ai.js'
 import { createIntel } from './intel.js'
 import { createLedger } from './ledger.js'
 import { shop } from './shop.js'
@@ -222,38 +222,40 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
   })
 
   /**
-   * Who may spend an AI read: Pro and Elite with the paywall on, an invited user while it's off
-   * (open in local dev without Firebase). Takes one read off today's allowance; `refund()` gives
-   * it back when nothing was produced.
+   * Who may spend an AI read (it costs OpenAI money): the admin, and members holding a real Pro
+   * or Elite pass, whether passes are on sale or not. An invite code alone doesn't unlock it,
+   * and the daily allowance always applies. Open only in local dev without Firebase. Takes one
+   * read off today's allowance; `refund()` gives it back when nothing was produced.
    */
   async function aiGate(req, res, { what = 'AI reads', limiterFor = insightLimiter, charge = true } = {}) {
     let user
-    let ent
-    if (paywallOn()) {
-      const a = await access.resolve(req)
-      if (!a.user) throw new ApiError(401, 'signin', `Sign in to use ${what}.`, { need: 'pro' })
-      if (!atLeast(a.tier, 'pro')) throw new ApiError(402, 'upgrade', `${what[0].toUpperCase()}${what.slice(1)} are part of Pro and Elite.`, { need: 'pro', plan: a.tier, status: a.ent.status })
-      user = a.user
-      ent = a.ent
-    } else if (authMode() === 'optional') {
+    let ent = null
+    if (authMode() === 'optional' && !paywallOn()) {
       // local `npm run dev` without Firebase: the AI is open, like the analyzer
       user = (await auth.identify(req).catch(() => null)) || { uid: `dev:${clientIp(req)}` }
     } else {
-      user = await auth.authenticate(req)
-      if (!(await auth.inviteVerified(user))) throw new ApiError(403, 'invite', `Redeem an invite code to use ${what}.`)
+      user = await auth.identify(req)
+      if (!user) throw new ApiError(401, 'signin', `Sign in to use ${what}.`, { need: 'pro' })
+      if (billing?.aiAccess) {
+        const g = await billing.aiAccess(user)
+        if (!g.allowed) throw new ApiError(402, 'upgrade', 'The AI is for members with a Pro or Elite pass.', { need: 'pro', plan: g.ent?.plan || 'free', status: g.ent?.status || null })
+        ent = g.ent
+      } else if (!user.admin) {
+        throw new ApiError(402, 'upgrade', 'The AI is for members with a Pro or Elite pass.', { need: 'pro' })
+      }
     }
     if (!charge) return { user, refund: async () => {} }
     const lim = limiterFor.take(user.uid)
     if (!lim.ok) throw new ApiError(429, 'slow_down', 'One at a time. Try again in a few seconds.', { retryAfter: lim.retryAfter })
     let usage = null
-    if (paywallOn()) {
+    if (ent && billing) {
       usage = await billing.useQuota(user, ent, 'aiReads')
       if (usage.limit != null) res.setHeader('X-Apex-Usage', `${usage.used}/${usage.limit}`)
     }
     return {
       user,
       refund: async () => {
-        if (paywallOn() && usage) await billing.refundQuota(user, 'aiReads').catch(() => {})
+        if (usage?.limit != null) await billing.refundQuota(user, 'aiReads').catch(() => {})
       },
     }
   }
@@ -334,15 +336,23 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
     }
   })
 
-  /** AI read of one prop. Pro and Elite (or the invite rule while the paywall is off). */
+  /**
+   * AI read of one prop. Members with a Pro or Elite pass. A read is written once and shared: the
+   * next member who opens the same prop (same line and prices, same day) gets it back without a
+   * new AI call and without using their allowance.
+   */
+  const reads = createReadCache({ store: engine.store, sport: engine.sport })
   r.post('/insight', { selfAuth: true }, async (ctx) => {
     const { req, res } = ctx
     ctx.cache = null
     const propId = String(req.body?.propId || '')
     if (!parsePropId(propId)) throw new ApiError(400, 'bad_prop', 'That prop id is not valid.')
-    const gate = await aiGate(req, res)
-    const out = await streamPropInsight({ propId, views, res, ai, sport: engine.sport })
-    if (!out.produced) await gate.refund()
+    const pctx = views.propContext(propId)
+    const key = pctx && ai.ready() ? readKey(pctx, engine.sport, ai.model('insight')) : null
+    const hit = key ? await reads.get(key) : null
+    const gate = await aiGate(req, res, { charge: !hit })
+    const out = await streamPropInsight({ propId, views, res, ai, sport: engine.sport, cached: hit, onDone: key ? (text) => reads.set(key, text) : null })
+    if (!out.produced || out.cached) await gate.refund()
     return RAW
   })
 

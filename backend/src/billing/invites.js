@@ -1,6 +1,7 @@
 // Invite codes and plan codes, redeemed through the API (POST /api/billing/redeem) or the old
 // Firebase callable, with one set of rules:
-// - a plain code unlocks the AI while the paywall is off (users/{uid}.inviteVerifiedAt)
+// - a plain code marks the account as invited (users/{uid}.inviteVerifiedAt); it doesn't unlock
+//   the AI, which takes a real Pro or Elite pass
 // - a plan code ({ plan: 'pro' | 'elite', days: 30 | 'lifetime' }) adds that pass, stacking on
 //   time the person already has; each person can use a given code once
 // - every try is counted before the code is looked at (8 an hour per account; a code that

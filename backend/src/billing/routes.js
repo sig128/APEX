@@ -1,7 +1,8 @@
 // /api/billing/* — pass purchase and admin endpoints. Every response is no-store.
 import express from 'express'
 import { ApiError } from '../lib/router.js'
-import { publicBillingConfig } from './config.js'
+import { publicBillingConfig, billingConfig } from './config.js'
+import { authMode } from '../security/auth.js'
 import { createLimiter } from '../security/rateLimit.js'
 import { log, errText } from '../lib/log.js'
 import { redeemInvite } from './invites.js'
@@ -42,7 +43,8 @@ export function billingRoutes({ billing, access, getDb = null, now = Date.now })
     if (!t.ok) throw new ApiError(429, 'slow_down', 'Slow down a little.', { retryAfter: t.retryAfter })
   }
 
-  r.get('/config', wrap(async () => publicBillingConfig()))
+  // aiOpen: local dev without Firebase, where the AI needs no pass
+  r.get('/config', wrap(async () => ({ ...publicBillingConfig(), aiOpen: authMode() === 'optional' && !billingConfig().paywall })))
   // invite and plan codes (the same rules as the Firebase callable, which uses this too)
   r.post(
     '/redeem',

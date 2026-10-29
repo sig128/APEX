@@ -11,7 +11,7 @@ const fmtDay = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { month:
 const PLAN = { free: 'Free', pro: 'Pro', elite: 'Elite' }
 
 export function AccountPage() {
-  const { user, loading, signOutUser, redeemInviteCode, hasInviteAccess } = useAuth()
+  const { user, loading, signOutUser, redeemInviteCode } = useAuth()
   const { me, ent, paywall, config, refresh, isAdmin, usage } = useBilling()
   const [q, setQ] = useSearchParams()
   const [buy, setBuy] = useState(null)
@@ -48,11 +48,12 @@ export function AccountPage() {
       <section className="acct-plan">
         <p className="acct-plan__k">Your plan</p>
         <p className="acct-plan__v">
-          {!paywall ? 'Everything is open during the beta' : PLAN[ent.plan] || 'Free'}
+          {!paywall ? (me?.ai?.allowed ? `${PLAN[me.ai.plan] || 'Pro'}: the whole site and the AI` : 'Everything but the AI is open during the beta') : PLAN[ent.plan] || 'Free'}
           {ent.status === 'grace' && <span className="tag tag--warn">grace period</span>}
-          {ent.status === 'admin' && <span className="tag">admin</span>}
+          {(ent.status === 'admin' || me?.ai?.status === 'admin') && <span className="tag">admin</span>}
         </p>
         {paywall && <PlanLine ent={ent} />}
+        {!paywall && !me?.ai?.allowed && <p className="muted small">The AI (prop reads, the parlay check, game intel and the analyzer) takes a Pro or Elite pass. Passes aren’t on sale yet; a plan code below works.</p>}
         {paywall && ent.status !== 'admin' && (
           <div className="row">
             {plans.map((p) => (
@@ -64,7 +65,7 @@ export function AccountPage() {
         )}
       </section>
 
-      {usage && paywall && (ent.plan !== 'free' || ent.status === 'admin') && (
+      {usage && me?.ai?.allowed && (
         <section className="acct-usage">
           <p className="acct-plan__k">Today's AI allowance</p>
           <Meter label="AI prop reads" u={usage.aiReads} />
@@ -106,7 +107,7 @@ export function AccountPage() {
         </section>
       )}
 
-      <Redeem redeem={redeemInviteCode} after={refresh} verified={hasInviteAccess} paywall={paywall} />
+      <Redeem redeem={redeemInviteCode} after={refresh} />
 
       <nav className="acct-links">
         <Link to="/me" className="link">
@@ -150,18 +151,17 @@ function Meter({ label, u }) {
   )
 }
 
-function Redeem({ redeem, after, verified, paywall }) {
+function Redeem({ redeem, after }) {
   const [code, setCode] = useState('')
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
-  if (!paywall && verified) return null
   const submit = async (e) => {
     e.preventDefault()
     setBusy(true)
     setMsg(null)
     try {
       const r = await redeem(code.trim())
-      setMsg({ ok: true, text: r?.plan ? `Code applied: ${PLAN[r.plan]} is on your account.` : 'Code accepted. The AI is unlocked.' })
+      setMsg({ ok: true, text: r?.plan ? `Code applied: ${PLAN[r.plan]} is on your account.` : 'Code accepted.' })
       setCode('')
       after()
     } catch (err) {
@@ -173,7 +173,7 @@ function Redeem({ redeem, after, verified, paywall }) {
   }
   return (
     <section className="acct-list">
-      <p className="acct-plan__k">{paywall ? 'Have a code?' : 'Invite code'}</p>
+      <p className="acct-plan__k">Have a code?</p>
       <form className="row" onSubmit={submit}>
         <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="PROPIFY-XXXX-XXXX-XXXX-XXXX" aria-label="Code" autoCapitalize="characters" spellCheck="false" />
         <button type="submit" className="btn btn--quiet" disabled={busy || code.trim().length < 4}>

@@ -159,8 +159,9 @@ test('the live stream says hello and sends the scoreboard', async () => {
   assert.equal(none.status, 204)
 })
 
-test('AI reads: sign in, then Pro, then a daily allowance', async () => {
-  const propId = (await api.get('/api/nfl/games/401873020')).body.props[0].id
+test('AI reads: sign in, then Pro, then a daily allowance, and a read is shared, not paid twice', async () => {
+  const ids = (await api.get('/api/nfl/games/401873020')).body.props.map((p) => p.id)
+  const propId = ids[0]
   const anon = await api.post('/api/nfl/insight', { propId })
   assert.equal(anon.status, 401)
   assert.equal(anon.body.code, 'signin')
@@ -180,21 +181,35 @@ test('AI reads: sign in, then Pro, then a daily allowance', async () => {
   assert.match(events[2].text, /VERDICT: PRIME/)
   assert.match(ai.calls.at(-1).messages[0].content, /PROP:/i, 'the model gets the Propify brief')
 
+  // the same prop again, by anyone with access: the shared read, no new AI call, no allowance
+  const calls = ai.calls.length
+  for (const who of ['u_pro', 'u_admin']) {
+    const again = await api.post('/api/nfl/insight', { propId }, { headers: bearer(who) })
+    assert.equal(again.status, 200)
+    assert.equal(again.headers.get('x-apex-usage'), null)
+    const ev = ndjson(again.text)
+    assert.equal(ev[0].cached, true)
+    assert.match(ev.at(-1).text, /VERDICT: PRIME/)
+  }
+  assert.equal(ai.calls.length, calls, 'nobody paid for the same read twice')
+
   ai.mode = 'fail'
-  const failed = await api.post('/api/nfl/insight', { propId }, { headers: bearer('u_pro') })
+  const failed = await api.post('/api/nfl/insight', { propId: ids[1] }, { headers: bearer('u_pro') })
   ai.mode = 'ok'
   assert.equal(ndjson(failed.text).at(-1).type, 'error')
   const me = await api.get('/api/billing/me', { headers: bearer('u_pro') })
-  assert.equal(me.body.usage.aiReads.used, 1, 'a failed read is refunded')
+  assert.equal(me.body.usage.aiReads.used, 1, 'a failed read is refunded, and a shared one never charged')
+  assert.equal(me.body.ai.allowed, true)
   for (const n of [2, 3]) {
-    const r = await api.post('/api/nfl/insight', { propId }, { headers: bearer('u_pro') })
+    const r = await api.post('/api/nfl/insight', { propId: ids[n] }, { headers: bearer('u_pro') })
     assert.equal(r.headers.get('x-apex-usage'), `${n}/3`)
   }
-  const over = await api.post('/api/nfl/insight', { propId }, { headers: bearer('u_pro') })
+  const over = await api.post('/api/nfl/insight', { propId: ids[4] }, { headers: bearer('u_pro') })
   assert.equal(over.status, 429)
   assert.equal(over.body.code, 'quota')
   assert.ok(over.body.resetsAt > now())
   assert.ok(Number(over.headers.get('retry-after')) >= 1)
+  assert.equal((await api.post('/api/nfl/insight', { propId }, { headers: bearer('u_pro') })).status, 200, 'a shared read still opens past the allowance')
   const badProp = await api.post('/api/nfl/insight', { propId: 'drop table' }, { headers: bearer('u_pro') })
   assert.equal(badProp.status, 400)
 })

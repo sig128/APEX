@@ -172,7 +172,7 @@ export function CheckPage() {
         <h1 className="page-title">Parlay check</h1>
         <p className="page-sub">Show Propify the parlay before you place it. Every leg gets a call, keep, cut or swap, with the numbers behind it, and the whole slip is played out 20,000 times.</p>
       </header>
-      <Locked need="pro" title="The parlay check">
+      <Locked need="pro" ai title="The parlay check">
         <div className="pcheck">
           <section className="check__in" aria-label="Your parlay">
             <div className="seg" role="tablist" aria-label="How to add your parlay">
@@ -280,7 +280,7 @@ export function CheckPage() {
             {run.state === 'reading' && <p className="check__wait">Reading your slip and finding each leg on the board…</p>}
             {run.err && (
               <p className="ask__err" role="alert">
-                {run.err.code === 'invite' ? 'Redeem an invite code on your account page to use the parlay check.' : run.err.message}
+                {run.err.message}
               </p>
             )}
             {run.err?.body?.unmatched?.length > 0 && <Unmatched list={run.err.body.unmatched} />}

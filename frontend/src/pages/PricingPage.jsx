@@ -17,7 +17,7 @@ export function PricingPage() {
         <h1 className="page-title">Plans</h1>
         <p className="page-sub">The stats are free. Passes run 30 days, paid in USDC on {config?.networkName || 'Base'}, with no card and no auto-renew.</p>
       </header>
-      {!paywall && config && <p className="notice">Passes aren't on sale yet, so everything is open while Propify is in beta.</p>}
+      {!paywall && config && <p className="notice">Passes aren't on sale yet, so everything but the AI is open while Propify is in beta. The AI (prop reads, the parlay check, game intel and the analyzer) is for members with a pass.</p>}
       <div className="plans">
         <section className="plan">
           <h2 className="plan__name">Free</h2>

@@ -1,5 +1,6 @@
-// Paywall off (no treasury yet): the original invite-code gate guards the AI, and an optional
-// "sign in to read anything" mode with signed stream tickets.
+// Paywall off (no treasury yet): the site is open, but the AI still takes a real Pro or Elite
+// pass (an invite code alone doesn't open it), and an optional "sign in to read anything" mode
+// with signed stream tickets.
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createApexApp } from '../app.js'
@@ -11,6 +12,7 @@ const restoreEnv = withEnv({ OPENAI_API_KEY: null, APEX_AI_PROVIDER: null, APEX_
 
 let api
 let engine
+let made
 before(async () => {
   globalThis.__anthropicFake = {
     stream() {
@@ -26,7 +28,7 @@ before(async () => {
     },
   }
   const { http } = fixtureHttp()
-  const made = createApexApp({ engineMode: 'lazy', http, store: createStore({ driver: 'memory' }), auth: testAuth(USERS, { invited: ['u_pro'] }), anthropicKey: () => 'sk-test', oddsKey: () => null, now: clock() })
+  made = createApexApp({ engineMode: 'lazy', http, store: createStore({ driver: 'memory' }), auth: testAuth(USERS, { invited: ['u_pro'] }), anthropicKey: () => 'sk-test', oddsKey: () => null, now: clock() })
   engine = made.engine
   await loadAll(engine)
   api = await serve(made.app)
@@ -38,20 +40,31 @@ after(async () => {
   delete globalThis.__anthropicFake
 })
 
-test('no paywall: passes are off sale, the invite rule guards the AI', async () => {
+test('no paywall: the site is open, but the AI takes a real pass, with its daily allowance', async () => {
   const cfg = await api.get('/api/billing/config')
   assert.equal(cfg.body.paywall, false)
+  assert.equal(cfg.body.aiOpen, false)
   assert.equal((await api.post('/api/billing/invoice', { plan: 'pro' }, { headers: bearer('u_free') })).body.code, 'billing_off')
   const propId = (await api.get('/api/nfl/games/401873020')).body.props[0].id
   assert.equal((await api.post('/api/nfl/insight', { propId })).status, 401)
-  const noInvite = await api.post('/api/nfl/insight', { propId }, { headers: bearer('u_free') })
-  assert.equal(noInvite.status, 403)
-  assert.equal(noInvite.body.code, 'invite')
+  const game = { homeTeam: 'Detroit Lions', awayTeam: 'Green Bay Packers', date: '2026-10-25' }
+  // no pass: no AI, whether or not they redeemed an invite code (u_pro has one)
+  for (const who of ['u_free', 'u_pro']) {
+    const no = await api.post('/api/nfl/insight', { propId }, { headers: bearer(who) })
+    assert.equal(no.status, 402, who)
+    assert.equal(no.body.code, 'upgrade')
+    assert.equal((await api.post('/api/chat/stream', { game }, { headers: bearer(who) })).status, 402)
+    assert.equal((await api.post('/api/nfl/check', { text: 'anything over 1.5' }, { headers: bearer(who) })).status, 402)
+    const me = await api.get('/api/billing/me', { headers: bearer(who) })
+    assert.equal(me.body.ai.allowed, false)
+    assert.equal(me.body.entitlement.plan, 'elite', 'everything else on the site stays open')
+  }
+  // a pass the admin gives (or a plan code) opens it, and the allowance counts
+  await made.billing.grant({ uid: 'admin', admin: true }, { uid: 'u_pro', plan: 'pro', days: 30 })
   const ok = await api.post('/api/nfl/insight', { propId }, { headers: bearer('u_pro') })
   assert.equal(ok.status, 200)
-  assert.equal(ok.headers.get('x-apex-usage'), null, 'no allowance without a paywall')
-  const game = { homeTeam: 'Detroit Lions', awayTeam: 'Green Bay Packers', date: '2026-10-25' }
-  assert.equal((await api.post('/api/chat/stream', { game }, { headers: bearer('u_free') })).status, 403)
+  assert.equal(ok.headers.get('x-apex-usage'), '1/15', 'the daily allowance applies with passes off sale too')
+  assert.equal((await api.get('/api/billing/me', { headers: bearer('u_pro') })).body.ai.allowed, true)
   assert.equal((await api.post('/api/chat/stream', { game }, { headers: bearer('u_pro') })).status, 200)
 })
 

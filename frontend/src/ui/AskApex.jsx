@@ -4,7 +4,7 @@ import { streamUrl } from '../lib/config.js'
 import { Locked } from './Locked.jsx'
 import { useBilling } from '../context/BillingContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { Link } from 'react-router-dom'
+import { ago } from '../lib/format.js'
 import { useSport, apiOf } from '../lib/sport.js'
 
 /** Turn the read's "VERDICT: ...", "WHY: ..." lines into labeled blocks. */
@@ -31,7 +31,7 @@ const TITLES = { VERDICT: 'Verdict', WHY: 'Why', RISKS: 'Risks', SIZING: 'Sizing
 
 // Reads live outside the component: leaving the page mid-stream doesn't throw away a read the
 // user paid for, and coming back shows it again. Keyed by user and prop; a small LRU.
-const IDLE = { text: '', state: 'idle', err: null, usage: null } // state: idle | streaming | done | error
+const IDLE = { text: '', state: 'idle', err: null, usage: null, cached: false, at: null } // state: idle | streaming | done | error
 const MAX_READS = 40
 const reads = new Map() // key -> { snap, ctrl }
 const subs = new Map() // key -> Set<fn>
@@ -50,7 +50,7 @@ function put(key, patch) {
 async function startRead(key, propId, onDone, sport = 'nfl') {
   reads.get(key)?.ctrl?.abort()
   const ac = new AbortController()
-  put(key, { text: '', state: 'streaming', err: null })
+  put(key, { text: '', state: 'streaming', err: null, cached: false, at: null })
   reads.get(key).ctrl = ac
   const mine = () => reads.get(key)?.ctrl === ac
   try {
@@ -61,6 +61,8 @@ async function startRead(key, propId, onDone, sport = 'nfl') {
         signal: ac.signal,
         onEvent: (ev) => {
           if (!mine()) return
+          // a read another member already paid for comes back whole, marked cached
+          if (ev.type === 'start' && ev.cached) put(key, { cached: true, at: ev.at || null })
           if (ev.type === 'text_delta') put(key, { text: reads.get(key).snap.text + ev.text })
           if (ev.type === 'complete') put(key, { text: ev.text })
         },
@@ -97,37 +99,31 @@ function useRead(key) {
   return useSyncExternalStore(subscribe, get, get)
 }
 
-/** The AI read of one prop, written with the Propify ruleset. Pro and Elite. */
+/**
+ * The AI read of one prop, written with the Propify ruleset. Members with a Pro or Elite pass
+ * (the AI costs money per read); a read someone already got for the same line comes back free.
+ */
 export function AskApex({ propId }) {
   const sport = useSport()
-  const { user, firebaseConfigured } = useAuth()
-  const { paywall, refresh } = useBilling()
+  const { user } = useAuth()
+  const { refresh } = useBilling()
   const key = `${user?.uid || ''}|${sport}|${propId}`
-  const { text, state, err, usage } = useRead(key)
+  const { text, state, err, usage, cached, at } = useRead(key)
   const run = () => startRead(key, propId, refresh, sport)
 
   const blocks = sections(text)
   const verdict = blocks.find((b) => b.k === 'VERDICT')?.lines.join(' ') || ''
   const tone = /prime/i.test(verdict) ? 'is-prime' : /no play/i.test(verdict) ? 'is-pass' : /monitor/i.test(verdict) ? 'is-watch' : ''
-  // with the paywall off the server still wants a signed-in, invited user (except in local dev
-  // without Firebase, where it's open)
-  const needsSignIn = !paywall && !user && firebaseConfigured
-
   return (
-    <Locked need="pro" title="AI read of this prop">
+    <Locked need="pro" ai title="AI read of this prop">
       <div className={`ask ${tone}`}>
         <div className="ask__head">
           <p className="ask__title">Propify AI read</p>
-          {state !== 'streaming' &&
-            (needsSignIn ? (
-              <Link className="btn btn--quiet" to="/login">
-                Sign in for AI reads
-              </Link>
-            ) : (
-              <button type="button" className="btn btn--gold" onClick={run}>
-                {state === 'idle' ? 'Read this prop' : 'Read again'}
-              </button>
-            ))}
+          {state !== 'streaming' && (
+            <button type="button" className="btn btn--gold" onClick={run}>
+              {state === 'idle' ? 'Read this prop' : 'Read again'}
+            </button>
+          )}
           {state === 'streaming' && (
             <button type="button" className="btn btn--quiet" onClick={() => stopRead(key)}>
               Stop
@@ -137,7 +133,7 @@ export function AskApex({ propId }) {
         {state === 'idle' && <p className="muted">Runs this prop through the Propify ruleset: verdict, the reasons, the risks, and how much to stake.</p>}
         {err && (
           <p className="ask__err" role="alert">
-            {err.code === 'quota' ? `${err.message}` : err.code === 'invite' ? 'Redeem an invite code on your account page to use AI reads.' : err.message}
+            {err.message}
           </p>
         )}
         {blocks.length > 0 && (
@@ -154,6 +150,7 @@ export function AskApex({ propId }) {
           </div>
         )}
         {usage && <p className="ask__usage">{usage.split('/')[0]} of {usage.split('/')[1]} AI reads used today</p>}
+        {cached && state === 'done' && <p className="ask__usage">Written {at ? ago(at) : 'earlier today'} for this line and price. Shared reads don’t use your allowance.</p>}
       </div>
     </Locked>
   )

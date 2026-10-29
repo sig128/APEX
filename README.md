@@ -66,8 +66,8 @@ npm run dev                         # API on :8787, site on http://localhost:517
 ```
 
 The API pulls the live slate from ESPN as soon as it starts (give it a minute to fill in game
-logs the first time). Without a treasury address the paywall is off, and locally the API runs
-without Firebase credentials, so AI reads work without signing in. Add `?intro` to the URL to
+logs the first time). Without a treasury address the paywall is off (everything but the AI is
+open), and locally the API runs without Firebase credentials, so AI reads work without signing in. Add `?intro` to the URL to
 replay the intro any time (it otherwise plays at most every 6 hours).
 
 Tests:
@@ -199,8 +199,14 @@ ledger. NFL is the site's root (`/`, `/nfl/props`); the others live under their 
   the board's record at real prices (edge finder, calendar), members, money, and the tools (comp
   a pass by email or for life, revoke one, hide a page). Changing the key in Vercel closes every
   open admin session. `/adminn` still turns sports on and off for the analyzer (same key).
+- **The AI costs money per use**, so it's for the admin and members holding a real Pro or Elite
+  pass (paid, given in the admin page's Tools tab, or from a plan code), whether passes are on
+  sale or not, always with the daily allowances (`APEX_*_PER_DAY`). An invite code alone doesn't
+  unlock it. A prop's AI read is written once and shared: the next member who opens the same prop
+  (same line and prices, same day) gets it back without a new AI call or using their allowance.
 - **Codes:** invite codes and plan codes (e.g. 30 days of Elite) are explained in
   `firestore/inviteCodes.template.txt`; create them with `npm run seed-invites` in functions/.
+  Only plan codes open the AI.
 - **Picks:** picks on any league lock when their first game starts and grade themselves from
   the final box score (a player who didn't play is voided after 18 hours). Only lines a sportsbook posted can go on a record,
   graded at the price posted when the pick was made; main lines with no listed price grade at
