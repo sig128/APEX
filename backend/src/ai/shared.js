@@ -8,8 +8,6 @@
 import crypto from 'node:crypto'
 import { dayET } from '../nfl/proplog.js'
 
-const NS = 'ai-analyses'
-const CLAIMS = 'ai-analyses-claim'
 const CLAIM_MS = 5 * 60_000 // a writer that hasn't finished by then is taken to have failed
 const WAIT_MS = 4 * 60_000
 const POLL_MS = 2_500
