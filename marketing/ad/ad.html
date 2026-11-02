@@ -1,0 +1,958 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Propify ad</title>
+<style>
+/*
+  "Read the line." A 30 s vertical spot, 1080x1920, rendered frame by frame.
+  Spine: one gold line across the frame (the prop line). OVER lives above it, UNDER below.
+  Palette (the site's own): night #050a14, stand #0a1220, seat #1c2b45, chalk #e8edf5,
+  chalk-2 #aab5c7, chalk-3 #75839a, gold #fcd800, turf #2fd47a, flag #ff5a5a.
+  Type: Big Shoulders Display for numbers and headlines, Barlow for labels.
+*/
+@font-face { font-family: 'BigShoulders'; src: url('fonts/bigshoulders-var.woff') format('woff'); font-weight: 100 900; }
+@font-face { font-family: 'Barlow'; src: url('fonts/barlow-500.woff') format('woff'); font-weight: 500; }
+@font-face { font-family: 'Barlow'; src: url('fonts/barlow-600.woff') format('woff'); font-weight: 600; }
+@font-face { font-family: 'Barlow'; src: url('fonts/barlow-700.woff') format('woff'); font-weight: 700; }
+@font-face { font-family: 'Barlow'; src: url('fonts/barlow-800.woff') format('woff'); font-weight: 800; }
+@font-face { font-family: 'Barlow'; src: url('fonts/barlow-900.woff') format('woff'); font-weight: 900; }
+html, body { margin: 0; background: #050a14; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+'use strict'
+const W = 1080, H = 1920, CX = 540, LY = 960
+const C = { night: '#050a14', stand: '#0a1220', stand2: '#0f1a2d', seat: '#1c2b45', seat2: '#2a3c5c', chalk: '#e8edf5', chalk2: '#aab5c7', chalk3: '#75839a', gold: '#fcd800', goldHi: '#fff3a6', turf: '#2fd47a', flag: '#ff5a5a' }
+const BIG = 'BigShoulders', UI = 'Barlow'
+
+const main = document.getElementById('c')
+const out = main.getContext('2d')
+const mk = (w = W, h = H) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c }
+const sceneCv = mk(), ctx = sceneCv.getContext('2d')
+const tmpCv = mk(), tmp = tmpCv.getContext('2d')
+const ovCv = mk(), ov = ovCv.getContext('2d') // captions drawn over the camera blur
+const frmCv = mk(), frm = frmCv.getContext('2d') // one moment, composed
+const accCv = mk(), acc = accCv.getContext('2d') // one frame: the moments inside the shutter, averaged
+const bA = mk(), bAc = bA.getContext('2d'), bB = mk(), bBc = bB.getContext('2d') // smear ping-pong
+const odoCv = mk(W, 695), odo = odoCv.getContext('2d') // the live counter's window
+const FPS = 30
+let DT = 1 / 120 // how much time one moment stands for (motion blur inside the moment)
+
+// ---------- math ----------
+const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x)
+const lerp = (a, b, k) => a + (b - a) * k
+const seg = (t, a, b) => clamp((t - a) / (b - a))
+const E = {
+  outCubic: (k) => 1 - (1 - k) ** 3,
+  outQuart: (k) => 1 - (1 - k) ** 4,
+  outQuint: (k) => 1 - (1 - k) ** 5,
+  outExpo: (k) => (k >= 1 ? 1 : 1 - 2 ** (-10 * k)),
+  inExpo: (k) => (k <= 0 ? 0 : 2 ** (10 * k - 10)),
+  inCubic: (k) => k ** 3,
+  inOutCubic: (k) => (k < 0.5 ? 4 * k ** 3 : 1 - (-2 * k + 2) ** 3 / 2),
+  inOutExpo: (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k < 0.5 ? 2 ** (20 * k - 10) / 2 : (2 - 2 ** (-20 * k + 10)) / 2),
+  outBack: (k, s = 1.6) => 1 + (s + 1) * (k - 1) ** 3 + s * (k - 1) ** 2,
+}
+const hash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s) }
+const vnoise = (x) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return lerp(hash(i), hash(i + 1), u) * 2 - 1 }
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6d2b79f5) >>> 0; let q = s; q = Math.imul(q ^ (q >>> 15), q | 1); q ^= q + Math.imul(q ^ (q >>> 7), q | 61); return ((q ^ (q >>> 14)) >>> 0) / 4294967296 } }
+
+// ---------- the timeline's big moments (the soundtrack hits the same times) ----------
+const IMPACTS = [[1.0, 1.0], [4.25, 0.45], [4.75, 0.45], [6.0, 0.55], [7.5, 0.7], [8.0, 1.25], [9.5, 0.8], [14.0, 0.5], [15.45, 0.55], [18.0, 0.55], [22.0, 1.35], [24.0, 1.1]]
+const FLASHES = [[1.0, 0.18], [8.0, 0.42], [22.0, 0.55], [24.0, 0.5]]
+const impactAt = (t) => IMPACTS.reduce((a, [ti, s]) => (t >= ti ? a + s * Math.exp(-(t - ti) * 9) : a), 0)
+const kick = (t, ti, rate = 10) => (t >= ti ? Math.exp(-(t - ti) * rate) : 0)
+
+// ---------- drawing helpers ----------
+const font = (fam, wt, size) => `${wt} ${size}px ${fam}`
+function txt(c, s, x, y, o = {}) {
+  c.save()
+  c.font = o.font
+  c.textAlign = o.align || 'center'
+  c.textBaseline = o.base || 'alphabetic'
+  c.letterSpacing = `${o.ls || 0}px`
+  c.globalAlpha *= o.alpha ?? 1
+  if (o.glow) { c.shadowColor = o.glow; c.shadowBlur = o.glowBlur || 30 }
+  c.fillStyle = o.color || C.chalk
+  const dx = o.ls && (o.align || 'center') === 'center' ? o.ls / 2 : 0
+  if (o.chroma) {
+    c.save(); c.shadowBlur = 0; c.globalCompositeOperation = 'lighter'
+    c.fillStyle = `rgba(255,40,90,${0.55 * Math.min(1, o.chroma)})`; c.fillText(s, x + dx - 14 * o.chroma, y)
+    c.fillStyle = `rgba(40,210,255,${0.55 * Math.min(1, o.chroma)})`; c.fillText(s, x + dx + 14 * o.chroma, y)
+    c.restore()
+  }
+  c.fillText(s, x + dx, y)
+  c.restore()
+}
+function measure(c, s, f, ls = 0) { c.save(); c.font = f; c.letterSpacing = `${ls}px`; const m = c.measureText(s); c.restore(); return m }
+function rr(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r) }
+function goldLine(c, x0, x1, y, a = 1, glow = 1) {
+  if (a <= 0 || x1 <= x0) return
+  c.save()
+  c.lineCap = 'round'
+  c.globalAlpha = a
+  c.strokeStyle = C.gold; c.shadowColor = C.gold
+  c.shadowBlur = 60 * glow; c.lineWidth = 6; c.beginPath(); c.moveTo(x0, y); c.lineTo(x1, y); c.stroke()
+  c.shadowBlur = 18 * glow; c.lineWidth = 5; c.stroke()
+  c.shadowBlur = 0; c.strokeStyle = '#fff7c9'; c.lineWidth = 2.5; c.stroke()
+  c.restore()
+}
+function spark(c, x, y, r, a) {
+  if (a <= 0) return
+  c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = a
+  const g = c.createRadialGradient(x, y, 0, x, y, r)
+  g.addColorStop(0, 'rgba(255,250,220,1)'); g.addColorStop(0.15, 'rgba(255,226,80,0.8)'); g.addColorStop(1, 'rgba(252,216,0,0)')
+  c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2)
+  c.restore()
+}
+function flare(c, x, y, a, len = 900) { // a thin horizontal lens streak
+  if (a <= 0.003) return
+  c.save(); c.globalCompositeOperation = 'lighter'; c.translate(x, y)
+  for (const [sy, col, k] of [[0.011, '255,244,205', 0.95], [0.05, '120,175,255', 0.3]]) {
+    c.save(); c.scale(1, sy)
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, len)
+    g.addColorStop(0, `rgba(${col},${Math.min(1, k * a)})`); g.addColorStop(0.3, `rgba(${col},${Math.min(1, k * a * 0.35)})`); g.addColorStop(1, `rgba(${col},0)`)
+    c.fillStyle = g; c.fillRect(-len, -len, len * 2, len * 2); c.restore()
+  }
+  c.restore()
+}
+function star(c, x, y, r, a) {
+  if (a <= 0) return
+  c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = a; c.translate(x, y)
+  for (const [sx, sy] of [[1, 0.06], [0.06, 1]]) {
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, r)
+    g.addColorStop(0, 'rgba(255,252,235,1)'); g.addColorStop(1, 'rgba(255,230,120,0)')
+    c.save(); c.scale(sx, sy); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill(); c.restore()
+  }
+  spark(c, 0, 0, r * 0.35, 1)
+  c.restore()
+}
+
+// ---------- the world around everything ----------
+const vignette = (() => {
+  const v = mk(), g = v.getContext('2d')
+  const r = g.createRadialGradient(CX, LY, 300, CX, LY, 1250)
+  r.addColorStop(0, 'rgba(0,0,0,0)'); r.addColorStop(0.6, 'rgba(0,0,0,0.18)'); r.addColorStop(1, 'rgba(0,0,0,0.72)')
+  g.fillStyle = r; g.fillRect(0, 0, W, H)
+  return v
+})()
+const grains = [0, 1, 2, 3, 4, 5].map((k) => {
+  const g = mk(384, 384), gc = g.getContext('2d'), img = gc.createImageData(384, 384), r = rng(77 + k)
+  for (let i = 0; i < img.data.length; i += 4) { const v = 128 + (r() - 0.5) * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255 }
+  gc.putImageData(img, 0, 0)
+  return g
+})
+const DUST = (() => { const r = rng(11); return Array.from({ length: 70 }, () => ({ x: r() * W, y: r() * H, s: 0.6 + r() * 2.2, v: 6 + r() * 18, ph: r() * 6.28, a: 0.15 + r() * 0.5 })) })()
+
+function backdrop(c, t, o = {}) {
+  const g = c.createLinearGradient(0, 0, 0, H)
+  g.addColorStop(0, '#08142a'); g.addColorStop(0.5, C.night); g.addColorStop(1, '#02050b')
+  c.fillStyle = g; c.fillRect(0, 0, W, H)
+  if (o.glow) {
+    const y = o.glowY ?? LY
+    const r = c.createRadialGradient(CX, y, 0, CX, y, o.glowR || 900)
+    r.addColorStop(0, `rgba(252,216,0,${0.13 * o.glow})`); r.addColorStop(0.45, `rgba(252,216,0,${0.04 * o.glow})`); r.addColorStop(1, 'rgba(252,216,0,0)')
+    c.fillStyle = r; c.fillRect(0, 0, W, H)
+  }
+  if (o.beams) beams(c, t, o.beams)
+  if (o.dust) dust(c, t, o.dust)
+}
+function beams(c, t, a) {
+  c.save(); c.globalCompositeOperation = 'lighter'
+  for (const side of [-1, 1]) {
+    const ox = side < 0 ? -120 : W + 120
+    const ang = side * (0.5 + 0.06 * Math.sin(t * 0.45 + side * 1.3))
+    c.save(); c.translate(ox, -220); c.rotate(-ang)
+    for (const [spread, alpha] of [[120, 0.05], [230, 0.035], [380, 0.022], [560, 0.012]]) {
+      const g = c.createLinearGradient(0, 0, 0, 2700)
+      g.addColorStop(0, `rgba(255,244,205,${alpha * a * 2.2})`); g.addColorStop(0.55, `rgba(255,236,170,${alpha * a})`); g.addColorStop(1, 'rgba(255,236,170,0)')
+      c.fillStyle = g
+      c.beginPath(); c.moveTo(-18, 0); c.lineTo(18, 0); c.lineTo(spread, 2700); c.lineTo(-spread, 2700); c.closePath(); c.fill()
+    }
+    c.restore()
+  }
+  c.restore()
+}
+function dust(c, t, a) {
+  c.save(); c.globalCompositeOperation = 'lighter'
+  for (const d of DUST) {
+    const y = ((d.y - t * d.v) % H + H) % H
+    const x = d.x + Math.sin(t * 0.7 + d.ph) * 14
+    c.globalAlpha = a * d.a * (0.6 + 0.4 * Math.sin(t * 2 + d.ph))
+    c.fillStyle = '#ffe9a0'; c.beginPath(); c.arc(x, y, d.s, 0, Math.PI * 2); c.fill()
+  }
+  c.restore()
+}
+function floor(c, t, a, horizon = LY) {
+  if (a <= 0) return
+  c.save()
+  c.beginPath(); c.rect(0, horizon + 2, W, H - horizon); c.clip()
+  c.lineWidth = 2
+  for (let i = -14; i <= 14; i++) {
+    const x = CX + i * 260
+    const g = c.createLinearGradient(0, horizon, 0, H)
+    g.addColorStop(0, 'rgba(170,181,199,0)'); g.addColorStop(0.35, `rgba(170,181,199,${0.07 * a})`); g.addColorStop(1, `rgba(170,181,199,${0.12 * a})`)
+    c.strokeStyle = g
+    c.beginPath(); c.moveTo(CX + i * 6, horizon); c.lineTo(CX + (x - CX) * 3.2, H + 200); c.stroke()
+  }
+  const off = (t * 0.35) % 1
+  for (let j = 0; j < 14; j++) {
+    const z = (j + off) / 14
+    const y = horizon + (H - horizon) * z ** 2.2
+    c.strokeStyle = `rgba(170,181,199,${0.1 * a * z})`
+    c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke()
+  }
+  c.restore()
+}
+function rays(c, x, y, a, t) { // light rays behind the logo
+  if (a <= 0) return
+  c.save(); c.globalCompositeOperation = 'lighter'; c.translate(x, y); c.rotate(t * 0.05)
+  for (let i = 0; i < 28; i++) {
+    const ang = (i / 28) * Math.PI * 2, w = 0.028 + 0.02 * hash(i * 3.1)
+    const len = 1300 + 500 * hash(i * 7.7)
+    const g = c.createRadialGradient(0, 0, 60, 0, 0, len)
+    g.addColorStop(0, `rgba(255,232,120,${0.11 * a * (0.5 + hash(i))})`); g.addColorStop(1, 'rgba(255,232,120,0)')
+    c.fillStyle = g
+    c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, len, ang - w, ang + w); c.closePath(); c.fill()
+  }
+  c.restore()
+}
+function bars(c, t, a) { // crowd lights: soft bokeh low in the frame
+  if (a <= 0) return
+  const r = rng(5)
+  c.save(); c.globalCompositeOperation = 'lighter'
+  for (let i = 0; i < 26; i++) {
+    const x = r() * W, y = 1500 + r() * 520, rad = 30 + r() * 90, hue = r() < 0.7 ? '255,226,140' : '140,180,255'
+    const tw = 0.5 + 0.5 * Math.sin(t * (1 + r() * 2) + i)
+    const g = c.createRadialGradient(x, y, 0, x, y, rad)
+    g.addColorStop(0, `rgba(${hue},${0.09 * a * tw})`); g.addColorStop(1, `rgba(${hue},0)`)
+    c.fillStyle = g; c.fillRect(x - rad, y - rad, rad * 2, rad * 2)
+  }
+  c.restore()
+}
+
+// =====================================================================================
+// 1. THE LINE (0 to 4 s): a gold line, a number, the question every bettor asks
+// =====================================================================================
+const FLIPS = [[2.0, 'O'], [2.5, 'U'], [3.0, 'O'], [3.25, 'U'], [3.5, 'O'], [3.625, 'U']]
+function scene1(c, t) {
+  backdrop(c, t, { glow: 0.5 * E.outCubic(seg(t, 0.2, 1.4)) + 0.6 * kick(t, 1.0, 5), beams: 0.55 * seg(t, 0.9, 2.6), dust: 0.6 * seg(t, 0.5, 2) })
+  floor(c, t, E.outCubic(seg(t, 0.5, 2.0)))
+  const push = lerp(1.07, 1.0, E.outCubic(seg(t, 0, 4)))
+  c.save(); c.translate(CX, LY); c.scale(push, push); c.translate(-CX, -LY)
+  scene1Content(c, t)
+  c.restore()
+}
+function scene1Content(c, t) {
+  const draw = E.outExpo(seg(t, 0.12, 0.95))
+  const half = draw * (W / 2 + 80)
+  // the number sits on the line; the line opens around it
+  const nIn = seg(t, 1.0, 1.32)
+  const numF = font(BIG, 900, 430)
+  const nm = measure(c, '24.5', numF)
+  const gap = E.outExpo(nIn) * (nm.width / 2 + 46)
+  goldLine(c, CX - half, CX - gap, LY, 1, 1 + kick(t, 1.0, 6))
+  goldLine(c, CX + gap, CX + half, LY, 1, 1 + kick(t, 1.0, 6))
+  spark(c, CX - half, LY, 120, (1 - draw) * 1.2 + 0.0)
+  spark(c, CX + half, LY, 120, (1 - draw) * 1.2)
+  flare(c, CX, LY, 1.1 * kick(t, 1.0, 2.6), 1000)
+  if (t >= 1.0) {
+    const k = E.outExpo(nIn)
+    const sc = lerp(1.55, 1, k)
+    const asc = nm.actualBoundingBoxAscent, desc = nm.actualBoundingBoxDescent
+    c.save(); c.translate(CX, LY); c.scale(sc, sc)
+    const g = c.createLinearGradient(0, -asc / 2, 0, asc / 2)
+    g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#c9d3e3')
+    txt(c, '24.5', 0, (asc - desc) / 2, { font: numF, color: g, alpha: seg(t, 1.0, 1.08), chroma: kick(t, 1.0, 7) * 1.2 })
+    c.restore()
+  }
+  // eyebrow and label
+  const eb = E.outCubic(seg(t, 1.2, 1.6))
+  txt(c, 'TONIGHT’S LINE', CX, LY - 560 + (1 - eb) * 24, { font: font(UI, 800, 36), color: C.gold, ls: 12, alpha: eb })
+  const pl = E.outQuart(seg(t, 1.45, 2.0))
+  txt(c, 'POINTS', CX, LY + 230, { font: font(UI, 800, 50), color: C.chalk2, ls: lerp(70, 26, pl), alpha: pl })
+  // OVER above the line, UNDER below, faster and faster
+  for (let i = 0; i < FLIPS.length; i++) {
+    const [ti, side] = FLIPS[i]
+    const next = FLIPS[i + 1]?.[0] ?? 3.78
+    if (t < ti || t >= next + 0.08) continue
+    const k = seg(t, ti, ti + 0.06)
+    const fade = 1 - seg(t, next - 0.05, next + 0.08)
+    const a = k * fade
+    const pop = lerp(1.18, 1, E.outCubic(seg(t, ti, ti + 0.18)))
+    const over = side === 'O'
+    const y = over ? LY - 330 : LY + 470
+    c.save(); c.translate(CX, y); c.scale(pop, pop)
+    txt(c, over ? 'OVER' : 'UNDER', 0, 0, { font: font(BIG, 900, 170), color: over ? C.gold : C.chalk, ls: 10, alpha: a, glow: over ? 'rgba(252,216,0,0.55)' : null, glowBlur: 40 })
+    // a chevron pointing away from the line
+    c.globalAlpha = a; c.fillStyle = over ? C.gold : C.chalk
+    c.beginPath()
+    if (over) { c.moveTo(-34, -150); c.lineTo(0, -190); c.lineTo(34, -150) } else { c.moveTo(-34, 38); c.lineTo(0, 78); c.lineTo(34, 38) }
+    c.lineWidth = 10; c.strokeStyle = c.fillStyle; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke()
+    c.restore()
+  }
+  // the question, last
+  const q = E.outCubic(seg(t, 3.0, 3.3)) * (1 - seg(t, 3.7, 3.8))
+  txt(c, 'WHICH SIDE?', CX, H - 250, { font: font(UI, 800, 40), color: C.chalk3, ls: 16, alpha: q })
+}
+
+// =====================================================================================
+// 2. THE NOISE (4 to 8 s): thousands of lines blur past and stop on that same one
+// =====================================================================================
+const POOL = ['OVER 1.5 SHOTS ON GOAL', 'UNDER 6.5 REBOUNDS', 'OVER 257.5 PASS YARDS', 'ANYTIME TOUCHDOWN', 'OVER 0.5 HOME RUNS', 'UNDER 22.5 POINTS', 'OVER 4.5 ASSISTS', 'OVER 68.5 RUSH YARDS', 'UNDER 1.5 TOTAL BASES', 'OVER 2.5 THREES', 'OVER 5.5 RECEPTIONS', 'UNDER 28.5 SAVES', 'OVER 6.5 STRIKEOUTS', 'OVER 0.5 GOALS', 'UNDER 1.5 HITS', 'OVER 39.5 PTS + REB + AST', 'UNDER 54.5 REC YARDS', 'OVER 1.5 PASS TDS', 'OVER 11.5 REBOUNDS', 'OVER 1.5 BLOCKS', 'UNDER 3.5 SHOTS ON GOAL', 'OVER 19.5 PASS ATTEMPTS']
+const HERO = 40, HERO_TEXT = 'OVER 24.5 POINTS', ROW = 132
+const fitCache = new Map()
+function rowFont(s) {
+  if (!fitCache.has(s)) { const w = measure(ctx, s, font(BIG, 800, 96), 3).width; fitCache.set(s, font(BIG, 800, w > 940 ? Math.floor((96 * 940) / w) : 96)) }
+  return fitCache.get(s)
+}
+const rowText = (i) => (i === HERO ? HERO_TEXT : POOL[(((i * 7 + 3) % POOL.length) + POOL.length) % POOL.length])
+const reelU = (t) => seg(t, 4.0, 7.5)
+function reelPos(t) {
+  if (t < 7.5) return HERO * reelU(t) ** 2.4
+  const s = t - 7.5
+  return HERO + 0.28 * Math.exp(-13 * s) * Math.sin(44 * s)
+}
+const reelVel = (t) => (t < 7.5 ? (HERO * 2.4 * reelU(t) ** 1.4) / 3.5 : 0)
+function scene2(c, t) {
+  backdrop(c, t, { glow: 0.35, beams: 0.35, dust: 0.4 })
+  const p = reelPos(t)
+  const v = reelVel(t) * ROW // px per second, upward
+  const span = Math.min(90, v * DT)
+  const n = span > 3 ? Math.min(7, Math.ceil(span / 5)) : 1
+  const frozen = t >= 7.5
+  for (let i = Math.floor(p) - 9; i <= Math.ceil(p) + 9; i++) {
+    const y0 = LY + (i - p) * ROW
+    const d = Math.abs(y0 - LY)
+    if (d > 1100) continue
+    const near = clamp(1 - d / 80)
+    const top = y0 < LY ? E.inOutCubic(seg(y0, 640, 860)) : 1
+    const fadeEdge = (1 - (d / 1000) ** 2) * top
+    const hero = i === HERO && frozen
+    let a = clamp(fadeEdge) * (frozen && !hero ? 0.25 : 1)
+    const color = near > 0.02 || hero ? mixGold(near) : C.chalk3
+    for (let k = 0; k < n; k++) {
+      const y = y0 + (span * k) / n + 33
+      txt(c, rowText(i), CX, y, { font: rowFont(rowText(i)), color, ls: 3, alpha: (a * (n > 1 ? 1.5 : 1)) / n, glow: hero ? 'rgba(252,216,0,0.7)' : null, glowBlur: 40 })
+    }
+  }
+  goldLine(c, 0, W, LY - 70, 0.9, 0.7)
+  goldLine(c, 0, W, LY + 70, 0.9, 0.7)
+  // copy over the reel
+  const band = c.createLinearGradient(0, 0, 0, 860)
+  band.addColorStop(0, 'rgba(5,10,20,0.98)'); band.addColorStop(0.7, 'rgba(5,10,20,0.9)'); band.addColorStop(1, 'rgba(5,10,20,0)')
+  c.fillStyle = band; c.fillRect(0, 0, W, 860)
+  const h1 = seg(t, 4.25, 4.33), h2 = seg(t, 4.75, 4.83), out1 = E.inCubic(seg(t, 5.7, 5.92))
+  txt(c, 'THOUSANDS', CX, 450 - out1 * 120, { font: font(BIG, 900, 190), color: C.chalk, ls: 4, alpha: h1 * (1 - out1), chroma: kick(t, 4.25, 8) })
+  txt(c, 'OF LINES.', CX, 640 - out1 * 120, { font: font(BIG, 900, 190), color: C.chalk, ls: 4, alpha: h2 * (1 - out1), chroma: kick(t, 4.75, 8) })
+  const e1 = seg(t, 6.0, 6.08), e2 = E.inCubic(seg(t, 7.2, 7.42))
+  c.save(); c.translate(CX, 560); const sc = lerp(1.25, 1, E.outExpo(seg(t, 6.0, 6.35))); c.scale(sc, sc)
+  txt(c, 'EVERY NIGHT.', 0, 0, { font: font(BIG, 900, 172), color: C.gold, ls: 4, alpha: e1 * (1 - e2), glow: 'rgba(252,216,0,0.5)', glowBlur: 50, chroma: kick(t, 6.0, 8) })
+  c.restore()
+  if (frozen) {
+    const g = seg(t, 7.5, 7.56)
+    txt(c, 'MOST BETTORS', CX, 480, { font: font(BIG, 900, 150), color: C.chalk, ls: 4, alpha: g, chroma: kick(t, 7.5, 9) })
+    txt(c, 'GUESS.', CX, 640, { font: font(BIG, 900, 150), color: C.flag, ls: 4, alpha: g, chroma: kick(t, 7.5, 9) })
+  }
+}
+function mixGold(k) {
+  const a = [117, 131, 154], b = [252, 216, 0]
+  return `rgb(${Math.round(lerp(a[0], b[0], k))},${Math.round(lerp(a[1], b[1], k))},${Math.round(lerp(a[2], b[2], k))})`
+}
+
+// =====================================================================================
+// 3. THE READ (8 to 18 s): one prop, taken apart. A camera flies down the page.
+// =====================================================================================
+const HERO_P = { name: 'A. MORALES', stat: 'POINTS', pick: 'OVER 24.5', side: 'o', line: 24.5, games: [28, 31, 19, 27, 33, 22, 29, 30, 26, 35], proj: 27.8, prob: 64, book: 57, edge: 7.0, prices: ['−125', '−118', '−110'], best: 2, verdict: 'PRIME', why: ['Hit in 8 of his last 10', 'Usage climbs with the starter out', 'Fast pace, soft perimeter defense'] }
+const OTHERS = [
+  { name: 'M. LINDQVIST', stat: 'GOALS', pick: 'OVER 0.5', side: 'o', line: 0.5, games: [1, 0, 1, 1, 0, 2, 0, 1, 1, 0], proj: 0.7, prob: 55, book: 52, edge: 3.1, prices: ['+105', '+110', '+120'], best: 2, verdict: 'MONITOR', why: ['Shots up three straight', 'Top power-play unit', 'Backup goalie tonight'] },
+  { name: 'J. PARK', stat: 'SHOTS', pick: 'OVER 1.5', side: 'o', line: 1.5, games: [2, 3, 1, 4, 2, 3, 0, 2, 5, 3], proj: 2.6, prob: 62, book: 56, edge: 5.8, prices: ['−140', '−135', '−128'], best: 2, verdict: 'PRIME', why: ['Hit in 8 of his last 10', 'Faces the most shots allowed', 'Plays 19 minutes a night'] },
+  { name: 'D. OKAFOR', stat: 'REBOUNDS', pick: 'UNDER 6.5', side: 'u', line: 6.5, games: [5, 7, 4, 6, 3, 8, 5, 9, 6, 5], proj: 5.4, prob: 58, book: 54, edge: 3.9, prices: ['−115', '−110', '−106'], best: 2, verdict: 'STANDARD', why: ['Under in 7 of 10', 'Big man back from injury', 'Slow pace tonight'] },
+  { name: 'T. REYES', stat: 'STRIKEOUTS', pick: 'OVER 6.5', side: 'o', line: 6.5, games: [7, 8, 5, 9, 7, 6, 8, 7, 10, 6], proj: 7.6, prob: 60, book: 55, edge: 4.4, prices: ['−120', '−112', '−108'], best: 2, verdict: 'STANDARD', why: ['Over in 7 of 10', 'Lineup strikes out 27%', 'Pitch count back to 100'] },
+]
+const CARD_Y = [960, 2960, 4960, 6960]
+const DONE = { header: 1, bars: Array(10).fill(1), stat: 1, proj: 1, ring: 1, ringNum: 1, ringCap: 1, tiles: [1, 1, 1], best: 1, edge: 1, cmp: 1, verdictHead: 1, verdict: 1, pick: 1, type: [1, 1, 1], stake: 1 }
+
+function panel(c, cy, a = 1) {
+  c.save(); c.globalAlpha = a
+  rr(c, 40, cy - 880, 1000, 1760, 48)
+  const g = c.createLinearGradient(0, cy - 880, 0, cy + 880)
+  g.addColorStop(0, 'rgba(18,30,52,0.82)'); g.addColorStop(1, 'rgba(8,14,26,0.82)')
+  c.fillStyle = g; c.fill()
+  c.lineWidth = 2; c.strokeStyle = 'rgba(70,96,140,0.55)'; c.stroke()
+  c.restore()
+}
+function pill(c, x, y, label, o = {}) {
+  const f = font(UI, 900, o.size || 40)
+  const m = measure(c, label, f, o.ls ?? 4)
+  const w = m.width + 56, h = (o.size || 40) * 1.7
+  c.save(); c.globalAlpha *= o.alpha ?? 1
+  rr(c, x - (o.align === 'right' ? w : w / 2), y - h / 2, w, h, h / 2)
+  if (o.fill) { c.fillStyle = o.fill; c.fill() }
+  if (o.stroke) { c.lineWidth = 3; c.strokeStyle = o.stroke; c.stroke() }
+  c.restore()
+  txt(c, label, x - (o.align === 'right' ? w / 2 : 0), y + (o.size || 40) * 0.36, { font: f, color: o.color || C.night, ls: o.ls ?? 4, alpha: o.alpha ?? 1 })
+}
+
+function cardChart(c, P, cy, s, hero) {
+  const top = cy - 960
+  // header
+  const h = s.header
+  txt(c, P.name, 100, top + 236, { font: font(UI, 800, 60), color: C.chalk, align: 'left', ls: 2, alpha: h })
+  txt(c, `TONIGHT  ${P.stat}`, 100, top + 292, { font: font(UI, 700, 32), color: C.chalk3, align: 'left', ls: 6, alpha: h })
+  pill(c, 980, top + 250, P.pick, { align: 'right', fill: C.gold, color: C.night, size: 40, alpha: h })
+  // the big number
+  const hits = P.games.filter((v) => (P.side === 'o' ? v > P.line : v < P.line)).length
+  const st = s.stat
+  if (st > 0) {
+    const roll = Math.round(lerp(0, hits, E.outCubic(seg(st, 0, 0.7))))
+    const sc = lerp(1.3, 1, E.outExpo(st))
+    c.save(); c.translate(540, top + 610); c.scale(sc, sc)
+    const fA = font(BIG, 900, 330), fB = font(BIG, 900, 170)
+    const wA = measure(c, String(roll), fA).width, wB = measure(c, '/10', fB).width
+    const x0 = -(wA + wB + 12) / 2
+    txt(c, String(roll), x0 + wA / 2, 0, { font: fA, color: C.gold, alpha: clamp(st * 6), glow: 'rgba(252,216,0,0.45)', glowBlur: 50, chroma: hero ? kick(T, 9.5, 8) : 0 })
+    txt(c, '/10', x0 + wA + 12 + wB / 2, 0, { font: fB, color: C.chalk, alpha: clamp(st * 6) })
+    c.restore()
+    txt(c, `HIT IN ${hits} OF HIS LAST 10`, 540, top + 690, { font: font(UI, 800, 36), color: C.chalk2, ls: 8, alpha: clamp(st * 3) })
+  }
+  // chart
+  const base = top + 1327.5
+  const unit = Math.min((1327.5 - 960) / P.line, 560 / Math.max(...P.games))
+  const lineY = base - P.line * unit
+  const bw = 62, gapW = 22, x0 = 182
+  for (let i = 0; i < 10; i++) {
+    const k = s.bars[i]
+    if (k <= 0) continue
+    const v = P.games[i]
+    const hgt = v * unit * E.outBack(k, 1.3)
+    const x = x0 + i * (bw + gapW)
+    const hit = P.side === 'o' ? v > P.line : v < P.line
+    const col = hit ? C.turf : C.flag
+    const g = c.createLinearGradient(0, base - hgt, 0, base)
+    g.addColorStop(0, col); g.addColorStop(1, hit ? 'rgba(47,212,122,0.25)' : 'rgba(255,90,90,0.25)')
+    c.save(); rr(c, x, base - Math.max(0, hgt), bw, Math.max(0, hgt), [14, 14, 4, 4]); c.fillStyle = g
+    if (hit) { c.shadowColor = 'rgba(47,212,122,0.55)'; c.shadowBlur = 26 * k }
+    c.fill(); c.restore()
+    txt(c, String(v), x + bw / 2, base - hgt - 18, { font: font(BIG, 800, 44), color: hit ? C.turf : C.flag, alpha: seg(k, 0.6, 1) })
+  }
+  c.save(); c.strokeStyle = 'rgba(117,131,154,0.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(80, base + 2); c.lineTo(1000, base + 2); c.stroke(); c.restore()
+  txt(c, 'LAST 10 GAMES', 100, base + 66, { font: font(UI, 800, 30), color: C.chalk3, align: 'left', ls: 8, alpha: s.header })
+  // the line, labeled
+  goldLine(c, 70, 1010, lineY, hero ? 1 : 0.9, 0.8)
+  pill(c, 112, lineY, String(P.line), { fill: C.gold, color: C.night, size: 30, ls: 1, alpha: s.header })
+  // projection
+  if (s.proj > 0) {
+    const py = base - P.proj * unit
+    const k = E.outCubic(s.proj)
+    c.save(); c.setLineDash([18, 14]); c.lineWidth = 4; c.strokeStyle = 'rgba(232,237,245,0.8)'
+    c.beginPath(); c.moveTo(70, py); c.lineTo(lerp(70, 1010, k), py); c.stroke(); c.restore()
+    pill(c, 1000, py - 42, `PROJ ${P.proj}`, { align: 'right', fill: 'rgba(232,237,245,0.95)', color: C.night, size: 30, alpha: seg(s.proj, 0.5, 1) })
+  }
+}
+
+function cardRing(c, P, cy, s) {
+  const top = cy - 960
+  txt(c, 'PROPIFY PROBABILITY', 540, top + 300, { font: font(UI, 800, 40), color: C.chalk2, ls: 12, alpha: s.ring > 0 ? 1 : 0 })
+  const ry = top + 900, R = 300
+  c.save(); c.lineWidth = 52; c.strokeStyle = 'rgba(42,60,92,0.7)'; c.beginPath(); c.arc(540, ry, R, 0, Math.PI * 2); c.stroke(); c.restore()
+  const k = E.outCubic(s.ring)
+  if (k > 0) {
+    const a1 = -Math.PI / 2, a2 = a1 + (Math.PI * 2 * P.prob * k) / 100
+    const g = c.createLinearGradient(240, ry - R, 840, ry + R)
+    g.addColorStop(0, '#fff1a1'); g.addColorStop(1, C.gold)
+    c.save(); c.lineCap = 'round'; c.lineWidth = 52; c.strokeStyle = g; c.shadowColor = 'rgba(252,216,0,0.7)'; c.shadowBlur = 50
+    c.beginPath(); c.arc(540, ry, R, a1, a2); c.stroke(); c.restore()
+    spark(c, 540 + R * Math.cos(a2), ry + R * Math.sin(a2), 90, 0.9 * (1 - seg(s.ring, 0.9, 1)) + 0.25)
+  }
+  const num = Math.round(P.prob * E.outCubic(s.ringNum))
+  const fN = font(BIG, 900, 290), fP = font(BIG, 900, 130)
+  const wN = measure(c, String(num), fN).width
+  txt(c, String(num), 540 - 40, ry + 100, { font: fN, color: C.chalk, alpha: s.ring > 0 ? 1 : 0 })
+  txt(c, '%', 540 - 40 + wN / 2 + 52, ry + 100, { font: fP, color: C.chalk2, alpha: s.ring > 0 ? 1 : 0 })
+  txt(c, P.pick, 540, ry + 170, { font: font(UI, 900, 40), color: C.gold, ls: 6, alpha: s.ring > 0 ? 1 : 0 })
+  const cap = E.outCubic(s.ringCap)
+  txt(c, `PROJECTED ${P.proj}  ·  LINE ${P.line}`, 540, top + 1400 + (1 - cap) * 30, { font: font(UI, 800, 38), color: C.chalk2, ls: 6, alpha: cap })
+  txt(c, 'Built from his game logs, minutes,', 540, top + 1490 + (1 - cap) * 30, { font: font(UI, 600, 40), color: C.chalk3, alpha: cap })
+  txt(c, 'the matchup and who’s out tonight.', 540, top + 1546 + (1 - cap) * 30, { font: font(UI, 600, 40), color: C.chalk3, alpha: cap })
+}
+
+function cardPrice(c, P, cy, s) {
+  const top = cy - 960
+  txt(c, 'BEST PRICE ACROSS THE BOOKS', 540, top + 300, { font: font(UI, 800, 38), color: C.chalk2, ls: 10, alpha: s.tiles[0] > 0 ? 1 : 0 })
+  const tw = 270, th = 210, gx = 30, x0 = 540 - (3 * tw + 2 * gx) / 2
+  for (let i = 0; i < 3; i++) {
+    const k = s.tiles[i]
+    if (k <= 0) continue
+    const yy = top + 400 + (1 - E.outBack(k, 1.4)) * 120
+    const x = x0 + i * (tw + gx)
+    const best = i === P.best
+    const b = best ? E.outCubic(s.best) : 0
+    c.save(); c.globalAlpha = clamp(k * 3)
+    rr(c, x, yy, tw, th, 30); c.fillStyle = best ? `rgba(252,216,0,${0.1 * b})` : 'rgba(28,43,69,0.85)'; c.fill()
+    c.lineWidth = 3 + 2 * b; c.strokeStyle = best && b > 0 ? `rgba(252,216,0,${b})` : 'rgba(70,96,140,0.5)'
+    if (best && b > 0) { c.shadowColor = 'rgba(252,216,0,0.6)'; c.shadowBlur = 40 * b }
+    c.stroke(); c.restore()
+    txt(c, P.prices[i], x + tw / 2, yy + 138, { font: font(BIG, 800, 118), color: best && b > 0.5 ? C.gold : C.chalk, alpha: clamp(k * 3) })
+    if (best && b > 0) pill(c, x + tw / 2, yy - 6, 'BEST', { fill: C.gold, color: C.night, size: 30, alpha: b })
+  }
+  const e = s.edge
+  if (e > 0) {
+    const val = (P.edge * E.outCubic(seg(e, 0, 0.8))).toFixed(1)
+    const sc = lerp(1.25, 1, E.outExpo(e))
+    txt(c, 'EDGE', 540, top + 800, { font: font(UI, 800, 40), color: C.chalk2, ls: 14, alpha: clamp(e * 4) })
+    c.save(); c.translate(540, top + 1080); c.scale(sc, sc)
+    txt(c, `+${val}`, 0, 0, { font: font(BIG, 900, 300), color: C.turf, alpha: clamp(e * 4), glow: 'rgba(47,212,122,0.5)', glowBlur: 50, chroma: kick(T, 14.0, 8) })
+    c.restore()
+    txt(c, 'points above the book’s price', 540, top + 1160, { font: font(UI, 600, 42), color: C.chalk3, alpha: clamp(e * 3) })
+  }
+  const m = E.outCubic(s.cmp)
+  if (m > 0) {
+    const rows = [['BOOK', P.book, 'rgba(117,131,154,0.9)'], ['PROPIFY', P.prob, C.gold]]
+    rows.forEach(([label, v, col], i) => {
+      const y = top + 1330 + i * 130
+      txt(c, label, 100, y + 14, { font: font(UI, 900, 34), color: i ? C.gold : C.chalk3, align: 'left', ls: 6, alpha: m })
+      c.save(); rr(c, 330, y - 22, 560, 44, 22); c.fillStyle = 'rgba(28,43,69,0.9)'; c.fill(); c.restore()
+      c.save(); rr(c, 330, y - 22, Math.max(44, 560 * (v / 100) * m), 44, 22); c.fillStyle = col
+      if (i) { c.shadowColor = 'rgba(252,216,0,0.6)'; c.shadowBlur = 30 }
+      c.fill(); c.restore()
+      txt(c, `${Math.round(v * m)}%`, 1000, y + 16, { font: font(BIG, 800, 54), color: i ? C.gold : C.chalk2, align: 'right', alpha: m })
+    })
+  }
+}
+
+function cardRead(c, P, cy, s) {
+  const top = cy - 960
+  const hd = s.verdictHead
+  // a small sparkle mark, then the header
+  if (hd > 0) { star(c, 300, top + 286, 40, hd * 0.9) }
+  txt(c, 'PROPIFY AI READ', 560, top + 300, { font: font(UI, 800, 40), color: C.chalk2, ls: 12, alpha: hd })
+  txt(c, 'VERDICT', 540, top + 470, { font: font(UI, 800, 36), color: C.chalk3, ls: 16, alpha: hd })
+  const v = s.verdict
+  if (v > 0) {
+    const sc = lerp(1.35, 1, E.outExpo(v))
+    c.save(); c.translate(540, top + 760); c.scale(sc, sc)
+    txt(c, P.verdict, 0, 0, { font: font(BIG, 900, 300), color: C.gold, ls: 6, alpha: clamp(v * 5), glow: 'rgba(252,216,0,0.55)', glowBlur: 60, chroma: kick(T, 15.45, 8) })
+    c.restore()
+  }
+  txt(c, `${P.pick} ${P.stat}`, 540, top + 860, { font: font(UI, 800, 46), color: C.chalk, ls: 4, alpha: s.pick })
+  c.save(); c.globalAlpha = s.pick * 0.6; c.strokeStyle = 'rgba(117,131,154,0.6)'; c.lineWidth = 2; c.beginPath(); c.moveTo(120, top + 940); c.lineTo(960, top + 940); c.stroke(); c.restore()
+  P.why.forEach((line, i) => {
+    const k = s.type[i]
+    if (k <= 0) return
+    const shown = line.slice(0, Math.round(line.length * k))
+    const y = top + 1060 + i * 112
+    c.save(); c.fillStyle = C.gold; c.beginPath(); c.arc(130, y - 15, 9, 0, Math.PI * 2); c.fill(); c.restore()
+    txt(c, shown, 168, y, { font: font(UI, 600, 48), color: C.chalk, align: 'left' })
+    if (k < 1 && Math.floor(T * 8) % 2 === 0) {
+      const w = measure(c, shown, font(UI, 600, 48)).width
+      c.save(); c.fillStyle = C.gold; c.fillRect(176 + w, y - 40, 5, 48); c.restore()
+    }
+  })
+  const st = s.stake
+  if (st > 0) {
+    txt(c, 'SOURCES', 540, top + 1440, { font: font(UI, 800, 32), color: C.chalk3, ls: 14, alpha: E.outCubic(seg(st, 0, 0.5)) })
+    const chips = ['GAME LOGS', 'INJURY REPORT', 'MATCHUP'], cf = font(UI, 900, 30)
+    const cw = chips.map((l) => measure(c, l, cf, 4).width + 56), gap = 20
+    let x = 540 - (cw.reduce((a, b) => a + b, 0) + gap * 2) / 2
+    chips.forEach((l, i) => {
+      const k = E.outBack(seg(st, i * 0.2, i * 0.2 + 0.55), 1.6)
+      if (k > 0) { c.save(); c.translate(x + cw[i] / 2, top + 1530); c.scale(k, k); pill(c, 0, 0, l, { stroke: 'rgba(170,181,199,0.55)', color: C.chalk2, size: 30, ls: 4, alpha: clamp(k) }); c.restore() }
+      x += cw[i] + gap
+    })
+  }
+}
+
+function column(c, P, dx, s, hero) {
+  c.save(); c.translate(dx, 0)
+  for (let i = 0; i < 4; i++) panel(c, CARD_Y[i], s.panel ?? 1)
+  cardChart(c, P, CARD_Y[0], s, hero)
+  cardRing(c, P, CARD_Y[1], s)
+  cardPrice(c, P, CARD_Y[2], s)
+  cardRead(c, P, CARD_Y[3], s)
+  c.restore()
+}
+
+function heroState(t) {
+  return {
+    panel: E.outCubic(seg(t, 8.0, 8.35)),
+    header: E.outCubic(seg(t, 8.05, 8.4)),
+    bars: Array.from({ length: 10 }, (_, i) => seg(t, 8.0 + i * 0.125, 8.0 + i * 0.125 + 0.38)),
+    stat: seg(t, 9.5, 9.95),
+    proj: seg(t, 9.95, 10.3),
+    ring: seg(t, 10.5, 11.7),
+    ringNum: seg(t, 10.5, 11.7),
+    ringCap: seg(t, 11.5, 11.9),
+    tiles: [0, 1, 2].map((i) => seg(t, 13.0 + i * 0.14, 13.0 + i * 0.14 + 0.4)),
+    best: seg(t, 13.62, 13.9),
+    edge: seg(t, 14.0, 14.6),
+    cmp: seg(t, 14.3, 14.85),
+    verdictHead: E.outCubic(seg(t, 15.25, 15.5)),
+    verdict: seg(t, 15.45, 15.85),
+    pick: E.outCubic(seg(t, 15.62, 15.9)),
+    type: [seg(t, 15.9, 16.35), seg(t, 16.35, 16.8), seg(t, 16.8, 17.15)],
+    stake: seg(t, 16.55, 17.15),
+  }
+}
+const WHIPS = [[10.18, 10.5, 0, 1], [12.68, 13.0, 1, 2], [14.93, 15.25, 2, 3]]
+function cam3(t) {
+  let y = CARD_Y[0]
+  for (const [a, b, i0, i1] of WHIPS) { if (t >= b) y = CARD_Y[i1]; else if (t > a) y = lerp(CARD_Y[i0], CARD_Y[i1], E.inOutExpo(seg(t, a, b))) }
+  let s = 1 + 0.035 * Math.sin((t - 8) * 0.9)
+  const po = E.inOutCubic(seg(t, 17.2, 17.95))
+  return { x: 540, y: lerp(y, 3960, po), s: lerp(s, 0.236, po) }
+}
+let T = 0
+function scene3(c, t) {
+  backdrop(c, t, { glow: 0.25 + 0.5 * kick(t, 8.0, 3), beams: 0.3, dust: 0.3 })
+  const cam = cam3(t)
+  c.save(); c.setTransform(cam.s, 0, 0, cam.s, W / 2 - cam.s * cam.x, H / 2 - cam.s * cam.y)
+  const po = seg(t, 17.2, 17.95)
+  if (po > 0) {
+    const cols = [[-2600, OTHERS[0]], [-1300, OTHERS[1]], [1300, OTHERS[2]], [2600, OTHERS[3]]]
+    for (const [dx, P] of cols) { c.save(); c.globalAlpha = 0.85 * clamp(po * 3); column(c, P, dx, DONE, false); c.restore() }
+  }
+  column(c, HERO_P, 0, heroState(t), true)
+  c.restore()
+  // the hero line carried over from the reel, fading into the card
+  if (t < 8.35) {
+    const k = seg(t, 8.0, 8.35)
+    goldLine(c, lerp(0, 70, k), lerp(W, 1010, k), LY, 1, 1.4 - k * 0.6)
+  }
+  // the pull-out caption, over the blur
+  const cap = E.outCubic(seg(t, 17.55, 17.8))
+  if (cap > 0) {
+    c = ov
+    const g = c.createLinearGradient(0, 640, 0, 1320)
+    g.addColorStop(0, 'rgba(5,10,20,0)'); g.addColorStop(0.5, `rgba(5,10,20,${0.86 * cap})`); g.addColorStop(1, 'rgba(5,10,20,0)')
+    c.fillStyle = g; c.fillRect(0, 640, W, 680)
+    c.save(); c.translate(CX, LY + 20); const sc = lerp(1.12, 1, E.outExpo(seg(t, 17.55, 17.9))); c.scale(sc, sc)
+    const cf = { font: font(BIG, 900, 180), color: C.chalk, ls: 3, alpha: cap, glow: 'rgba(0,0,0,0.6)', glowBlur: 30 }
+    txt(c, 'EVERY PROP.', 0, -18, cf)
+    txt(c, 'READ.', 0, 150, cf)
+    c.restore()
+  }
+}
+
+// =====================================================================================
+// 4. LIVE (18 to 24 s): the game is on, the count climbs past the line
+// =====================================================================================
+const STEPS = [[18.0, 22], [19.0, 23], [20.0, 24], [22.0, 26]]
+const BURST = (() => { const r = rng(42); return Array.from({ length: 110 }, () => ({ a: r() * Math.PI * 2, v: 300 + r() * 1300, life: 0.5 + r() * 1.0, w: 2 + r() * 4 })) })()
+function countAt(t) { let v = STEPS[0][1]; for (const [ti, n] of STEPS) if (t >= ti) v = n; return v }
+function scene4(c, t) {
+  const tension = seg(t, 20.5, 22.0)
+  backdrop(c, t, { glow: 0.35 + 0.4 * tension + 0.9 * kick(t, 22.0, 3), glowY: 1360, glowR: 1000, beams: 0.55 + 0.5 * tension, dust: 0.5 })
+  bars(c, t, 1.6)
+  const punch = 1 + 0.06 * kick(t, 22.0, 2.2) + 0.02 * tension
+  c.save(); c.translate(CX, 1150); c.scale(punch, punch); c.translate(-CX, -1150); c.translate(0, -LIVE_UP)
+  scene4Content(c, t, tension)
+  c.restore()
+  // into the last scene: the marker becomes the line, in frame space so it lands where scene 5 starts
+  if (t > 23.2) {
+    const k = E.inOutExpo(seg(t, 23.25, 24.0))
+    const sx = CX + (MARK_X - CX) * punch, sy = 1150 + (TRACK.y - LIVE_UP - 1150) * punch
+    const y = lerp(sy, LY, k), half = lerp(4, W / 2 + 40, k), x = lerp(sx, CX, k)
+    goldLine(c, x - half, x + half, y, 1, 1 + k)
+  }
+}
+const LIVE_UP = 60, TRACK = { x0: 110, x1: 970, y: 1370, max: 30 }
+const MARK_X = TRACK.x0 + ((TRACK.x1 - TRACK.x0) * 24.5) / TRACK.max
+function scene4Content(c, t, tension) {
+  const inK = E.outExpo(seg(t, 18.0, 18.4))
+  const outK = E.inCubic(seg(t, 23.15, 23.6))
+  const a = inK * (1 - outK)
+  // LIVE row
+  const blink = 0.55 + 0.45 * Math.cos((t - 18) * Math.PI * 2)
+  c.save(); c.globalAlpha = a; rr(c, CX - 300, 250, 250, 84, 42); c.fillStyle = 'rgba(255,90,90,0.14)'; c.fill(); c.lineWidth = 2; c.strokeStyle = 'rgba(255,90,90,0.6)'; c.stroke()
+  c.fillStyle = C.flag; c.globalAlpha = a * blink; c.shadowColor = C.flag; c.shadowBlur = 20; c.beginPath(); c.arc(CX - 250, 292, 13, 0, Math.PI * 2); c.fill(); c.restore()
+  txt(c, 'LIVE', CX - 160, 307, { font: font(UI, 900, 42), color: C.chalk, ls: 8, alpha: a })
+  const sec = 134 - Math.floor((t - 18) / 0.5) * 3
+  const clock = `Q4  ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+  txt(c, clock, CX + 170, 307, { font: font(UI, 800, 48), color: C.chalk2, ls: 4, alpha: a })
+  txt(c, 'A. MORALES', CX, 470, { font: font(UI, 800, 56), color: C.chalk, ls: 4, alpha: a })
+  txt(c, 'POINTS TONIGHT', CX, 530, { font: font(UI, 700, 34), color: C.chalk3, ls: 10, alpha: a })
+  // the counter, odometer style
+  const fC = font(BIG, 900, 620)
+  let prev = STEPS[0][1], cur = prev, tStep = 18.0
+  for (const [ti, n] of STEPS) if (t >= ti) { prev = cur; cur = n; tStep = ti }
+  const roll = E.outQuint(seg(t, tStep, tStep + 0.32))
+  const pulse = 1 + 0.035 * tension * Math.max(0, Math.sin((t - 20.5) * Math.PI * 4))
+  const cashed = t >= 22.0
+  // the counter rolls inside a window with soft top and bottom edges
+  odo.setTransform(1, 0, 0, 1, 0, 0); odo.globalAlpha = 1; odo.globalCompositeOperation = 'source-over'; odo.clearRect(0, 0, W, 695)
+  odo.save(); odo.translate(CX, 605)
+  if (roll < 1 && t > 18.2) txt(odo, String(prev), 0, -roll * 520, { font: fC, color: C.chalk, alpha: a * (1 - roll) })
+  txt(odo, String(cur), 0, (1 - roll) * 520 * (t > 18.2 ? 1 : 0), { font: fC, color: cashed ? C.gold : C.chalk, alpha: a, glow: cashed ? 'rgba(252,216,0,0.6)' : null, glowBlur: 70, chroma: kick(t, 22.0, 7) * 1.2 })
+  odo.restore()
+  odo.save(); odo.globalCompositeOperation = 'destination-in'
+  const fm = odo.createLinearGradient(0, 0, 0, 695)
+  fm.addColorStop(0, 'rgba(0,0,0,0)'); fm.addColorStop(0.086, '#000'); fm.addColorStop(0.885, '#000'); fm.addColorStop(1, 'rgba(0,0,0,0)')
+  odo.fillStyle = fm; odo.fillRect(0, 0, W, 695); odo.restore()
+  c.save(); c.translate(CX, 1150); c.scale(pulse, pulse); c.drawImage(odoCv, -CX, -605); c.restore()
+  // +n tag
+  if (t > 18.9) {
+    const gain = cur - prev, k = seg(t, tStep, tStep + 0.9)
+    if (k < 1 && gain > 0) txt(c, `+${gain}`, CX + 300, 760 - k * 80, { font: font(BIG, 900, 110), color: C.turf, alpha: a * (1 - k) * clamp(k * 8), glow: 'rgba(47,212,122,0.6)', glowBlur: 30 })
+  }
+  // progress toward the line
+  const { x0: tx0, x1: tx1, y: ty, max } = TRACK
+  const shown = lerp(prev, cur, roll)
+  const mx = tx0 + ((tx1 - tx0) * 24.5) / max
+  c.save(); c.globalAlpha = a; rr(c, tx0, ty - 14, tx1 - tx0, 28, 14); c.fillStyle = 'rgba(28,43,69,0.95)'; c.fill()
+  rr(c, tx0, ty - 14, ((tx1 - tx0) * shown) / max, 28, 14); c.fillStyle = cashed ? C.gold : C.turf; c.shadowColor = cashed ? 'rgba(252,216,0,0.8)' : 'rgba(47,212,122,0.6)'; c.shadowBlur = 30; c.fill(); c.restore()
+  // the line marker on the track
+  const mf = 1 + 2 * kick(t, 22.0, 5)
+  c.save(); c.globalAlpha = a; c.strokeStyle = cashed ? '#fff7c9' : C.gold; c.shadowColor = C.gold; c.shadowBlur = 30 * mf; c.lineWidth = 6; c.lineCap = 'round'
+  c.beginPath(); c.moveTo(mx, ty - 46); c.lineTo(mx, ty + 46); c.stroke(); c.restore()
+  txt(c, 'LINE 24.5', mx, ty - 70, { font: font(UI, 900, 32), color: C.gold, ls: 4, alpha: a })
+  // burst when it crosses
+  if (cashed && t < 23.6) {
+    const dt = t - 22.0
+    c.save(); c.globalCompositeOperation = 'lighter'
+    for (const p of BURST) {
+      if (dt > p.life) continue
+      const d = p.v * dt * (1 - dt / (p.life * 2)), x = mx + Math.cos(p.a) * d, y = ty + Math.sin(p.a) * d + 220 * dt * dt
+      const tail = p.v * 0.03
+      c.globalAlpha = (1 - dt / p.life) * a
+      c.strokeStyle = '#ffe680'; c.lineWidth = p.w; c.lineCap = 'round'
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x - Math.cos(p.a) * tail, y - Math.sin(p.a) * tail); c.stroke()
+    }
+    c.restore()
+    spark(c, mx, ty, 320, kick(t, 22.0, 4) * 1.4)
+    flare(c, mx, ty, 1.2 * kick(t, 22.0, 2.4), 1100)
+    // shockwave
+    const wk = seg(t, 22.0, 22.7)
+    if (wk < 1) {
+      c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = `rgba(255,236,150,${0.7 * (1 - wk)})`; c.lineWidth = 14 * (1 - wk) + 2
+      c.beginPath(); c.arc(mx, ty, 40 + E.outCubic(wk) * 900, 0, Math.PI * 2); c.stroke(); c.restore()
+    }
+  }
+  // CASHED
+  if (cashed) {
+    const k = seg(t, 22.0, 22.28)
+    const sc = lerp(2.4, 1, E.outBack(k, 1.2))
+    c.save(); c.translate(CX, 1620); c.rotate(-0.07); c.scale(sc, sc); c.globalAlpha = clamp(k * 4) * a
+    const f = font(BIG, 900, 190), m = measure(c, 'CASHED', f, 10)
+    rr(c, -m.width / 2 - 46, -170, m.width + 92, 210, 26); c.lineWidth = 10; c.strokeStyle = C.gold; c.shadowColor = 'rgba(252,216,0,0.8)'; c.shadowBlur = 50; c.stroke()
+    c.restore()
+    c.save(); c.translate(CX, 1620); c.rotate(-0.07); c.scale(sc, sc)
+    txt(c, 'CASHED', 0, 0, { font: font(BIG, 900, 190), color: C.gold, ls: 10, alpha: clamp(k * 4) * a, glow: 'rgba(252,216,0,0.7)', glowBlur: 50, chroma: kick(t, 22.0, 7) })
+    c.restore()
+  }
+  const cap = E.outCubic(seg(t, 22.55, 22.9)) * (1 - outK)
+  txt(c, 'Tracked live. Graded from the box score.', CX, 1760, { font: font(UI, 700, 44), color: C.chalk2, alpha: cap })
+}
+
+// =====================================================================================
+// 5. THE BRAND (24 to 30 s): the logo comes out of the line
+// =====================================================================================
+let WORD = null
+const BRAND_Y = 800
+const GOLDDUST = (() => { const r = rng(9); return Array.from({ length: 90 }, () => ({ x: r() * W, y: 300 + r() * 1500, s: 0.8 + r() * 2.6, v: 20 + r() * 60, ph: r() * 6.28 })) })()
+function scene5(c, t) {
+  const fadeOut = seg(t, 29.25, 30.0)
+  backdrop(c, t, { glow: 0.55 + 1.1 * kick(t, 24.0, 2.4), glowY: 820, glowR: 1050, beams: 0.45, dust: 0 })
+  floor(c, t, 0.7 * (1 - fadeOut), 1000)
+  rays(c, CX, lerp(LY, BRAND_Y, E.inOutCubic(seg(t, 24.95, 25.5))), E.outCubic(seg(t, 24.05, 24.9)) * (1 - fadeOut) * (1 + kick(t, 24.0, 3)), t)
+  // rising gold dust
+  c.save(); c.globalCompositeOperation = 'lighter'
+  for (const d of GOLDDUST) {
+    const life = t - 24
+    if (life < 0) continue
+    const y = d.y - life * d.v, x = d.x + Math.sin(life * 1.2 + d.ph) * 18
+    c.globalAlpha = 0.5 * clamp(life * 2) * (0.5 + 0.5 * Math.sin(t * 3 + d.ph)) * (1 - fadeOut)
+    c.fillStyle = '#ffe27a'; c.beginPath(); c.arc(x, y, d.s, 0, Math.PI * 2); c.fill()
+  }
+  c.restore()
+  const rise = E.inOutCubic(seg(t, 24.95, 25.5))
+  const cy = lerp(LY, BRAND_Y, rise)
+  const ww = 900, sc = ww / WORD.w, wh = WORD.h * sc
+  const rev = E.outExpo(seg(t, 24.0, 24.5))
+  // the line: full width, then it tightens under the word
+  const tight = E.inOutExpo(seg(t, 24.35, 24.95))
+  const lineY = lerp(cy, cy + wh / 2 + 40, tight)
+  const half = lerp(W / 2 + 40, ww / 2, tight)
+  goldLine(c, CX - half, CX + half, lineY, 1 - fadeOut, 1.2 + kick(t, 24.0, 4) * 2)
+  // the word, unfolding from the line
+  if (rev > 0) {
+    c.save()
+    c.beginPath(); c.rect(0, cy - (wh / 2) * rev - 2, W, wh * rev + 4); c.clip()
+    c.translate(CX - ww / 2, cy - wh / 2); c.scale(sc, sc)
+    const g = c.createLinearGradient(0, 0, 0, WORD.h)
+    g.addColorStop(0, '#ffe94d'); g.addColorStop(0.55, C.gold); g.addColorStop(1, '#efc200')
+    c.fillStyle = g; c.shadowColor = 'rgba(252,216,0,0.55)'; c.shadowBlur = 70 / sc * (1 + kick(t, 24.0, 3))
+    c.globalAlpha = 1 - fadeOut
+    c.fill(WORD.path)
+    // light sweep across the letters
+    const sw = seg(t, 24.55, 25.2)
+    if (sw > 0 && sw < 1) {
+      c.save(); c.clip(WORD.path); c.globalCompositeOperation = 'lighter'; c.shadowBlur = 0
+      const x = lerp(-260, WORD.w + 260, E.inOutCubic(sw))
+      const lg = c.createLinearGradient(x - 90, 0, x + 90, 0)
+      lg.addColorStop(0, 'rgba(255,255,255,0)'); lg.addColorStop(0.5, 'rgba(255,255,240,0.95)'); lg.addColorStop(1, 'rgba(255,255,255,0)')
+      c.fillStyle = lg; c.setTransform(c.getTransform().multiply(new DOMMatrix().skewXSelf(-18))); c.fillRect(-400, -20, WORD.w + 800, WORD.h + 40)
+      c.restore()
+    }
+    c.restore()
+  }
+  flare(c, CX, cy, 1.25 * kick(t, 24.0, 1.8), 1100)
+  flare(c, CX + ww / 2 - 40, cy - wh / 2 + 6, 0.7 * kick(t, 25.15, 3) * (t > 25.15 ? 1 : 0), 700)
+  star(c, CX + ww / 2 - 40, cy - wh / 2 + 6, 150, kick(t, 25.15, 3) * (t > 25.15 ? 1 : 0) * (1 - fadeOut))
+  // the tagline, one word a beat
+  const words = [['READ', 25.25], ['THE', 25.5], ['LINE.', 25.75]]
+  const tf = font(BIG, 900, 132)
+  const ws = words.map(([w]) => measure(c, w, tf, 6).width)
+  const total = ws.reduce((a, b) => a + b, 0) + 40 * 2
+  let x = CX - total / 2
+  words.forEach(([w, ti], i) => {
+    const k = seg(t, ti, ti + 0.06)
+    const pop = lerp(1.25, 1, E.outExpo(seg(t, ti, ti + 0.3)))
+    c.save(); c.translate(x + ws[i] / 2, 1050); c.scale(pop, pop)
+    txt(c, w, 0, 0, { font: tf, color: i === 2 ? C.gold : C.chalk, ls: 6, alpha: k * (1 - fadeOut), chroma: kick(t, ti, 10) * 0.8 })
+    c.restore()
+    x += ws[i] + 40
+  })
+  const d = E.outCubic(seg(t, 26.6, 27.1)) * (1 - fadeOut)
+  txt(c, 'Hit rates, real prices, AI reads and live', CX, 1150 + (1 - d) * 24, { font: font(UI, 600, 44), color: C.chalk2, alpha: d })
+  txt(c, 'tracking for every player prop.', CX, 1210 + (1 - d) * 24, { font: font(UI, 600, 44), color: C.chalk2, alpha: d })
+  const cta = E.outBack(seg(t, 27.6, 28.0), 1.4)
+  if (cta > 0) {
+    c.save(); c.translate(CX, 1340); c.scale(cta, cta)
+    pill(c, 0, 0, 'TRY IT FREE', { stroke: C.gold, color: C.gold, size: 46, ls: 10, alpha: clamp(cta) * (1 - fadeOut) })
+    c.restore()
+  }
+  const legal = E.outCubic(seg(t, 27.9, 28.35)) * (1 - fadeOut)
+  txt(c, '21+. Please bet responsibly.', CX, 1480, { font: font(UI, 600, 30), color: C.chalk3, alpha: legal })
+  txt(c, 'Gambling problem? Call 1-800-MY-RESET.', CX, 1524, { font: font(UI, 600, 30), color: C.chalk3, alpha: legal })
+  txt(c, 'Propify is a research tool, not a sportsbook.', CX, 1568, { font: font(UI, 600, 30), color: C.chalk3, alpha: legal })
+}
+
+// =====================================================================================
+// compositing: camera shake, motion blur on the whips, glitch, flashes, grain, vignette
+// =====================================================================================
+function camVel(t) {
+  if (t < 8 || t >= 18) return { vy: 0, vs: 0 }
+  const h = 1 / 480, a = cam3(t - h), b = cam3(t + h)
+  return { vy: ((b.y - a.y) / (2 * h)) * cam3(t).s, vs: (b.s - a.s) / (2 * h) }
+}
+function glitch(t) { return t >= 3.74 && t < 4.04 ? 1 - Math.abs((t - 3.89) / 0.15) : t >= 7.46 && t < 7.56 ? 0.6 : 0 }
+// Smear a picture along a camera move. Each pass doubles the copies, so p passes give 2^p - 1
+// evenly spaced taps (a box blur along the move) for 2p draws.
+function smear(src, dy, dz) {
+  const reach = Math.max(Math.abs(dy), 1100 * Math.abs(dz))
+  if (reach < 1.5) return null
+  const p = Math.min(7, Math.ceil(Math.log2(reach / 1.5 + 1)))
+  const taps = 2 ** p - 1
+  const d = dy / taps, lz = Math.log1p(dz) / taps
+  let from = src, cv = bA, c = bAc
+  for (let i = 0; i < p; i++) {
+    const m = 2 ** i, sc = Math.exp(lz * m)
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'copy'; c.globalAlpha = 1
+    c.drawImage(from, 0, 0)
+    c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.5
+    c.translate(CX, LY); c.scale(sc, sc); c.translate(-CX, -LY + (d * m) / sc)
+    c.drawImage(from, 0, 0)
+    from = cv
+    if (cv === bA) { cv = bB; c = bBc } else { cv = bA; c = bAc }
+  }
+  return { cv: from, zoom: Math.exp(lz * taps) }
+}
+
+/** One moment of the film, composed into frm: the scene, camera shake and smear, captions, flashes, fades. */
+function moment(t, dt) {
+  T = t; DT = dt
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0
+  ov.setTransform(1, 0, 0, 1, 0, 0); ov.clearRect(0, 0, W, H)
+  if (t < 4) scene1(ctx, t)
+  else if (t < 8) scene2(ctx, t)
+  else if (t < 18) scene3(ctx, t)
+  else if (t < 24) scene4(ctx, t)
+  else scene5(ctx, t)
+
+  const o = frm
+  o.setTransform(1, 0, 0, 1, 0, 0); o.globalAlpha = 1; o.globalCompositeOperation = 'source-over'
+  o.fillStyle = C.night; o.fillRect(0, 0, W, H)
+  const amp = impactAt(t) * 13
+  const sx = vnoise(t * 41) * amp, sy = vnoise(t * 47 + 100) * amp, sr = vnoise(t * 29 + 200) * amp * 0.0012
+  const over = 1.025
+  const { vy, vs } = camVel(t)
+  const s3 = t >= 8 && t < 18 ? cam3(t).s : 1
+  const dyS = -vy * dt, dzS = (vs * dt) / s3 // how far the picture moves and zooms during this moment
+  const sm = smear(sceneCv, dyS, dzS)
+  const zc = sm ? 1 / Math.sqrt(sm.zoom) : 1 // centre the smear on the moment
+  o.save(); o.translate(CX + sx, LY + sy); o.rotate(sr); o.scale(over * zc, over * zc); o.translate(-CX, -LY - (sm ? dyS / 2 : 0)); o.drawImage(sm ? sm.cv : sceneCv, 0, 0); o.restore()
+  o.save(); o.translate(CX + sx, LY + sy); o.rotate(sr); o.scale(over, over); o.translate(-CX, -LY); o.drawImage(ovCv, 0, 0); o.restore()
+  // flashes
+  const fl = FLASHES.reduce((a, [ti, s]) => (t >= ti ? a + s * Math.exp(-(t - ti) * 13) : a), 0)
+  if (fl > 0.003) { o.save(); o.globalCompositeOperation = 'lighter'; o.fillStyle = `rgba(255,248,225,${Math.min(0.8, fl)})`; o.fillRect(0, 0, W, H); o.restore() }
+  // fade from and to night
+  const black = Math.max(1 - seg(t, 0, 0.15), seg(t, 29.6, 30.0))
+  if (black > 0) { o.fillStyle = `rgba(5,10,20,${black})`; o.fillRect(0, 0, W, H) }
+}
+
+/** The finished frame on the visible canvas: glitch, vignette and grain, once per frame. */
+function finish(tf) {
+  out.setTransform(1, 0, 0, 1, 0, 0); out.globalAlpha = 1; out.globalCompositeOperation = 'copy'
+  out.drawImage(accCv, 0, 0)
+  out.globalCompositeOperation = 'source-over'
+  // glitch: slices and split color
+  const gl = glitch(tf)
+  if (gl > 0) {
+    tmp.setTransform(1, 0, 0, 1, 0, 0); tmp.globalCompositeOperation = 'copy'; tmp.globalAlpha = 1
+    tmp.drawImage(accCv, 0, 0); tmp.globalCompositeOperation = 'source-over'
+    const r = rng(Math.floor(tf * 90))
+    for (let i = 0; i < 14; i++) {
+      const y = r() * H, h = 20 + r() * 140, dx = (r() - 0.5) * 260 * gl
+      out.drawImage(tmpCv, 0, y, W, h, dx, y, W, h)
+    }
+    out.save(); out.globalCompositeOperation = 'lighter'; out.globalAlpha = 0.35 * gl
+    tmp.globalCompositeOperation = 'multiply'; tmp.fillStyle = '#ff1e5a'; tmp.fillRect(0, 0, W, H)
+    out.drawImage(tmpCv, -22 * gl, 0)
+    tmp.globalCompositeOperation = 'copy'; tmp.drawImage(accCv, 0, 0); tmp.globalCompositeOperation = 'multiply'; tmp.fillStyle = '#1edcff'; tmp.fillRect(0, 0, W, H)
+    out.drawImage(tmpCv, 22 * gl, 0)
+    out.restore()
+    tmp.globalCompositeOperation = 'source-over'
+  }
+  out.drawImage(vignette, 0, 0)
+  // film grain, 24 times a second
+  const gi = Math.floor(tf * 24)
+  out.save(); out.globalCompositeOperation = 'overlay'; out.globalAlpha = 0.16
+  const r = rng(gi + 5)
+  out.translate(-r() * 384, -r() * 384); out.fillStyle = out.createPattern(grains[gi % grains.length], 'repeat'); out.fillRect(0, 0, W + 384, H + 384)
+  out.restore()
+}
+
+/** Frame f of the film at FPS: S moments spread over a half-frame shutter, averaged. */
+function frameAt(f, S = 4, shutter = 0.5) {
+  const tf = f / FPS
+  acc.setTransform(1, 0, 0, 1, 0, 0); acc.globalCompositeOperation = 'source-over'
+  for (let k = 0; k < S; k++) {
+    const t = Math.max(0, tf + ((k + 0.5) / S - 0.5) * (shutter / FPS))
+    moment(t, shutter / (FPS * S))
+    acc.globalAlpha = 1 / (k + 1) // running mean: every moment weighs the same
+    acc.drawImage(frmCv, 0, 0)
+  }
+  acc.globalAlpha = 1
+  finish(tf)
+}
+
+// ---------- boot ----------
+window.ready = (async () => {
+  const wm = await (await fetch('wordmark.json')).json()
+  WORD = { ...wm, path: new Path2D(wm.d) }
+  await Promise.all([font(BIG, 900, 100), font(BIG, 800, 100), font(UI, 600, 40), font(UI, 700, 40), font(UI, 800, 40), font(UI, 900, 40)].map((f) => document.fonts.load(f)))
+  await document.fonts.ready
+  frameAt(0, 1)
+  return true
+})()
+// a still: one moment at time t
+window.renderAt = (t) => { moment(t, 1 / 240); acc.globalAlpha = 1; acc.globalCompositeOperation = 'copy'; acc.drawImage(frmCv, 0, 0); acc.globalCompositeOperation = 'source-over'; finish(t); return true }
+window.renderFrame = (f, S, shutter) => { frameAt(f, S, shutter); return true }
+</script>
+</body>
+</html>

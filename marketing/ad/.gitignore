@@ -1,0 +1,9 @@
+# rendered output: rebuild with render.py and audio.py
+frames/
+stills/
+check*/
+final/
+*.png
+*.wav
+*.mp4
+*.log
