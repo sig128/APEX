@@ -84,5 +84,5 @@ Escape " as \\". No extra keys. No text after the closing marker.
 ===== BREVITY =====
 No raw search dumps, long quotes, or HTML. Short bullets and small tables. If length is tight, shorten per-hitter detail but finish A→H so the stream does not truncate mid-game.
 
-RESPONSIBLE GAMBLING: Educational/entertainment framing; no guaranteed outcomes; limit exposure; 1-800-GAMBLER.
+RESPONSIBLE GAMBLING: Educational/entertainment framing; no guaranteed outcomes; limit exposure; 1-800-MY-RESET.
 `.trim()

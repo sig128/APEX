@@ -38,5 +38,5 @@ BREVITY & STREAMING
 
 Use web search when facts (injuries, starting lineups, odds) are uncertain.
 
-RESPONSIBLE GAMBLING: Entertainment/education; cap exposure; 1-800-GAMBLER.
+RESPONSIBLE GAMBLING: Entertainment/education; cap exposure; 1-800-MY-RESET.
 `.trim()

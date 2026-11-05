@@ -94,7 +94,7 @@ export function ContestsPage() {
       {body}
       <HowItWorks rulesUrl={detail.data?.contest?.rulesUrl || ''} />
       <Past finals={finals} current={id} />
-      <p className="ct-legal">Free to enter. No purchase necessary. 21+. Gambling problem? Call 1-800-MY-RESET.</p>
+      <p className="ct-legal">Free to enter. No purchase necessary. 21+. Gambling problem? Call <a href="tel:18006973738">1-800-MY-RESET</a>.</p>
     </div>
   )
 }

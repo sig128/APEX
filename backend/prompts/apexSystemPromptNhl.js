@@ -51,5 +51,5 @@ SECTION H — BET CARDS (mandatory end of reply)
 <<<END_APEX_BET_CARDS_JSON>>>
 Escape quotes in JSON strings as required. No text after closing marker.
 
-RESPONSIBLE GAMBLING: Educational/entertainment. No guarantees. 1-800-GAMBLER.
+RESPONSIBLE GAMBLING: Educational/entertainment. No guarantees. 1-800-MY-RESET.
 `.trim()

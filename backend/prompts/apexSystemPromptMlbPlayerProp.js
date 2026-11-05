@@ -83,5 +83,5 @@ BET CARDS RULES (CRITICAL FOR PARSING)
 BREVITY
 No raw search dumps or HTML. Finish A→H so the stream does not truncate.
 
-RESPONSIBLE GAMBLING: Educational/entertainment; no guaranteed outcomes; 1-800-GAMBLER.
+RESPONSIBLE GAMBLING: Educational/entertainment; no guaranteed outcomes; 1-800-MY-RESET.
 `.trim()

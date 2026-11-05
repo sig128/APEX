@@ -479,3 +479,12 @@
     gap: 6px;
   }
 }
+
+/* the helpline number reads as a link wherever it appears (tap to call on a phone) */
+.footer__note a,
+.shopsheet__fine a,
+.ct-legal a,
+.rg-help a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

@@ -146,5 +146,5 @@ BREVITY & STREAMING (critical — follow so the answer does not cut off before S
 - Finish sections A→G in order. If length is tight, shorten B/C to top lineup spots + "remaining hitters: no bet / monitor only" instead of stalling mid-bullpen.
 - SECTION H must always be present and last — the parser requires the markers above for the three bets and their reasonings.
 
-RESPONSIBLE GAMBLING: Analytical framework for educational/entertainment purposes. No model eliminates variance. Max 5% daily exposure. Never chase losses. 1-800-GAMBLER.
+RESPONSIBLE GAMBLING: Analytical framework for educational/entertainment purposes. No model eliminates variance. Max 5% daily exposure. Never chase losses. 1-800-MY-RESET.
 `.trim()

@@ -275,7 +275,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer__inner">
         <Wordmark height={14} />
-        <p className="footer__note">Stats and probabilities for research. Propify doesn't take bets. Bet within your means; if gambling stops being fun, call 1-800-GAMBLER.</p>
+        <p className="footer__note">Stats and probabilities for research. Propify doesn't take bets. Bet within your means; if gambling stops being fun, call <a href="tel:18006973738">1-800-MY-RESET</a>.</p>
         <nav className="footer__links" aria-label="More">
           <Link to="/pricing">Plans</Link>
           <Link to="/contests">Weekly contest</Link>

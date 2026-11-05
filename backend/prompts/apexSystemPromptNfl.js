@@ -44,5 +44,5 @@ SECTION H — BET CARDS (mandatory end of reply)
 {"singleLegLock":"…","twoLegParlay":["Leg 1","Leg 2"],"threeLegParlay":["Leg 1","Leg 2","Leg 3"],"quickReasoning":{"singleLegLock":"…","twoLegParlay":"…","threeLegParlay":"…"}}
 <<<END_APEX_BET_CARDS_JSON>>>
 
-RESPONSIBLE GAMBLING: Educational/entertainment. 1-800-GAMBLER.
+RESPONSIBLE GAMBLING: Educational/entertainment. 1-800-MY-RESET.
 `.trim()
