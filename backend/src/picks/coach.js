@@ -207,10 +207,23 @@ export function coach(picks, { now = Date.now(), tz = 'America/New_York' } = {})
     }
   }
   const made = all.filter((p) => (p.createdAt || 0) >= weekAgo).length
+  // CLV week by week (weeks ending now), the last 12 weeks that have any
+  const weeks = new Map()
+  for (const p of decided) {
+    if (!Number.isFinite(p.clv) || !p.gradedAt) continue
+    const k = Math.floor((now - p.gradedAt) / (7 * DAY_MS))
+    if (k < 0 || k >= 12) continue
+    const w = weeks.get(k) || { sum: 0, n: 0 }
+    w.sum += p.clv
+    w.n++
+    weeks.set(k, w)
+  }
+  const clvTrend = [...weeks.entries()].sort((a, b) => b[0] - a[0]).map(([k, w]) => ({ weeksAgo: k, end: now - k * 7 * DAY_MS, avg: round(w.sum / w.n, 4), n: w.n }))
   return {
     threshold: THRESHOLD,
     decided: decided.length,
     week: { ...view(wk), made, clv: clvN ? round(clvSum / clvN, 4) : null, picks: wk.ids },
+    clvTrend,
     insights,
   }
 }

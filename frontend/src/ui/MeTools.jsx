@@ -99,6 +99,7 @@ export function CoachCard() {
           <dd className="num">{clvText(w.clv)}</dd>
         </div>
       </dl>
+      {data.clvTrend?.length >= 2 && <ClvTrend weeks={data.clvTrend} />}
       {!data.insights.length ? (
         <p className="muted small">
           Nothing to flag. A pattern shows up here once each group it compares has at least {data.threshold} graded picks.
@@ -132,6 +133,34 @@ export function CoachCard() {
         </ul>
       )}
     </section>
+  )
+}
+
+/** Average CLV week by week: bars above the line beat the close, below trailed it. */
+function ClvTrend({ weeks }) {
+  const w = 300
+  const h = 90
+  const pad = 14
+  const max = Math.max(0.02, ...weeks.map((x) => Math.abs(x.avg)))
+  const bw = (w - pad * 2) / 12
+  const y0 = h / 2
+  const label = weeks.map((x) => `${x.weeksAgo === 0 ? 'This week' : `${x.weeksAgo} wk ago`}: ${clvText(x.avg)} over ${x.n}`).join('; ')
+  return (
+    <figure className="clv-trend">
+      <figcaption className="small muted">Average CLV by week, last 12 weeks</figcaption>
+      <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label}>
+        <line x1={pad} x2={w - pad} y1={y0} y2={y0} className="clv-trend__zero" />
+        {weeks.map((x) => {
+          const i = 11 - x.weeksAgo
+          const bh = Math.max(1.5, (Math.abs(x.avg) / max) * (h / 2 - 6))
+          return (
+            <rect key={x.weeksAgo} x={pad + i * bw + 2} width={bw - 4} y={x.avg >= 0 ? y0 - bh : y0} height={bh} rx="2" className={x.avg >= 0 ? 'is-plus' : 'is-minus'}>
+              <title>{`${x.weeksAgo === 0 ? 'This week' : `${x.weeksAgo} ${x.weeksAgo === 1 ? 'week' : 'weeks'} ago`}: ${clvText(x.avg)} average over ${x.n} ${x.n === 1 ? 'pick' : 'picks'}`}</title>
+            </rect>
+          )
+        })}
+      </svg>
+    </figure>
   )
 }
 

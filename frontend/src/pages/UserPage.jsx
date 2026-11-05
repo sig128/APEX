@@ -91,10 +91,16 @@ export function UserPage() {
         </div>
       </header>
       {prof.record ? (
+        <>
+        <p className="verified-note">
+          <span className="verified-badge">Verified record</span>
+          Every pick was posted before kickoff at a sportsbook’s posted price, can’t be edited, and was graded from the box score.
+        </p>
         <div className="records">
           <RecordPanel title="Last 30 days" r={prof.record.d30} />
           <RecordPanel title="All time" r={prof.record.all} />
         </div>
+        </>
       ) : (
         <p className="muted">No graded picks yet. The record starts with the first pick that finishes.</p>
       )}
