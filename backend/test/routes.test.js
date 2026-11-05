@@ -372,7 +372,7 @@ test('picks: pages for everyone, showcase for Elite', async () => {
   assert.ok(feed.body.picks.every((p) => p.profile.elite), 'the feed is Elite only')
   const board = await api.get('/api/picks/leaderboard?range=all')
   assert.equal(board.status, 200)
-  assert.equal(board.body.min, 5)
+  assert.equal(board.body.min, 20, 'a real sample before anyone ranks')
   // tailing: counted once per person while the pick is open
   const pid = post.body.picks[0].id
   const t1 = await api.post(`/api/picks/${pid}/tail`, {}, { headers: bearer('u_free') })

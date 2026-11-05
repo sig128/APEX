@@ -8,7 +8,7 @@ import { ApiError } from '../src/lib/router.js'
 import { DAY_MS } from '../src/billing/config.js'
 import { fullEngine, clock, withEnv, TREASURY, fakeChain } from './support.js'
 
-const restoreEnv = withEnv({ APEX_TREASURY_ADDRESS: TREASURY, APEX_PAYWALL: null, APEX_USAGE_TZ: 'America/New_York', K_SERVICE: null })
+const restoreEnv = withEnv({ APEX_TREASURY_ADDRESS: TREASURY, APEX_PAYWALL: null, APEX_USAGE_TZ: 'America/New_York', K_SERVICE: null, APEX_BOARD_MIN: '5' })
 after(() => restoreEnv())
 
 async function rejectsWith(p, code) {

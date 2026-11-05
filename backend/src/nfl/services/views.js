@@ -10,6 +10,7 @@ import { injurySeverity } from '../../providers/espn/normalize.js'
 import { progressFor as progressAt, boxLeaders, winCurve } from './live.js'
 import { nameKey, round, mean, median } from '../../lib/util.js'
 import { findLock } from '../analytics/lock.js'
+import { absences, returnRule, statusTag, returnRecord } from '../analytics/availability.js'
 
 export function createViews(engine) {
   const wh = engine.wh
@@ -38,6 +39,21 @@ export function createViews(engine) {
       return { players: wh.players, logs: wh.logs, dvp, injuriesByTeam, prices: wh.priceMap ? wh.priceMap() : wh.prices, season, lastSeason: season - 1, teamAbbr: wh.teamAbbr, fam, sport: S.key }
     })
   }
+
+  /** Injury status and absences for one player: { tag, abs } (tag null when nothing to say). */
+  function availability(playerId) {
+    if (!playerId) return null
+    return cached(`avail:${playerId}`, wh.aVersion, () => {
+      const p = wh.players.get(String(playerId))
+      if (!p) return null
+      const sched = wh.schedules.get(p.teamId)?.games || []
+      const meta = wh.logMeta.get(p.id) || {}
+      const asOf = Math.max(0, ...Object.values(meta).filter(Number.isFinite))
+      const abs = absences({ schedule: sched, log: wh.logs.get(p.id) || [], rule: returnRule(S.family, p.pos), asOf: asOf || Infinity })
+      return { tag: statusTag(wh.injuryOf(p.id), abs), abs }
+    })
+  }
+  const statusOf = (playerId) => availability(playerId)?.tag || null
 
   function gameForTeam(teamId) {
     for (const g of wh.games.values()) if (g.home?.id === teamId || g.away?.id === teamId) return g
@@ -159,6 +175,7 @@ export function createViews(engine) {
       spark: r.recent.slice(-10).map((x) => [x.v, x.o === 'hit' ? 1 : x.o === 'push' ? 2 : 0]),
       move: r.move,
       boost: r.boost ? { short: r.boost.short, lift: r.boost.lift } : null,
+      inj: r.playerId ? statusOf(r.playerId) : null,
       matchupRank: r.matchup?.rank ?? null,
       price: r.price ? { over: r.price.over, under: r.price.under, yes: r.price.yes, book: r.price.book } : null,
       // line shopping: the best price on this side, and where
@@ -455,6 +472,18 @@ export function createViews(engine) {
     })
   }
 
+  /** Every board player's status, for alerts on open picks: Map playerId -> tag. */
+  function statuses(ids) {
+    const out = new Map()
+    for (const id of ids) {
+      const t = statusOf(id)
+      const inj = wh.injuryOf(id)
+      // players off the board (ruled out) still need their report status
+      out.set(String(id), t || (inj?.status ? { tag: inj.severity || 'other', label: inj.status, status: inj.status, detail: inj.detail || null } : null))
+    }
+    return out
+  }
+
   function prop(id) {
     const row = findProp(id)
     if (!row) return null
@@ -466,10 +495,13 @@ export function createViews(engine) {
       .filter(Boolean)
       .map((r) => ({ id: r.id, line: r.line, prob: r.prob, fair: r.fair, score: r.score }))
     const injury = row.playerId ? wh.injuryOf(row.playerId) : null
+    const av = row.playerId ? availability(row.playerId) : null
     return {
       prop: row,
       game: g ? gameCard(g) : null,
       injury,
+      status: av?.tag || null,
+      returning: av ? returnRecord(av.abs.returns, { market: row.market, line: row.line, side: row.side === 'u' ? 'u' : 'o' }) : null,
       others: others.slice(0, 12).map(card),
       alts: altRows,
       live: g && g.status.state !== 'pre' ? progressFor(row, g, wh.summaries.get(g.id)?.data) : null,
@@ -490,6 +522,7 @@ export function createViews(engine) {
       return {
         player: { id: p.id, name: p.name, short: p.short, pos: p.pos, jersey: p.jersey, headshot: p.headshot, teamId: p.teamId, team: team && { id: team.id, abbr: team.abbr, name: team.name, logo: team.logo, color: team.color } },
         injury: wh.injuryOf(p.id),
+        status: statusOf(p.id),
         next: g ? gameCard(g) : null,
         props: rows.map(card),
         markets: [...markets],
@@ -631,5 +664,5 @@ export function createViews(engine) {
     })
   }
 
-  return { ctx, allRows, strip, home, props, game, liveGame, live, trackerDiff, track, findProp, prop, player, search, dvp, rankings, teamProps, propContext, card, lockRows, lock, h2h }
+  return { ctx, allRows, strip, home, props, game, liveGame, live, trackerDiff, track, findProp, prop, player, search, dvp, rankings, teamProps, propContext, card, lockRows, lock, h2h, statusOf, statuses }
 }

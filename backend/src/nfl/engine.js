@@ -121,7 +121,7 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
       else if (g.status.state === 'post' && (!s || s.data?.status?.state !== 'post')) todo.push([g, 'normal'])
       else if (g.status.state === 'pre') {
         const until = Date.parse(g.date) - t
-        const maxAge = until < 3 * HOUR ? 10 * MIN : until < 36 * HOUR ? 30 * MIN : 3 * HOUR
+        const maxAge = until < 3 * HOUR ? 5 * MIN : until < 36 * HOUR ? 30 * MIN : 3 * HOUR
         if (ageMs > maxAge) todo.push([g, 'background'])
       }
     }

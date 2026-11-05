@@ -8,14 +8,36 @@ import { americanToDecimal, decimalToAmerican } from '../lib/odds.js'
 import { dayKey, atLeast, LIFETIME } from '../billing/service.js'
 import { billingConfig, DAY_MS } from '../billing/config.js'
 import { log, errText } from '../lib/log.js'
-import { round } from '../lib/util.js'
+import { round, envInt } from '../lib/util.js'
+import { closeSnap, sameClose, legClv, pickClv } from './clv.js'
+import { coach as coachOf } from './coach.js'
+import { cleanLimits, nextLimits, effectiveLimits, pauseError, pausedUntil, checkLimits, tiltCheck, netWeek, COOL_DAYS, EXCLUDE_MONTHS } from './rg.js'
+import { liveChance, slipChance } from './live.js'
 
 export const HANDLE_RE = /^[a-z0-9_]{3,20}$/
 const RESERVED = new Set(['admin', 'apex', 'api', 'me', 'nfl', 'nba', 'mlb', 'nhl', 'ncaaf', 'ncaab', 'wnba', 'lock', 'tools', 'props', 'live', 'pricing', 'account', 'login', 'support', 'help', 'settings', 'picks', 'feed', 'leaderboard', 'kelly', 'slip', 'null', 'undefined', 'root', 'staff', 'mod', 'moderator', 'official'])
 const MAX_LEGS = 6
 const PICKS_PER_DAY = 20
 const DEFAULT_PRICE = -110
-const MIN_GRADED_FOR_BOARD = 5
+// graded picks (wins and losses) before someone shows on the leaderboard
+const boardMin = () => envInt('APEX_BOARD_MIN', 20, { min: 1, max: 1000 })
+const HOUR_MS = 3600_000
+// open picks get their closing prices watched this long before their game
+const CLOSE_WATCH_MS = 2 * HOUR_MS
+// and their players' injury status this long before
+const INJURY_WATCH_MS = 36 * HOUR_MS
+// injury-report statuses that alert (a "Returning" badge comes and goes with logs, so it doesn't)
+const REPORT_TAGS = new Set(['out', 'doubtful', 'questionable', 'daytoday', 'probable'])
+const TZ_RE = /^[A-Za-z][A-Za-z0-9_+\-]{1,30}(\/[A-Za-z0-9_+\-]{1,30}){0,2}$/
+function cleanTz(v) {
+  if (typeof v !== 'string' || !TZ_RE.test(v)) return null
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: v })
+    return v
+  } catch {
+    return null
+  }
+}
 const VOID_AFTER_MS = 18 * 3600_000
 const HANDLE_CHANGE_MS = 7 * DAY_MS
 
@@ -115,7 +137,7 @@ export function recordOf(picks) {
 
 // Running totals kept on the profile, updated in the same transaction that grades a pick, so
 // a record never misses or double-counts a pick however many picks someone has posted.
-const bucket = () => ({ wins: 0, losses: 0, pushes: 0, voids: 0, units: 0, risked: 0 })
+const bucket = () => ({ wins: 0, losses: 0, pushes: 0, voids: 0, units: 0, risked: 0, clvSum: 0, clvN: 0 })
 const KEEP_DAYS = 40
 
 function addPick(b, pick) {
@@ -126,6 +148,10 @@ function addPick(b, pick) {
   else x.voids++
   if (pick.result === 'win' || pick.result === 'loss') x.risked = round(x.risked + pick.units, 2)
   x.units = round(x.units + (pick.profit || 0), 2)
+  if (Number.isFinite(pick.clv) && (pick.result === 'win' || pick.result === 'loss')) {
+    x.clvSum = round((x.clvSum || 0) + pick.clv, 4)
+    x.clvN = (x.clvN || 0) + 1
+  }
   return x
 }
 
@@ -149,7 +175,7 @@ function recordView(b, recent) {
     else if (streak[0] === c) streak += c
     else break
   }
-  return { wins: x.wins, losses: x.losses, pushes: x.pushes, voids: x.voids, units: round(x.units, 2), graded, roi: x.risked ? round(x.units / x.risked, 4) : null, hitRate: graded ? round(x.wins / graded, 4) : null, streak: streak ? `${streak[0]}${streak.length}` : null, last10: recent.slice(0, 10) }
+  return { wins: x.wins, losses: x.losses, pushes: x.pushes, voids: x.voids, units: round(x.units, 2), graded, roi: x.risked ? round(x.units / x.risked, 4) : null, hitRate: graded ? round(x.wins / graded, 4) : null, clv: x.clvN ? round(x.clvSum / x.clvN, 4) : null, clvN: x.clvN || 0, streak: streak ? `${streak[0]}${streak.length}` : null, last10: recent.slice(0, 10) }
 }
 
 /** The public record (all time and the last 30 days) from the running totals. */
@@ -159,7 +185,7 @@ export function recordFromStats(stats, t, tz) {
   let d30 = bucket()
   for (const [day, b] of Object.entries(stats.days || {})) {
     if (day < from) continue
-    d30 = { wins: d30.wins + b.wins, losses: d30.losses + b.losses, pushes: d30.pushes + b.pushes, voids: d30.voids + b.voids, units: round(d30.units + b.units, 2), risked: round(d30.risked + b.risked, 2) }
+    d30 = { wins: d30.wins + b.wins, losses: d30.losses + b.losses, pushes: d30.pushes + b.pushes, voids: d30.voids + b.voids, units: round(d30.units + b.units, 2), risked: round(d30.risked + b.risked, 2), clvSum: round((d30.clvSum || 0) + (b.clvSum || 0), 4), clvN: (d30.clvN || 0) + (b.clvN || 0) }
   }
   const recent = stats.recent || []
   return { all: recordView(stats.all, recent), d30: recordView(d30, recent) }
@@ -246,9 +272,16 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     }
   }
 
-  function publicPick(p) {
+  /** A pick for pages and the feed. Subscriber picks hide their legs from others until kickoff. */
+  function publicPick(p, { canSee = true } = {}) {
+    const hide = Boolean(p.subs) && !canSee && now() < p.lockAt
+    if (hide) {
+      return { id: p.id, handle: p.handle, createdAt: p.createdAt, lockAt: p.lockAt, locked: false, status: p.status, result: null, units: p.units, price: null, profit: null, note: '', tails: p.tails || 0, subs: true, hidden: true, legCount: p.legs.length, legs: [] }
+    }
     return {
       id: p.id,
+      subs: Boolean(p.subs),
+      clv: Number.isFinite(p.clv) ? p.clv : null,
       handle: p.handle,
       createdAt: p.createdAt,
       lockAt: p.lockAt,
@@ -260,7 +293,37 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
       profit: p.profit ?? null,
       note: p.note || '',
       tails: p.tails || 0,
-      legs: p.legs.map((l) => ({ id: l.id, sport: l.sport || 'nfl', playerId: l.playerId || null, teamId: l.teamId || null, name: l.name, short: l.short, headshot: l.headshot || null, teamAbbr: l.teamAbbr, oppAbbr: l.oppAbbr, market: l.market, label: l.label, line: l.line, side: l.side, kickoff: l.kickoff, price: l.price, book: l.book || null, prob: l.prob, fair: l.fair, score: l.score, result: l.result || null, value: l.value ?? null, gameId: l.gameId })),
+      legs: p.legs.map(publicLeg),
+    }
+  }
+
+  function publicLeg(l) {
+    return {
+      id: l.id,
+      sport: l.sport || 'nfl',
+      playerId: l.playerId || null,
+      teamId: l.teamId || null,
+      name: l.name,
+      short: l.short,
+      headshot: l.headshot || null,
+      teamAbbr: l.teamAbbr,
+      oppAbbr: l.oppAbbr,
+      market: l.market,
+      label: l.label,
+      line: l.line,
+      side: l.side,
+      kickoff: l.kickoff,
+      price: l.price,
+      book: l.book || null,
+      prob: l.prob,
+      fair: l.fair,
+      score: l.score,
+      result: l.result || null,
+      value: l.value ?? null,
+      gameId: l.gameId,
+      inj: l.inj || null,
+      close: l.close ? { price: l.close.price, line: l.close.line, at: l.close.at } : null,
+      clv: Number.isFinite(l.clv) ? l.clv : null,
     }
   }
 
@@ -341,6 +404,12 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     if (!parsed) throw new ApiError(400, 'bad_leg', 'One of those props is not valid.')
     const mk = marketOf(parsed.market)
     if (mk?.oneSided && parsed.side !== 'o') throw new ApiError(400, 'bad_leg', `${mk.label} only has a yes side.`)
+    // a player ruled out on the injury report can't go on a record (the board drops him too)
+    const inj = parsed.playerId ? eng.wh.injuryOf?.(parsed.playerId) : null
+    if (inj?.severity === 'out') {
+      const who = eng.wh.players.get(String(parsed.playerId))?.name || 'This player'
+      throw new ApiError(409, 'player_out', `${who} is listed ${inj.status || 'out'} on the injury report, so this leg can’t go on a record.`)
+    }
     const row = eng.views.findProp(parsed.id)
     if (!row) throw new ApiError(404, 'no_prop', 'That prop is not on the board anymore.')
     const g = row.gameId ? eng.wh.games.get(row.gameId) : null
@@ -380,7 +449,15 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
       prob: row.prob,
       fair: row.fair,
       score: row.score,
+      inj: injTag(eng, row.playerId),
     }
+  }
+
+  /** The leg's player status as stored on a pick: { tag, label } or null. */
+  function injTag(eng, playerId) {
+    if (!playerId || !eng?.views?.statusOf) return null
+    const t = eng.views.statusOf(playerId)
+    return t ? { tag: t.tag, label: t.label } : null
   }
 
   /** Every leg checked, so the slip can show all the problems at once. */
@@ -401,8 +478,12 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
   /** Which of these legs could go on a record right now (the post dialog asks before posting). */
   function check(body = {}) {
     const ids = Array.isArray(body.legs) ? [...new Set(body.legs.map(String))].slice(0, MAX_LEGS) : []
-    const { problems } = legsFrom(ids)
-    return { ok: problems.length === 0, legs: problems.map(({ id, code, error }) => ({ id, code, error })) }
+    const { legs, problems } = legsFrom(ids)
+    // not blocking: players on the injury report or just back from an absence
+    const warnings = legs
+      .filter((l) => l.inj && l.inj.tag !== 'probable')
+      .map((l) => ({ id: l.sport === 'nfl' ? l.id : `${l.sport}:${l.id}`, tag: l.inj.tag, label: l.inj.label, text: l.inj.tag === 'returning' ? `${l.short || l.name} is just back from an absence.` : `${l.short || l.name} is ${l.inj.label.toLowerCase()} on the injury report.` }))
+    return { ok: problems.length === 0, legs: problems.map(({ id, code, error }) => ({ id, code, error })), warnings }
   }
 
   async function post(user, body = {}) {
@@ -424,8 +505,27 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     const units = Math.min(10, Math.max(0.1, Math.round((Number(body.units) || 1) * 10) / 10))
     const note = cleanText(body.note, 280)
     const t = now()
-    const day = dayKey(t, billingConfig().usageTz)
+    const tz = billingConfig().usageTz
+    const day = dayKey(t, tz)
     const groups = separate ? legs.map((l) => [l]) : [legs]
+    // responsible betting: a break or exclusion stops posting; limits and the tilt check apply
+    const rg = await d.get('rg', user.uid)
+    const paused = pauseError(rg, t)
+    if (paused) throw paused
+    const limits = effectiveLimits(rg, t)
+    if (Object.values(limits).some((v) => v != null)) {
+      const days = [...new Set(Array.from({ length: 7 }, (_, i) => dayKey(t - i * DAY_MS, tz)))]
+      const usages = await Promise.all(days.map((k) => d.get('pickUsage', `${user.uid}_${k}`)))
+      const today = usages[0] || {}
+      checkLimits(limits, { picksToday: today.n || 0, unitsToday: today.units || 0, unitsWeek: usages.reduce((s, u) => s + (u?.units || 0), 0), netWeek: netWeek(prof.stats, days[days.length - 1]) }, { picks: groups.length, units: units * groups.length })
+    }
+    const tilt = tiltCheck(prof.stats, units)
+    if (tilt && body.ackTilt !== true) {
+      throw new ApiError(409, 'tilt', `You've lost ${tilt.streak} in a row and this stake is ${tilt.ratio}× your usual ${tilt.usual} units. Post it anyway, or take a break?`, { tilt })
+    }
+    const subs = body.subs === true
+    if (subs && !isElite(prof, t)) throw new ApiError(403, 'upgrade', 'Subscriber picks come with Elite.')
+    const pickTz = cleanTz(body.tz)
     const made = await d.tx(async (tx) => {
       const usage = (await tx.get('pickUsage', `${user.uid}_${day}`)) || { n: 0, keys: [] }
       if (usage.n + groups.length > PICKS_PER_DAY) throw new ApiError(429, 'pick_limit', `You can post ${PICKS_PER_DAY} picks a day.`)
@@ -450,11 +550,13 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
           legs: g,
           elite: isElite(prof, t),
           hidden: Boolean(prof.hidden),
+          subs,
+          ...(pickTz ? { tz: pickTz } : {}),
         }
         tx.set('picks', pick.id, pick)
         out.push(pick)
       }
-      tx.set('pickUsage', `${user.uid}_${day}`, { n: usage.n + groups.length, keys: [...keys].slice(-200), updatedAt: t })
+      tx.set('pickUsage', `${user.uid}_${day}`, { n: usage.n + groups.length, units: round((usage.units || 0) + units * groups.length, 2), keys: [...keys].slice(-200), updatedAt: t })
       return out
     })
     bust()
@@ -476,8 +578,14 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
    * Tail a pick: count it once per person (signed-in uid, or a hash of the address for guests)
    * while it's still open. The legs go onto the tailer's own slip in the browser.
    */
-  async function tail(id, who) {
+  async function tail(id, who, viewer = null) {
     if (typeof id !== 'string' || !/^pk_[0-9a-f]{20}$/.test(id)) throw new ApiError(404, 'not_found', 'No such pick.')
+    if (viewer?.uid) {
+      const paused = pauseError(await d.get('rg', viewer.uid), now())
+      if (paused) throw paused
+    }
+    const head = await d.get('picks', id)
+    if (head?.subs && !(await canSeePick(head, viewer))) throw new ApiError(403, 'subscribers', 'This pick is for subscribers.')
     const key = crypto.createHash('sha256').update(`${id}|${who}`).digest('hex').slice(0, 32)
     const out = await d.tx(async (tx) => {
       const p = await tx.get('picks', id)
@@ -515,7 +623,9 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     const list = await picksOf(owner.uid, { limit: 30, before })
     const open = list.filter((p) => p.status === 'open')
     const history = list.filter((p) => p.status === 'graded')
-    return { profile: publicProfile(prof), owner: isOwner, open: open.map(publicPick), history: history.map(publicPick), next: list.length === 30 ? list[list.length - 1].createdAt : null }
+    const canSee = isOwner || Boolean(viewer?.admin) || (open.some((p) => p.subs) && viewer?.uid ? await isSubscriber(owner.uid, viewer.uid) : false)
+    const show = (p) => publicPick(p, { canSee })
+    return { profile: publicProfile(prof), owner: isOwner, subscriber: !isOwner && canSee && !viewer?.admin, open: open.map(show), history: history.map(show), next: list.length === 30 ? list[list.length - 1].createdAt : null }
   }
 
   async function feed({ before } = {}) {
@@ -529,7 +639,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
         if (!profiles.has(p.uid)) profiles.set(p.uid, await profileCached(p.uid))
         const prof = profiles.get(p.uid)
         if (!prof || prof.hidden || !isElite(prof, t)) continue
-        out.push({ ...publicPick(p), profile: publicProfile(prof, t) })
+        out.push({ ...publicPick(p, { canSee: false }), profile: publicProfile(prof, t) })
         if (out.length >= 30) break
       }
       return { picks: out, next: rows.length === 120 ? rows[rows.length - 1].createdAt : null }
@@ -538,6 +648,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
 
   async function leaderboard({ range = '30d' } = {}) {
     const key = range === 'all' ? 'all' : 'd30'
+    const min = boardMin()
     return cached(`board:${key}`, 60_000, async () => {
       const t = now()
       // everyone with a recently graded pick (recordAt is stamped when a pick is graded)
@@ -545,11 +656,11 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
       const rows = profs
         .filter((p) => !p.hidden && isElite(p, t))
         .map((p) => ({ p, rec: recordFromStats(p.stats, t, billingConfig().usageTz)?.[key] }))
-        .filter((x) => x.rec && x.rec.graded >= MIN_GRADED_FOR_BOARD)
+        .filter((x) => x.rec && x.rec.graded >= min)
         .map((x) => ({ profile: publicProfile(x.p, t), record: x.rec }))
-        .sort((a, b) => b.record.units - a.record.units || (b.record.roi ?? 0) - (a.record.roi ?? 0))
+        .sort((a, b) => (b.record.roi ?? -9) - (a.record.roi ?? -9) || (b.record.clv ?? -9) - (a.record.clv ?? -9) || b.record.graded - a.record.graded)
         .slice(0, 50)
-      return { range: key === 'all' ? 'all' : '30d', rows, min: MIN_GRADED_FOR_BOARD }
+      return { range: key === 'all' ? 'all' : '30d', rows, min, rankBy: 'roi' }
     })
   }
 
@@ -616,6 +727,12 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
       return (logs.get(k) || []).find((r) => r.eventId === gameId) || null
     }
     for (const p of open) {
+      // a close missed before kickoff: the board still holds the last pre-game price
+      const closed = p.legs.map((l) => (l.close ? l : withClose(l, t)))
+      if (closed.some((l, i) => l !== p.legs[i])) {
+        p.legs = closed
+        await d.merge('picks', p.id, { legs: closed })
+      }
       const results = []
       for (const leg of p.legs) {
         if (leg.result) {
@@ -638,7 +755,8 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
         if (legs.some((l, i) => l.result !== p.legs[i].result)) await d.merge('picks', p.id, { legs })
         continue
       }
-      const graded = { status: 'graded', result: done.result, profit: done.profit, decimal: done.decimal, legs: done.legs, gradedAt: t }
+      const legsOut = done.legs.map((l) => ({ ...l, clv: legClv(l) }))
+      const graded = { status: 'graded', result: done.result, profit: done.profit, decimal: done.decimal, legs: legsOut, clv: pickClv(legsOut), gradedAt: t }
       const ok = await d.tx(async (tx) => {
         const cur = await tx.get('picks', p.id)
         if (!cur || cur.status !== 'open') return false // graded elsewhere, or deleted
@@ -654,11 +772,80 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     return { checked: open.length, graded: touched.size }
   }
 
+  /** A leg with the board's current price as its close (only before or just after its game). */
+  function withClose(leg, t) {
+    const eng = engineOf(leg.sport || 'nfl')
+    if (!eng || !Number.isFinite(leg.kickoff) || t > leg.kickoff + 6 * HOUR_MS) return leg
+    // the row at this leg's own line: if the main line moved off it, it has no price and the
+    // close stays unmeasured (CLV is only read at the same line)
+    const row = eng.views.findProp(leg.id)
+    if (!row) return leg
+    const g = eng.wh.games.get(leg.gameId)
+    const seen = Math.max(eng.wh.lines.get(leg.gameId)?.at || 0, eng.wh.at?.odds || 0)
+    const at = Math.min(t, seen || t, leg.kickoff)
+    if (g && g.status?.state !== 'pre' && !(seen && seen <= leg.kickoff)) return leg
+    const snap = closeSnap(row, leg.side, at)
+    if (!snap || sameClose(snap, leg.close)) return leg
+    return { ...leg, close: snap }
+  }
+
+  /**
+   * Before kickoff: keep each open pick's closing prices current, and alert its owner when a
+   * player on it changes status on the injury report.
+   */
+  async function watchOpen() {
+    const t = now()
+    const soon = await d.recent('picks', { field: 'lockAt', limit: 150, dir: 'asc', where: [['status', '==', 'open'], ['lockAt', '>', t]] })
+    const alerts = new Map()
+    for (const p of soon) {
+      if (p.lockAt > t + INJURY_WATCH_MS) break
+      let changed = false
+      const legs = p.legs.map((l) => {
+        let next = l
+        if (p.lockAt <= t + CLOSE_WATCH_MS) {
+          const c = withClose(l, t)
+          if (c !== l) {
+            next = c
+            changed = true
+          }
+        }
+        if (l.playerId) {
+          const eng = engineOf(l.sport || 'nfl')
+          const cur = eng?.views?.statuses ? eng.views.statuses([l.playerId]).get(String(l.playerId)) : undefined
+          if (cur !== undefined) {
+            const report = cur && REPORT_TAGS.has(cur.tag) ? { tag: cur.tag, label: cur.label } : null
+            const was = l.inj && REPORT_TAGS.has(l.inj.tag) ? l.inj : null
+            if ((report?.tag || null) !== (was?.tag || null)) {
+              // picks from before statuses were kept just start tracking, without an alert
+              if (l.inj !== undefined) {
+                const list = alerts.get(p.uid) || []
+                list.push({ id: `${p.id}:${l.playerId}:${report?.tag || 'clear'}:${t}`, kind: 'injury', pickId: p.id, playerId: l.playerId, sport: l.sport || 'nfl', name: l.short || l.name, label: l.label, from: was?.label || 'No status', to: report?.label || 'Off the report', tag: report?.tag || null, kickoff: l.kickoff, at: t })
+                alerts.set(p.uid, list)
+              }
+              next = { ...next, inj: report }
+              changed = true
+            }
+          }
+        }
+        return next
+      })
+      if (changed) await d.merge('picks', p.id, { legs })
+    }
+    for (const [uid, items] of alerts) {
+      await d.tx(async (tx) => {
+        const cur = (await tx.get('alerts', uid)) || { items: [], seenAt: 0 }
+        tx.set('alerts', uid, { items: [...items, ...(cur.items || [])].slice(0, 40), seenAt: cur.seenAt || 0, updatedAt: t })
+      })
+    }
+    if (alerts.size) bust()
+    return { watched: soon.length, alerted: alerts.size }
+  }
+
   /** Grade at most every two minutes; callers don't wait on each other. */
   function maybeGrade() {
     if (grading) return grading
     if (now() - lastGrade < 120_000) return Promise.resolve({ skipped: true })
-    grading = gradeOpen()
+    grading = Promise.all([gradeOpen(), watchOpen().catch((e) => log.warn('watching open picks failed', { err: errText(e) }))]).then(([g]) => g)
       .catch((e) => {
         log.warn('grading failed', { err: errText(e) })
         return { error: true }
@@ -679,5 +866,182 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     return { ok: true, handle, hidden: Boolean(hidden) }
   }
 
-  return { me, saveProfile, post, check, remove, tail, page, feed, leaderboard, gradeOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, _atLeast: atLeast }
+  // ---- subscribers ---------------------------------------------------------------------------
+  async function isSubscriber(creatorUid, viewerUid) {
+    if (!creatorUid || !viewerUid) return false
+    if (creatorUid === viewerUid) return true
+    const s = await d.get('subs', `${creatorUid}_${viewerUid}`)
+    return Boolean(s) && (!s.until || s.until > now())
+  }
+  async function canSeePick(p, viewer) {
+    if (!p.subs || now() >= p.lockAt) return true
+    if (!viewer?.uid) return false
+    return Boolean(viewer.admin) || p.uid === viewer.uid || (await isSubscriber(p.uid, viewer.uid))
+  }
+  /** One pick by id, with its legs when the viewer may see them. */
+  async function pickFor(id, viewer) {
+    if (typeof id !== 'string' || !/^pk_[0-9a-f]{20}$/.test(id)) throw new ApiError(404, 'not_found', 'No such pick.')
+    const p = await d.get('picks', id)
+    if (!p || (p.hidden && p.uid !== viewer?.uid && !viewer?.admin)) throw new ApiError(404, 'not_found', 'No such pick.')
+    return { pick: publicPick(p, { canSee: await canSeePick(p, viewer) }) }
+  }
+  async function subscribers(user) {
+    const prof = await mustProfile(user)
+    return { subscribers: (prof.subscribers || []).map((x) => ({ handle: x.handle, since: x.since })), max: 500 }
+  }
+  async function setSubscriber(user, { handle, remove: drop = false } = {}) {
+    const prof = await mustProfile(user)
+    if (!drop && !isElite(prof)) throw new ApiError(403, 'upgrade', 'Subscriber picks come with Elite.')
+    const h = String(handle || '').trim().toLowerCase().replace(/^@/, '')
+    if (!HANDLE_RE.test(h)) throw new ApiError(400, 'bad_handle', 'That handle does not look right.')
+    const who = await d.get('profileHandles', h)
+    if (!who) throw new ApiError(404, 'not_found', 'No page with that handle.')
+    if (who.uid === user.uid) throw new ApiError(400, 'self', 'That’s your own page.')
+    const t = now()
+    const out = await d.tx(async (tx) => {
+      const cur = await tx.get('profiles', user.uid)
+      const list = (cur?.subscribers || []).filter((x) => x.uid !== who.uid)
+      if (drop) tx.del('subs', `${user.uid}_${who.uid}`)
+      else {
+        if (list.length >= 500) throw new ApiError(409, 'full', 'You have 500 subscribers, the most a page can have for now.')
+        list.unshift({ uid: who.uid, handle: h, since: t })
+        tx.set('subs', `${user.uid}_${who.uid}`, { creator: user.uid, sub: who.uid, handle: h, since: t })
+      }
+      tx.patch('profiles', user.uid, { subscribers: list, updatedAt: t })
+      return list
+    })
+    bust()
+    return { subscribers: out.map((x) => ({ handle: x.handle, since: x.since })) }
+  }
+
+  async function mustProfile(user) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    const p = await profileOf(user.uid)
+    if (!p) throw new ApiError(409, 'no_profile', 'Make your page first.')
+    return p
+  }
+
+  // ---- alerts ----------------------------------------------------------------------------------
+  async function alertsFor(user) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    const a = (await d.get('alerts', user.uid)) || { items: [], seenAt: 0 }
+    const items = a.items || []
+    return { items, unread: items.filter((x) => x.at > (a.seenAt || 0)).length, seenAt: a.seenAt || 0 }
+  }
+  async function seenAlerts(user) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    await d.merge('alerts', user.uid, { seenAt: now() })
+    return { ok: true }
+  }
+
+  // ---- all of someone's picks (coach, records) ------------------------------------------------
+  async function allPicksOf(uid, max = 1000) {
+    const all = []
+    let before
+    while (all.length < max) {
+      const page = await picksOf(uid, { limit: 200, before })
+      all.push(...page)
+      if (page.length < 200) break
+      before = page[page.length - 1].createdAt
+    }
+    return all
+  }
+
+  async function coachFor(user) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    return cached(`coach:${user.uid}`, 60_000, async () => coachOf(await allPicksOf(user.uid), { now: now(), tz: billingConfig().usageTz }))
+  }
+
+  // ---- responsible betting ---------------------------------------------------------------------
+  async function rgView(uid, rg) {
+    const t = now()
+    const tz = billingConfig().usageTz
+    const days = [...new Set(Array.from({ length: 7 }, (_, i) => dayKey(t - i * DAY_MS, tz)))]
+    const [usages, prof] = await Promise.all([Promise.all(days.map((k) => d.get('pickUsage', `${uid}_${k}`))), profileOf(uid)])
+    return {
+      limits: effectiveLimits(rg, t),
+      pending: rg?.pending && rg.pending.at > t ? rg.pending : null,
+      coolUntil: (rg?.coolUntil || 0) > t ? rg.coolUntil : null,
+      excludedUntil: (rg?.excludedUntil || 0) > t ? rg.excludedUntil : null,
+      pausedUntil: pausedUntil(rg, t) || null,
+      usage: { picksToday: usages[0]?.n || 0, unitsToday: usages[0]?.units || 0, unitsWeek: round(usages.reduce((s, u) => s + (u?.units || 0), 0), 2), netWeek: netWeek(prof?.stats, days[days.length - 1]) },
+      options: { coolDays: COOL_DAYS, excludeMonths: EXCLUDE_MONTHS },
+    }
+  }
+  async function rgGet(user) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    return rgView(user.uid, await d.get('rg', user.uid))
+  }
+  async function rgLimits(user, body = {}) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    const wanted = cleanLimits(body)
+    const t = now()
+    const next = await d.tx(async (tx) => {
+      const cur = await tx.get('rg', user.uid)
+      const n = nextLimits(cur, wanted, t)
+      tx.set('rg', user.uid, n)
+      return n
+    })
+    return rgView(user.uid, next)
+  }
+  /** A break (days) or a self-exclusion (months). Neither can be shortened once set. */
+  async function rgPause(user, { kind, days, months } = {}) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    const t = now()
+    let field
+    let until
+    if (kind === 'cool') {
+      if (!COOL_DAYS.includes(Number(days))) throw new ApiError(400, 'bad_pause', `Pick ${COOL_DAYS.join(', ')} days.`)
+      field = 'coolUntil'
+      until = t + Number(days) * DAY_MS
+    } else if (kind === 'exclude') {
+      if (!EXCLUDE_MONTHS.includes(Number(months))) throw new ApiError(400, 'bad_pause', `Pick ${EXCLUDE_MONTHS.join(', ')} months.`)
+      field = 'excludedUntil'
+      until = t + Math.round(Number(months) * 30.44) * DAY_MS
+    } else throw new ApiError(400, 'bad_pause', 'Choose a break or a self-exclusion.')
+    const next = await d.tx(async (tx) => {
+      const cur = (await tx.get('rg', user.uid)) || {}
+      const n = { ...cur, [field]: Math.max(cur[field] || 0, until), updatedAt: t }
+      tx.set('rg', user.uid, n)
+      return n
+    })
+    return rgView(user.uid, next)
+  }
+  /** For other features (contests): { coolUntil, excludedUntil } or null. */
+  async function pauseOf(uid) {
+    if (!uid) return null
+    const rg = await d.get('rg', uid)
+    const t = now()
+    return pausedUntil(rg, t) ? { coolUntil: rg.coolUntil || 0, excludedUntil: rg.excludedUntil || 0, error: pauseError(rg, t) } : null
+  }
+
+  // ---- live slips ------------------------------------------------------------------------------
+  async function liveFor(user) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    const t = now()
+    const list = await picksOf(user.uid, { limit: 60 })
+    const open = list.filter((p) => p.status === 'open' && p.lockAt <= t)
+    let at = 0
+    const out = open.map((p) => {
+      const legs = p.legs.map((l) => {
+        const base = publicLeg(l)
+        if (l.result) return { ...base, chance: l.result === 'win' ? 1 : l.result === 'loss' ? 0 : null }
+        const eng = engineOf(l.sport || 'nfl')
+        if (!eng) return { ...base, chance: null }
+        const tr = eng.views.track([l.id]).legs[0]
+        const row = eng.views.findProp(l.id)
+        at = Math.max(at, eng.wh.at?.summaries || 0)
+        const prog = tr?.live || null
+        return { ...base, game: tr?.game ? { status: tr.game.status, home: tr.game.home?.abbr, away: tr.game.away?.abbr } : null, live: prog ? { cur: prog.cur, line: prog.line, projected: prog.projected, elapsed: prog.elapsed, status: prog.status, final: prog.final, untracked: Boolean(prog.untracked) } : null, chance: liveChance(row, prog) }
+      })
+      const live = legs.filter((l) => l.result !== 'void' && l.result !== 'push')
+      const dec = live.reduce((x, l) => x * decimalOf(l.price), 1)
+      const chance = slipChance(legs)
+      const payout = round(p.units * dec, 2)
+      return { id: p.id, units: p.units, price: decimalToAmerican(dec), decimal: round(dec, 3), payout, chance, fair: Number.isFinite(chance) ? round(chance * payout, 2) : null, legs }
+    })
+    return { picks: out, at: at || null, refreshMs: 20_000, now: t }
+  }
+
+  return { me, saveProfile, post, check, remove, tail, page, feed, leaderboard, gradeOpen, watchOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, pickFor, subscribers, setSubscriber, alertsFor, seenAlerts, coachFor, rgGet, rgLimits, rgPause, pauseOf, liveFor, _atLeast: atLeast }
 }

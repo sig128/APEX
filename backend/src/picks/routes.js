@@ -1,4 +1,5 @@
-// /api/picks/* — user pages, the Elite feed and leaderboard, posting and deleting picks.
+// /api/picks/* — user pages, the Elite feed and leaderboard, posting and deleting picks, and each
+// person's own tools: alerts, the coach, live slips, limits and breaks, subscribers.
 import express from 'express'
 import { ApiError, clientIp } from '../lib/router.js'
 import { createLimiter } from '../security/rateLimit.js'
@@ -88,7 +89,53 @@ export function picksRoutes({ picks, access }) {
     const u = await viewer(req).catch(() => null)
     const who = u ? `u:${u.uid}` : `ip:${clientIp(req)}`
     throttle(writeLimit, who)
-    return picks.tail(req.params.id, who)
+    return picks.tail(req.params.id, who, u)
+  }))
+  // one pick (subscriber picks show their legs to subscribers)
+  r.get('/p/:id', wrap(async (req) => {
+    throttle(readLimit, clientIp(req))
+    const v = await viewer(req).catch(() => null)
+    return picks.pickFor(req.params.id, v)
+  }))
+
+  // ---- the signed-in person's own tools ------------------------------------------------------
+  r.get('/me/alerts', wrap(async (req) => picks.alertsFor(await signedIn(req))))
+  r.post('/me/alerts/seen', wrap(async (req) => picks.seenAlerts(await signedIn(req))))
+  r.get('/me/coach', wrap(async (req) => {
+    const u = await signedIn(req)
+    throttle(readLimit, u.uid, 4)
+    return picks.coachFor(u)
+  }))
+  r.get('/me/live', wrap(async (req) => {
+    const u = await signedIn(req)
+    throttle(readLimit, u.uid)
+    return picks.liveFor(u)
+  }))
+  r.get('/me/rg', wrap(async (req) => picks.rgGet(await signedIn(req))))
+  r.put('/me/rg', wrap(async (req) => {
+    needDb()
+    const u = await signedIn(req)
+    throttle(writeLimit, u.uid)
+    return picks.rgLimits(u, req.body || {})
+  }))
+  r.post('/me/rg/pause', wrap(async (req) => {
+    needDb()
+    const u = await signedIn(req)
+    throttle(writeLimit, u.uid)
+    return picks.rgPause(u, req.body || {})
+  }))
+  r.get('/me/subscribers', wrap(async (req) => picks.subscribers(await signedIn(req))))
+  r.post('/me/subscribers', wrap(async (req) => {
+    needDb()
+    const u = await signedIn(req)
+    throttle(writeLimit, u.uid)
+    return picks.setSubscriber(u, { handle: req.body?.handle })
+  }))
+  r.delete('/me/subscribers/:handle', wrap(async (req) => {
+    needDb()
+    const u = await signedIn(req)
+    throttle(writeLimit, u.uid)
+    return picks.setSubscriber(u, { handle: req.params.handle, remove: true })
   }))
   r.delete('/:id', wrap(async (req) => {
     const u = await signedIn(req)
