@@ -218,7 +218,28 @@ ledger. NFL is the site's root (`/`, `/nfl/props`); the others live under their 
   the final box score (a player who didn't play is voided after 18 hours). Only lines a sportsbook posted can go on a record,
   graded at the price posted when the pick was made; main lines with no listed price grade at
   -110. Alternate lines and anytime-TD props need a real price, which comes with
-  `THE_ODDS_API_KEY`. The leaderboard needs 5 graded picks.
+  `THE_ODDS_API_KEY`. The leaderboard ranks by ROI, then CLV, and needs 20 graded picks
+  (`APEX_BOARD_MIN`). Hit rate is shown but doesn't rank.
+- **Player status:** board cards, prop and player pages carry a badge from the injury report
+  (Out, Doubtful, Questionable, Day-to-day, Probable) or Returning, worked out from the team's
+  schedule and the player's game log (a run of missed team games: 1 in football, 2 in
+  basketball and hockey, 5 in baseball; starting pitchers aren't tracked). The prop page shows
+  his first five games back against today's line, hidden under 3 games. Injuries refresh every
+  5 minutes in the 3 hours before a game. A ruled-out player can't go on a pick.
+- **Closing prices and CLV:** open picks keep the board's last price before kickoff (both sides,
+  with the time it was seen). CLV is measured at the same line, with a real price and a close
+  seen in the 90 minutes before the game; parlay legs multiply. On quiet nights a close can be
+  missed, because the board only refreshes when someone is looking.
+- **Each member's tools (`/me`):** alerts when a player on an open pick changes status; the
+  coach (patterns in their graded picks, shown only when each group has 10 graded picks, every
+  one linked to its picks); limits on picks and units a day, units a week and net loss a week
+  (lower takes effect at once, higher after 24 hours); a break (1, 7, 30 days) or
+  self-exclusion (6, 12, 60 months) that blocks posting, tailing and contests and can't be
+  shortened; a tilt warning on a stake twice the usual after three straight losses; and for
+  Elite, subscribers who see subscriber picks before kickoff (everyone sees them once they
+  lock). `/me/live` shows picks in play with each leg's live chance and a cash-out and hedge
+  comparison that needs a price typed in the last minute.
+- **Wording:** screens say model reads, projection or score, never "AI".
 - **Data:** ESPN's public endpoints (scoreboard, summaries, rosters, game logs, prop lines).
   They are unofficial and can change; the API caches everything in Firestore and keeps
   serving the last good copy if ESPN has a bad minute. Prices come from The Odds API when its
