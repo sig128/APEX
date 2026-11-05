@@ -180,7 +180,7 @@ test('OpenAI fallbacks: a model that turns down reasoning or search is asked aga
 test('OpenAI errors: plain words, and never the key', async () => {
   const bad = fakeOpenAi([json({ error: { message: 'Incorrect API key provided: sk-proj-********************abcd. You can find your API key at https://platform.openai.com.', type: 'invalid_request_error', code: 'invalid_api_key' } }, 401)])
   await assert.rejects(createAi({ openaiKey: 'sk-proj-secret-value-abcd', fetchImpl: bad.fetchImpl }).complete({ messages: [{ role: 'user', content: 'x' }], maxTokens: 10 }), (e) => {
-    assert.equal(e.message, 'The AI key was refused (check OPENAI_API_KEY).')
+    assert.equal(e.message, 'The model service key was refused (check OPENAI_API_KEY).')
     assert.equal(e.status, 401)
     return true
   })

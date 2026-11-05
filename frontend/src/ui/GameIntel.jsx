@@ -158,7 +158,7 @@ export function GameIntel({ gameId, official }) {
             )}
 
             {official > 0 && <p className="muted intel__fine">The full official list for both teams is on the Injuries tab.</p>}
-            <p className="muted intel__fine">From public reporting by established outlets, read by AI; check the link before you rely on it. Propify never uses leaked or insider information.</p>
+            <p className="muted intel__fine">From public reporting by established outlets, summarized by our model; check the link before you rely on it. Propify never uses leaked or insider information.</p>
           </>
         )}
       </div>

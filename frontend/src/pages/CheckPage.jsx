@@ -272,7 +272,7 @@ export function CheckPage() {
                 </button>
               )}
             </div>
-            <p className="check__fine">Uses one AI read. {mode === 'slip' ? 'Player props' : `${sportInfo(sport).name} player props`}{['nfl', 'ncaaf'].includes(sport) || mode === 'slip' ? ' and team totals' : ''}; moneylines and spreads are skipped.</p>
+            <p className="check__fine">Uses one model read. {mode === 'slip' ? 'Player props' : `${sportInfo(sport).name} player props`}{['nfl', 'ncaaf'].includes(sport) || mode === 'slip' ? ' and team totals' : ''}; moneylines and spreads are skipped.</p>
           </section>
 
           <section className="check__out" aria-live="polite" aria-label="The verdict">
@@ -316,7 +316,7 @@ export function CheckPage() {
                     </Link>
                   </div>
                 )}
-                {run.usage && <p className="ask__usage">{run.usage.split('/')[0]} of {run.usage.split('/')[1]} AI reads used today</p>}
+                {run.usage && <p className="ask__usage">{run.usage.split('/')[0]} of {run.usage.split('/')[1]} model reads used today</p>}
               </>
             )}
           </section>
@@ -389,7 +389,7 @@ function Call({ leg, call, sim, streaming }) {
         <span className="call__stamp">{v ? VERDICT[v] : streaming ? '…' : LEAN[leg.lean]}</span>
       </div>
       <p className="call__why">{call?.why || (streaming ? <span className="ask__cursor" aria-hidden="true" /> : null)}</p>
-      {call?.overridden && <p className="call__override">The AI liked it, but it fails a Propify rule check below, so it isn’t a Keep.</p>}
+      {call?.overridden && <p className="call__override">The model liked it, but it fails a Propify rule check below, so it isn’t a Keep.</p>}
       <dl className="call__facts">
         <div>
           <dt>Propify chance</dt>

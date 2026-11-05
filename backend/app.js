@@ -291,9 +291,9 @@ export function createApexApp({
       let ent = null
       if (billingConfig().paywall || authMode() !== 'optional') {
         user = await auth.identify(req)
-        if (!user) throw new ApiError(401, 'signin', 'Sign in to use the AI analyzer.', { need: 'pro' })
+        if (!user) throw new ApiError(401, 'signin', 'Sign in to use the game analyzer.', { need: 'pro' })
         const g = billing?.aiAccess ? await billing.aiAccess(user) : { allowed: Boolean(user.admin), ent: null }
-        if (!g.allowed) throw new ApiError(402, 'upgrade', 'The AI analyzer is for members with a Pro or Elite pass.', { need: 'pro', plan: g.ent?.plan || 'free', status: g.ent?.status || null })
+        if (!g.allowed) throw new ApiError(402, 'upgrade', 'The game analyzer is for members with a Pro or Elite pass.', { need: 'pro', plan: g.ent?.plan || 'free', status: g.ent?.status || null })
         ent = g.ent
       }
       // Each game is analysed once and stored: a stored one (or one another member is writing
@@ -425,7 +425,7 @@ export function createApexApp({
   async function chatOnceFresh(req, res) {
     if (!ai.ready()) {
       await refundIfEmpty(req, null)
-      return res.status(503).json({ error: 'AI is not configured on this server (OPENAI_API_KEY).' })
+      return res.status(503).json({ error: 'Model reads aren’t set up on this server (OPENAI_API_KEY).' })
     }
     const parsed = req.apexParsed || parseChatBody(req)
     if (!parsed.ok) {

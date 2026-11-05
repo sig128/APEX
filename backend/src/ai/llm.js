@@ -75,11 +75,11 @@ function openaiError(status, body) {
   // plain words for the failures people can fix; the API's own text otherwise (keys scrubbed)
   const message =
     code === 'invalid_api_key' || status === 401
-      ? 'The AI key was refused (check OPENAI_API_KEY).'
+      ? 'The model service key was refused (check OPENAI_API_KEY).'
       : code === 'insufficient_quota'
         ? 'The OpenAI account is out of credit or over its quota.'
         : code === 'model_not_found'
-          ? `That AI model isn't available on this OpenAI account (check OPENAI_MODEL).`
+          ? `That model isn't available on this OpenAI account (check OPENAI_MODEL).`
           : e?.message || `OpenAI answered HTTP ${status}`
   return new AiError(message, { status, code, param: String(e?.param || '') })
 }
@@ -217,7 +217,7 @@ function openaiAdapter(key, { fetchImpl, env }) {
     async complete({ model, system, messages, maxTokens, webSearch, signal }) {
       const res = await post(request({ model, system, messages, maxTokens, webSearch }), { signal, timeoutMs: webSearch ? 240_000 : 120_000 })
       const resp = await res.json()
-      if (resp?.status === 'failed') throw new AiError(resp.error?.message || 'The AI answer failed.', { code: resp.error?.code })
+      if (resp?.status === 'failed') throw new AiError(resp.error?.message || 'The model answer failed.', { code: resp.error?.code })
       return finish(resp, '', model)
     },
     async stream({ model, system, messages, maxTokens, webSearch, onText, onActivity, signal }) {
@@ -245,13 +245,13 @@ function openaiAdapter(key, { fetchImpl, env }) {
             final = ev.response || {}
             break
           case 'response.failed':
-            throw new AiError(ev.response?.error?.message || 'The AI answer failed.', { code: ev.response?.error?.code })
+            throw new AiError(ev.response?.error?.message || 'The model answer failed.', { code: ev.response?.error?.code })
           case 'error':
-            throw new AiError(ev.message || ev.error?.message || 'The AI stream failed.', { code: ev.code || ev.error?.code })
+            throw new AiError(ev.message || ev.error?.message || 'The model stream failed.', { code: ev.code || ev.error?.code })
           default:
         }
       }
-      if (!final) throw new AiError('The AI stream ended before the answer finished.')
+      if (!final) throw new AiError('The model stream ended before the answer finished.')
       return finish(final, text, model)
     },
   }
@@ -354,7 +354,7 @@ export function createAi({ openaiKey = () => process.env.OPENAI_API_KEY, anthrop
   const adapter = (p) => (p.provider === 'openai' ? openaiAdapter(p.key, { fetchImpl, env }) : anthropicAdapter(p.key))
   const run = (how) => async (opts) => {
     const p = pick()
-    if (!p) throw new AiError('AI is not configured on this server (OPENAI_API_KEY).', { code: 'ai_off', status: 503 })
+    if (!p) throw new AiError('Model reads aren’t set up on this server (OPENAI_API_KEY).', { code: 'ai_off', status: 503 })
     const model = opts.model || modelFor(p.provider, opts.feature, env)
     try {
       return await adapter(p)[how]({ ...opts, model })

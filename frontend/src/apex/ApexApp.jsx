@@ -831,7 +831,7 @@ export function ApexApp() {
       d.className = `chat-msg ${m.role === 'user' ? 'u' : 'a'}`
       const lab = document.createElement('div')
       lab.className = 'who'
-      lab.textContent = m.role === 'user' ? 'You' : 'Propify AI'
+      lab.textContent = m.role === 'user' ? 'You' : 'Propify'
       const body = document.createElement('div')
       body.textContent = m.content
       d.appendChild(lab)
@@ -1635,7 +1635,7 @@ export function ApexApp() {
             onEvent(ev) {
               if (ev.type === 'start' && statusEl) {
                 // each game is analysed once and shared: a stored one comes back at once
-                statusEl.textContent = ev.shared ? (ev.waiting ? 'Another member is analysing this game: it’s yours the moment it’s done' : 'This game’s shared analysis') : ev.webSearch ? 'Propify AI with web search' : 'Propify AI'
+                statusEl.textContent = ev.shared ? (ev.waiting ? 'Another member is analysing this game: it’s yours the moment it’s done' : 'This game’s shared analysis') : ev.webSearch ? 'Propify, with web search' : 'Propify'
               }
               if (ev.type === 'activity' && statusEl) {
                 statusEl.textContent = ev.detail || ev.phase || '…'
@@ -1758,7 +1758,7 @@ export function ApexApp() {
           {
           onEvent(ev) {
             if (ev.type === 'start' && statusEl) {
-              statusEl.textContent = ev.webSearch ? 'Propify AI with web search' : 'Propify AI'
+              statusEl.textContent = ev.webSearch ? 'Propify, with web search' : 'Propify'
             }
             if (ev.type === 'activity' && statusEl) {
               statusEl.textContent = ev.detail || ev.phase || '…'

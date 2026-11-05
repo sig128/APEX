@@ -237,9 +237,9 @@ function RenewBanner() {
   if (!paywall || hidden) return null
   const plan = ent?.paidPlan === 'elite' ? 'Elite' : 'Pro'
   let text = null
-  if (ent?.status === 'grace') text = `Your ${plan} pass ran out. You keep it for ${ent.daysLeft} more ${ent.daysLeft === 1 ? 'day' : 'days'}, then AI picks and ${ent.paidPlan === 'elite' ? 'your showcase' : 'Kelly tools'} lock.`
+  if (ent?.status === 'grace') text = `Your ${plan} pass ran out. You keep it for ${ent.daysLeft} more ${ent.daysLeft === 1 ? 'day' : 'days'}, then model reads and ${ent.paidPlan === 'elite' ? 'your showcase' : 'Kelly tools'} lock.`
   else if (ent?.status === 'active' && ent.daysLeft != null && ent.daysLeft <= 3) text = `Your ${plan} pass ends in ${ent.daysLeft} ${ent.daysLeft === 1 ? 'day' : 'days'}.`
-  else if (ent?.status === 'expired' && ent.paidPlan && Date.now() - (ent.graceUntil || 0) < 14 * DAY) text = `Your ${plan} pass has ended. Stats stay free; AI picks are locked.`
+  else if (ent?.status === 'expired' && ent.paidPlan && Date.now() - (ent.graceUntil || 0) < 14 * DAY) text = `Your ${plan} pass has ended. Stats stay free; model reads are locked.`
   if (!text) return null
   return (
     <div className={`renew renew--${ent.status}`} role="status">

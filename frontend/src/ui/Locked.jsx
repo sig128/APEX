@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useBilling } from '../context/BillingContext.jsx'
 
 const COPY = {
-  pro: { plan: 'Pro', what: 'AI picks on every prop, the game analyzer, and Kelly stake sizing.' },
+  pro: { plan: 'Pro', what: 'Model reads on every prop, the game analyzer, and Kelly stake sizing.' },
   elite: { plan: 'Elite', what: 'your public picks page with X and Instagram links, the Elite badge, the picks feed and the leaderboard.' },
 }
 
@@ -56,10 +56,10 @@ export function Locked({ need = 'pro', children, title, inline = false, ai = fal
 function AiLocked({ title, inline, signedIn, paywall, lapsed, price, next }) {
   return (
     <div className={`locked${inline ? ' locked--inline' : ''}`}>
-      <p className="locked__title">{title || 'The AI'}</p>
+      <p className="locked__title">{title || 'Model reads'}</p>
       <p className="locked__body">
-        {lapsed ? 'Your pass has ended, and the AI goes with it. ' : ''}
-        The AI (prop reads, the parlay check, game intel and the game analyzer) is for members with a Pro or Elite pass.
+        {lapsed ? 'Your pass has ended, and the model reads go with it. ' : ''}
+        Model reads (prop reads, the parlay check, game intel and the game analyzer) are for members with a Pro or Elite pass.
         {!paywall && ' Passes aren’t on sale yet.'}
       </p>
       <div className="locked__actions">

@@ -359,13 +359,13 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     if (!atLeast(ent.plan, 'pro')) return 0
     return (cfg.plans[ent.plan]?.limits?.[base] ?? 0) * mult
   }
-  const KIND_NAME = { analyses: 'game analyses', aiReads: 'AI reads', followups: 'follow-up questions' }
+  const KIND_NAME = { analyses: 'game analyses', aiReads: 'model reads', followups: 'follow-up questions' }
 
   async function useQuota(user, ent, kind) {
     const cfg = billingConfig()
     const limit = limitFor(ent, kind, cfg)
     if (limit === Infinity) return { used: 0, limit: null }
-    if (!limit) throw new ApiError(402, 'upgrade', kind === 'aiReads' ? 'AI picks are part of Pro and Elite.' : 'The AI analyzer is part of Pro and Elite.', { need: 'pro', plan: ent.plan, status: ent.status })
+    if (!limit) throw new ApiError(402, 'upgrade', kind === 'aiReads' ? 'Model reads are part of Pro and Elite.' : 'The game analyzer is part of Pro and Elite.', { need: 'pro', plan: ent.plan, status: ent.status })
     const t = now()
     const day = dayKey(t, cfg.usageTz)
     const id = `${user.uid}_${day}`

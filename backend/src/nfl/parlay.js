@@ -193,7 +193,7 @@ export async function streamParlayCheck({ engine, matched, unmatched = [], parla
       return { produced: false }
     }
     if (!ai?.ready()) {
-      write({ type: 'error', error: 'AI is not configured on this server (OPENAI_API_KEY).' })
+      write({ type: 'error', error: 'Model reads aren’t set up on this server (OPENAI_API_KEY).' })
       return { produced: false }
     }
     const brief = [

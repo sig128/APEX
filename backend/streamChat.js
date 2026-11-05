@@ -271,7 +271,7 @@ export function sendStoredAnalysis(res, stored) {
 export async function handleChatStream(req, res, ai, { keepGoing = false, onDone = null, before = null } = {}) {
   if (!ai?.ready()) {
     res.status(503).json({
-      error: 'AI is not configured on this server (OPENAI_API_KEY).',
+      error: 'Model reads aren’t set up on this server (OPENAI_API_KEY).',
     })
     return { ok: false, produced: false }
   }

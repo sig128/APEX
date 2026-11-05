@@ -115,10 +115,10 @@ export function AskApex({ propId }) {
   const verdict = blocks.find((b) => b.k === 'VERDICT')?.lines.join(' ') || ''
   const tone = /prime/i.test(verdict) ? 'is-prime' : /no play/i.test(verdict) ? 'is-pass' : /monitor/i.test(verdict) ? 'is-watch' : ''
   return (
-    <Locked need="pro" ai title="AI read of this prop">
+    <Locked need="pro" ai title="Model read of this prop">
       <div className={`ask ${tone}`}>
         <div className="ask__head">
-          <p className="ask__title">Propify AI read</p>
+          <p className="ask__title">Propify model read</p>
           {state !== 'streaming' && (
             <button type="button" className="btn btn--gold" onClick={run}>
               {state === 'idle' ? 'Read this prop' : 'Read again'}
@@ -149,7 +149,7 @@ export function AskApex({ propId }) {
             {state === 'streaming' && <span className="ask__cursor" aria-hidden="true" />}
           </div>
         )}
-        {usage && <p className="ask__usage">{usage.split('/')[0]} of {usage.split('/')[1]} AI reads used today</p>}
+        {usage && <p className="ask__usage">{usage.split('/')[0]} of {usage.split('/')[1]} model reads used today</p>}
         {cached && state === 'done' && <p className="ask__usage">Written {at ? ago(at) : 'earlier today'} for this line and price. Shared reads don’t use your allowance.</p>}
       </div>
     </Locked>

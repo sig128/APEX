@@ -48,12 +48,12 @@ export function AccountPage() {
       <section className="acct-plan">
         <p className="acct-plan__k">Your plan</p>
         <p className="acct-plan__v">
-          {!paywall ? (me?.ai?.allowed ? `${PLAN[me.ai.plan] || 'Pro'}: the whole site and the AI` : 'Everything but the AI is open during the beta') : PLAN[ent.plan] || 'Free'}
+          {!paywall ? (me?.ai?.allowed ? `${PLAN[me.ai.plan] || 'Pro'}: the whole site and the model reads` : 'Everything but the model reads is open during the beta') : PLAN[ent.plan] || 'Free'}
           {ent.status === 'grace' && <span className="tag tag--warn">grace period</span>}
           {(ent.status === 'admin' || me?.ai?.status === 'admin') && <span className="tag">admin</span>}
         </p>
         {paywall && <PlanLine ent={ent} />}
-        {!paywall && !me?.ai?.allowed && <p className="muted small">The AI (prop reads, the parlay check, game intel and the analyzer) takes a Pro or Elite pass. Passes aren’t on sale yet; a plan code below works.</p>}
+        {!paywall && !me?.ai?.allowed && <p className="muted small">Model reads (prop reads, the parlay check, game intel and the analyzer) take a Pro or Elite pass. Passes aren’t on sale yet; a plan code below works.</p>}
         {paywall && ent.status !== 'admin' && (
           <div className="row">
             {plans.map((p) => (
@@ -67,8 +67,8 @@ export function AccountPage() {
 
       {usage && me?.ai?.allowed && (
         <section className="acct-usage">
-          <p className="acct-plan__k">Today's AI allowance</p>
-          <Meter label="AI prop reads" u={usage.aiReads} />
+          <p className="acct-plan__k">Today's model allowance</p>
+          <Meter label="Model prop reads" u={usage.aiReads} />
           <Meter label="Game analyses" u={usage.analyses} />
           <Meter label="Follow-up questions" u={usage.followups} />
           <p className="muted small">Resets at {new Date(usage.resetsAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}. A read that fails doesn't count.</p>
@@ -130,9 +130,9 @@ export function AccountPage() {
 function PlanLine({ ent }) {
   if (ent.status === 'active') return <p>{ent.lifetime ? 'Lifetime pass.' : `Active until ${fmtDay(ent.paidUntil)} (${ent.daysLeft} ${ent.daysLeft === 1 ? 'day' : 'days'} left).`}</p>
   if (ent.status === 'grace') return <p>Your pass ended {fmtDay(ent.paidUntil)}. Everything stays on until {fmtDay(ent.graceUntil)}; renew before then to keep going without a break (the new 30 days start {fmtDay(ent.paidUntil)}).</p>
-  if (ent.status === 'expired' && ent.paidPlan) return <p>Your {PLAN[ent.paidPlan]} pass ended {fmtDay(ent.paidUntil)}. Stats are still free; AI picks and Kelly are locked.</p>
+  if (ent.status === 'expired' && ent.paidPlan) return <p>Your {PLAN[ent.paidPlan]} pass ended {fmtDay(ent.paidUntil)}. Stats are still free; model reads and Kelly are locked.</p>
   if (ent.status === 'admin') return <p>Admins have every plan.</p>
-  return <p>Stats, the slip, live tracking and your picks page are free. Pro adds the AI and Kelly; Elite adds the showcase.</p>
+  return <p>Stats, the slip, live tracking and your picks page are free. Pro adds model reads and Kelly; Elite adds the showcase.</p>
 }
 
 function Meter({ label, u }) {

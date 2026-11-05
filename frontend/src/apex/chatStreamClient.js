@@ -90,7 +90,7 @@ export async function postChatStream(body, handlers) {
     throw new Error(
       sawStreamActivity
         ? `The reply was cut off before it finished (connection closed mid-stream). ${timeoutHint} ${hostingHint}`
-        : `No reply was received from the AI. ${hostingHint}`,
+        : `No reply was received from the analyzer. ${hostingHint}`,
     )
   }
 

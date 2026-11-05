@@ -143,25 +143,25 @@ function mapAiErrorType(type, message) {
   switch (type) {
     case 'overloaded_error':
     case 'server_error':
-      return 'The AI is busy right now. Wait a moment and try again.'
+      return 'The analysis service is busy right now. Wait a moment and try again.'
     case 'rate_limit_error':
     case 'rate_limit_exceeded':
       return 'Too many requests right now. Wait a minute and try again.'
     case 'authentication_error':
     case 'invalid_api_key':
-      return 'The AI key was refused or is missing. Check OPENAI_API_KEY on the server.'
+      return 'The analysis service key was refused or is missing. Check OPENAI_API_KEY on the server.'
     case 'billing_error':
     case 'insufficient_quota':
-      return 'The AI account is out of credit or over its quota. Check its plan and billing.'
+      return 'The analysis service account is out of credit or over its quota. Check its plan and billing.'
     case 'permission_error':
       return 'This API key is not allowed to perform that action.'
     case 'not_found_error':
     case 'model_not_found':
-      return 'That AI model is not available. Check OPENAI_MODEL if you set one.'
+      return 'That model is not available. Check OPENAI_MODEL if you set one.'
     case 'invalid_request_error':
       return msg ? `Invalid request: ${msg}` : 'The request was invalid. Check inputs and try again.'
     case 'api_error':
-      return msg ? `AI service error: ${msg}` : 'The AI service returned an error. Try again in a moment.'
+      return msg ? `Analysis service error: ${msg}` : 'The analysis service returned an error. Try again in a moment.'
     case 'request_too_large':
       return 'Request or context is too large. Shorten the conversation or game details and try again.'
     default:
@@ -170,7 +170,7 @@ function mapAiErrorType(type, message) {
   if (msg && msg !== 'Overloaded') return msg
   if (type && type.endsWith('_error')) {
     const short = type.replace(/_error$/, '').replace(/_/g, ' ')
-    return `AI service reported an error (${short}). Try again.`
+    return `The analysis service reported an error (${short}). Try again.`
   }
   return msg || null
 }
@@ -179,16 +179,16 @@ function mapAiErrorType(type, message) {
 function mapKnownPhrases(raw) {
   const lower = raw.toLowerCase()
   if (lower.includes('overloaded')) {
-    return 'The AI is busy right now. Wait a moment and try again.'
+    return 'The analysis service is busy right now. Wait a moment and try again.'
   }
   if (lower.includes('rate limit') || lower.includes('429')) {
     return 'Too many requests right now. Wait a minute and try again.'
   }
   if (lower.includes('401') || lower.includes('unauthorized')) {
-    return 'The AI key was refused or is missing. Check OPENAI_API_KEY on the server.'
+    return 'The analysis service key was refused or is missing. Check OPENAI_API_KEY on the server.'
   }
   if (lower.includes('503') && lower.includes('service unavailable')) {
-    return 'The AI service is temporarily unavailable. Try again shortly.'
+    return 'The analysis service is temporarily unavailable. Try again shortly.'
   }
   if (lower.includes('popup-closed-by-user')) {
     return 'Sign-in was cancelled.'

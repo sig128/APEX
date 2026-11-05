@@ -16,7 +16,7 @@ export function AnalyzerPage() {
   if (!user && !config?.aiOpen) return <Navigate to="/login?next=/apex" replace />
   // The analyzer's stylesheet is scoped to .apex-analyzer so it can't restyle the rest of the site.
   return (
-    <Locked need="pro" ai title="The AI game analyzer">
+    <Locked need="pro" ai title="The game analyzer">
       <SportsConfigProvider>
         <Suspense fallback={<div className="container page"><Skeleton rows={6} /></div>}>
           <div className="apex-analyzer">

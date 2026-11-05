@@ -227,7 +227,7 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
    * and the daily allowance always applies. Open only in local dev without Firebase. Takes one
    * read off today's allowance; `refund()` gives it back when nothing was produced.
    */
-  async function aiGate(req, res, { what = 'AI reads', limiterFor = insightLimiter, charge = true } = {}) {
+  async function aiGate(req, res, { what = 'model reads', limiterFor = insightLimiter, charge = true } = {}) {
     let user
     let ent = null
     if (authMode() === 'optional' && !paywallOn()) {
@@ -238,10 +238,10 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
       if (!user) throw new ApiError(401, 'signin', `Sign in to use ${what}.`, { need: 'pro' })
       if (billing?.aiAccess) {
         const g = await billing.aiAccess(user)
-        if (!g.allowed) throw new ApiError(402, 'upgrade', 'The AI is for members with a Pro or Elite pass.', { need: 'pro', plan: g.ent?.plan || 'free', status: g.ent?.status || null })
+        if (!g.allowed) throw new ApiError(402, 'upgrade', 'Model reads are for members with a Pro or Elite pass.', { need: 'pro', plan: g.ent?.plan || 'free', status: g.ent?.status || null })
         ent = g.ent
       } else if (!user.admin) {
-        throw new ApiError(402, 'upgrade', 'The AI is for members with a Pro or Elite pass.', { need: 'pro' })
+        throw new ApiError(402, 'upgrade', 'Model reads are for members with a Pro or Elite pass.', { need: 'pro' })
       }
     }
     if (!charge) return { user, refund: async () => {} }
@@ -259,7 +259,7 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
       },
     }
   }
-  const AI_OFF = 'AI is not configured on this server (OPENAI_API_KEY).'
+  const AI_OFF = 'Model reads aren’t set up on this server (OPENAI_API_KEY).'
   const intel = createIntel({ engine, ai, store: engine.store })
 
   /**

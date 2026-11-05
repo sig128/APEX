@@ -38,7 +38,7 @@ export function LoginPage() {
       <div className="login__card">
         <Wordmark height={28} />
         <h1 className="login__title">Sign in</h1>
-        <p className="muted">Your picks page, passes and AI reads live on your account. Browsing props never needs one.</p>
+        <p className="muted">Your picks page, passes and model reads live on your account. Browsing props never needs one.</p>
         {!firebaseConfigured ? (
           <p className="form-err">Sign-in isn't set up on this site yet: the Firebase web config is missing (VITE_FIREBASE_* in frontend/.env).</p>
         ) : (

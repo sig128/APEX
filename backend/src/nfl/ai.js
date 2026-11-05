@@ -116,7 +116,7 @@ export async function streamPropInsight({ propId, views, res, ai, sport, maxToke
     return { ok: false, produced: false }
   }
   if (!ai?.ready()) {
-    res.status(503).set('Cache-Control', 'no-store').json({ error: 'AI is not configured on this server (OPENAI_API_KEY).', code: 'ai_off' })
+    res.status(503).set('Cache-Control', 'no-store').json({ error: 'Model reads aren’t set up on this server (OPENAI_API_KEY).', code: 'ai_off' })
     return { ok: false, produced: false }
   }
   res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
@@ -168,7 +168,7 @@ export async function streamPropInsight({ propId, views, res, ai, sport, maxToke
     return { ok: true, produced: text.trim().length > 0 }
   } catch (e) {
     log.warn('prop insight failed', { prop: propId, err: errText(e) })
-    write({ type: 'error', error: 'The AI read failed. Your allowance was not used.' })
+    write({ type: 'error', error: 'The model read failed. Your allowance was not used.' })
     return { ok: false, produced: text.trim().length > 0 }
   } finally {
     try {
