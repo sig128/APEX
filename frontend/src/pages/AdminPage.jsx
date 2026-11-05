@@ -8,6 +8,7 @@ import { SeasonCalendar, SERIES, dayValue } from '../admin/Calendar.jsx'
 import { EdgeFinder, Confidence } from '../admin/Edge.jsx'
 import { Members, Money, Cell } from '../admin/People.jsx'
 import { Tools } from '../admin/Tools.jsx'
+import { Contests } from '../admin/Contests.jsx'
 import { ZERO, add, stats, standouts, pctTxt, signedPct, unitsTxt, record, money, compact, dayKey, shiftDay, dayLabel } from '../admin/numbers.js'
 
 const PERIODS = [
@@ -23,6 +24,7 @@ const TABS = [
   { key: 'members', label: 'Members' },
   { key: 'money', label: 'Money' },
   { key: 'tools', label: 'Tools' },
+  { key: 'contests', label: 'Contests' },
 ]
 const tabFromHash = () => {
   const h = (typeof window !== 'undefined' && window.location.hash.slice(1)) || ''
@@ -157,6 +159,7 @@ export function AdminPage() {
           {tab === 'members' && <Members users={data.users} />}
           {tab === 'money' && <Money cash={data.money} users={data.users} />}
           {tab === 'tools' && <Tools data={data} onChanged={load} onLocked={locked} />}
+          {tab === 'contests' && <Contests onLocked={locked} />}
         </div>
       )}
     </div>

@@ -16,7 +16,7 @@ export const sportInfo = (key) => SPORTS.find((s) => s.key === key) || SPORTS[0]
 export const isSport = (key) => SPORT_KEYS.includes(key)
 
 // Pages that belong to no league (picks, tools, account, a shared slip).
-export const SHARED_PATHS = /^\/(picks|u|me|kelly|tools|pricing|account|login|apex|admin|adminn|slip)(\/|$)/
+export const SHARED_PATHS = /^\/(picks|u|me|kelly|tools|pricing|account|login|apex|admin|adminn|slip|contests)(\/|$)/
 export const isSharedPath = (pathname) => SHARED_PATHS.test(String(pathname || ''))
 
 /** The same section in another league: props stays props, a game page goes to that league's home. */

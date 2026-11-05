@@ -136,6 +136,7 @@ const TOOLS = [
   { to: '/tools/sim', title: 'Parlay simulator', body: 'Play your parlay out 10,000 to 100,000 times: how often each leg hits, how often it all cashes, and what luck does to a bankroll.', plan: 'Pro' },
   { to: '/tools/check', title: 'Parlay check', body: 'Paste your legs or upload a screenshot of your betslip. The AI says which legs to keep and which to cut, and why.', plan: 'Pro' },
   { to: '/kelly', title: 'Kelly calculator', body: 'How much to bet from your edge and your bankroll, and thousands of simulated seasons of betting it.', plan: 'Pro' },
+  { to: '/contests', title: 'Weekly contest', body: 'Pick over or under on a weekly slate of props. Every right pick is a point, and the most points wins. Free to enter.', plan: 'Free' },
 ]
 
 export function ToolsPage() {
