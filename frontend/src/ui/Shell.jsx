@@ -278,6 +278,7 @@ function Footer() {
         <p className="footer__note">Stats and probabilities for research. Propify doesn't take bets. Bet within your means; if gambling stops being fun, call 1-800-GAMBLER.</p>
         <nav className="footer__links" aria-label="More">
           <Link to="/pricing">Plans</Link>
+          <Link to="/contests">Weekly contest</Link>
           <Link to={sp(sport, '/dvp')}>Defense vs position</Link>
           <Link to="/apex">Game analyzer</Link>
           {isAdmin && <Link to="/admin">Admin</Link>}

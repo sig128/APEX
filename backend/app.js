@@ -17,6 +17,8 @@ import { billingConfig } from './src/billing/config.js'
 import { billingRoutes } from './src/billing/routes.js'
 import { createPicks } from './src/picks/service.js'
 import { picksRoutes } from './src/picks/routes.js'
+import { createContests } from './src/contests/service.js'
+import { contestsRoutes } from './src/contests/routes.js'
 import { createAccess } from './src/security/access.js'
 import { defaultAuthInstance, authMode } from './src/security/auth.js'
 import { createLimiter } from './src/security/rateLimit.js'
@@ -214,6 +216,11 @@ export function createApexApp({
   // the admin page's numbers, and the daily run that keeps the board's record without visitors
   const metrics = createAdminMetrics({ engines, store: engineStore, billing, listUsers, ...(now ? { now } : {}) })
   const lock = createAdminLock({ store: engineStore, ...(now ? { now } : {}) })
+  // weekly free-to-play contests: public at /api/contests, run from /admin under the admin password
+  const contests = createContests({ docs: billing.docs, engines, ...(now ? { now } : {}) })
+  const contestApi = contestsRoutes({ contests, access, lock })
+  app.use('/api/contests', contestApi.public)
+  app.use('/api/admin/contests', contestApi.admin)
   app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks }))
   app.get('/api/cron/daily', cronHandler({ metrics }))
 

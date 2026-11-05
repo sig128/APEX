@@ -22,6 +22,7 @@ import { NotFound } from './pages/NotFound.jsx'
 const page = (load, name) => lazy(() => load().then((m) => ({ default: m[name] })))
 const MePage = page(() => import('./pages/MePage.jsx'), 'MePage')
 const LiveSlipPage = page(() => import('./pages/LiveSlipPage.jsx'), 'LiveSlipPage')
+const ContestsPage = page(() => import('./pages/ContestsPage.jsx'), 'ContestsPage')
 const KellyPage = page(() => import('./pages/KellyPage.jsx'), 'KellyPage')
 const ToolsPage = page(() => import('./pages/ToolsPage.jsx'), 'ToolsPage')
 const SimPage = page(() => import('./pages/SimPage.jsx'), 'SimPage')
@@ -70,6 +71,7 @@ export function App() {
               <Route path="/u/:handle" element={<UserPage />} />
               <Route path="/me" element={<MePage />} />
               <Route path="/me/live" element={<LiveSlipPage />} />
+              <Route path="/contests" element={<ContestsPage />} />
               <Route path="/kelly" element={<KellyPage />} />
               <Route path="/tools" element={<ToolsPage />} />
               <Route path="/tools/sim" element={<SimPage />} />
