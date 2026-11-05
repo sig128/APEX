@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { Headshot, TeamLogo, logoFor } from './Img.jsx'
 import { Spark } from './HitChart.jsx'
-import { RateChip, SlipToggle } from './Bits.jsx'
+import { RateChip, SlipToggle, InjChip } from './Bits.jsx'
 import { pct, odds, clock } from '../lib/format.js'
 import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
@@ -37,6 +37,7 @@ export const PropRow = memo(function PropRow({ c, rank, showGame = false, win, l
         <span className="prop-row__who">
           <span className="prop-row__name">
             {c.name}
+            <InjChip inj={c.inj} />
             <span className="prop-row__meta">
               {c.pos ? `${c.pos} ` : ''}
               {c.teamAbbr} {c.home ? 'vs' : '@'} {c.oppAbbr}

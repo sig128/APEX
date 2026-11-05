@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useBilling } from '../context/BillingContext.jsx'
 import { Avatar } from '../ui/PickCard.jsx'
 import { Skeleton, EliteBadge } from '../ui/Bits.jsx'
+import { AlertsCard, CoachCard, LimitsCard, SubscribersCard } from '../ui/MeTools.jsx'
 
 /** Make or edit your picks page. Handles are yours once claimed; socials show with Elite. */
 export function MePage() {
@@ -123,6 +124,21 @@ export function MePage() {
         </div>
       </form>
       <p className="muted small">To post a pick, add props to your slip and choose Post as pick.</p>
+      {p && (
+        <div className="me-tools">
+          <div className="me-tools__links">
+            <Link to="/me/live" className="btn btn--quiet">
+              Live slips
+            </Link>
+          </div>
+          <AlertsCard />
+          <CoachCard />
+          {elite && <SubscribersCard />}
+        </div>
+      )}
+      <div className="me-tools">
+        <LimitsCard />
+      </div>
     </div>
   )
 }

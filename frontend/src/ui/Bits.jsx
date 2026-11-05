@@ -83,6 +83,16 @@ export function Skeleton({ rows = 6, kind = 'row' }) {
   )
 }
 
+/** Injury report or return-from-absence badge: { tag, label, status }. */
+export function InjChip({ inj, className = '' }) {
+  if (!inj?.tag) return null
+  return (
+    <span className={`inj-chip is-${inj.tag} ${className}`} title={inj.status && inj.status !== inj.label ? inj.status : undefined}>
+      {inj.label}
+    </span>
+  )
+}
+
 export function EliteBadge({ small = false }) {
   return (
     <span className={`elite-badge${small ? ' elite-badge--s' : ''}`} title="Elite member">

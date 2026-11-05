@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Headshot } from './Img.jsx'
-import { EliteBadge } from './Bits.jsx'
+import { EliteBadge, InjChip } from './Bits.jsx'
 import { odds, units as fmtUnits, ago, kickoff, pct, bookName, impliedOf } from '../lib/format.js'
 import { importLegs } from '../lib/slip.js'
 import { sp, legRef } from '../lib/sport.js'
@@ -12,12 +12,42 @@ import { api } from '../lib/api.js'
 
 const RESULT = { win: 'Won', loss: 'Lost', push: 'Push', void: 'Void' }
 
+/** CLV as a signed percent: +3.1% beat the closing price, −2.0% trailed it. */
+export const clvText = (x) => (Number.isFinite(x) ? `${x > 0 ? '+' : x < 0 ? '−' : ''}${Math.abs(x * 100).toFixed(1)}%` : '–')
+
 export function Avatar({ profile, size = 40 }) {
   return <Headshot src={profile?.avatar} name={profile?.name || profile?.handle} size={size} className="avatar" />
 }
 
 /** One posted pick: legs, price, units, and how it turned out. */
 export function PickCard({ pick, showProfile = false, onDelete, owner = false }) {
+  if (pick.hidden) return <HiddenPick pick={pick} showProfile={showProfile} />
+  return <OpenPick pick={pick} showProfile={showProfile} onDelete={onDelete} owner={owner} />
+}
+
+/** A subscriber pick seen by someone who isn't subscribed: no legs until kickoff. */
+function HiddenPick({ pick, showProfile }) {
+  return (
+    <article className="pick is-subs">
+      {showProfile && pick.profile && (
+        <header className="pick__who">
+          <Link to={`/u/${pick.profile.handle}`} className="pick__who-link">
+            <Avatar profile={pick.profile} size={36} />
+            <span>
+              <b>{pick.profile.name}</b>
+              <span className="muted"> @{pick.profile.handle}</span>
+            </span>
+          </Link>
+        </header>
+      )}
+      <p className="pick__subs">
+        <span className="subs-tag">Subscribers</span> {pick.legCount > 1 ? `${pick.legCount}-leg parlay` : 'One pick'}, {pick.units}u. Shown to everyone when it locks {kickoff(new Date(pick.lockAt).toISOString())}.
+      </p>
+    </article>
+  )
+}
+
+function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
   const locked = pick.locked || Date.now() >= pick.lockAt
   const [tails, setTails] = useState(pick.tails || 0)
   const [tailed, setTailed] = useState(false)
@@ -63,8 +93,10 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
               <Link to={sp(l.sport, `/prop/${encodeURIComponent(l.id)}`)}>
                 <b>{l.name}</b> {l.label}
               </Link>
+              {!locked && <InjChip inj={l.inj} />}
               <span className="muted">
                 {l.teamAbbr} {l.oppAbbr ? `vs ${l.oppAbbr}` : ''}, Propify {pct(l.prob)} when posted, {Number.isFinite(l.price) ? `${odds(l.price)} (${pct(impliedOf(l.price), 1)})${l.book ? ` at ${bookName(l.book)}` : ''}` : 'no price listed (graded at -110)'}
+                {l.close && Number.isFinite(l.close.price) ? `, closed ${odds(l.close.price)}${l.close.line !== l.line ? ` at ${l.close.line}` : ''}` : ''}
               </span>
             </span>
             <span className="pick-leg__res">{l.result ? `${RESULT[l.result] || l.result}${l.value != null ? ` (${l.value})` : ''}` : ''}</span>
@@ -75,6 +107,12 @@ export function PickCard({ pick, showProfile = false, onDelete, owner = false })
       <footer className="pick__foot">
         <Odds a={pick.price} className="pick__price" />
         <span className="pick__units num">{pick.units}u</span>
+        {pick.subs && <span className="subs-tag">Subscribers</span>}
+        {pick.status === 'graded' && Number.isFinite(pick.clv) && (
+          <span className={`clv-chip num ${pick.clv > 0 ? 'is-plus' : pick.clv < 0 ? 'is-minus' : ''}`} title="Closing line value: this price against the last price before the game">
+            CLV {clvText(pick.clv)}
+          </span>
+        )}
         <span className={`pick__status is-${status}`}>
           {status === 'open' && `Locks ${kickoff(new Date(pick.lockAt).toISOString())}`}
           {status === 'live' && 'In play'}
@@ -123,6 +161,10 @@ export function RecordPanel({ title, r }) {
         <div>
           <dt>ROI</dt>
           <dd className="num">{r.roi == null ? '–' : `${(r.roi * 100).toFixed(1)}%`}</dd>
+        </div>
+        <div>
+          <dt title="Closing line value: prices taken against the last price before each game">CLV</dt>
+          <dd className={`num ${r.clv > 0 ? 'is-plus' : r.clv < 0 ? 'is-minus' : ''}`}>{r.clvN ? clvText(r.clv) : '–'}</dd>
         </div>
         <div>
           <dt>Hit rate</dt>

@@ -4,7 +4,7 @@ import { useTitle } from '../lib/hooks.js'
 import { shortDate, clock } from '../lib/format.js'
 import { Headshot, TeamLogo } from '../ui/Img.jsx'
 import { PropRow } from '../ui/PropRow.jsx'
-import { Skeleton, ErrorBox, Section, Empty } from '../ui/Bits.jsx'
+import { Skeleton, ErrorBox, Section, Empty, InjChip } from '../ui/Bits.jsx'
 import { useSport, apiOf, sp, sportInfo } from '../lib/sport.js'
 
 const COLS = {
@@ -80,7 +80,14 @@ export function PlayerPage() {
               </Link>
             </p>
           )}
-          {data.injury && <p className={`prop-head__inj is-${data.injury.severity}`}>{data.injury.status}</p>}
+          {data.status ? (
+            <p className="prop-head__status">
+              <InjChip inj={data.status} />
+              {data.status.tag === 'returning' ? <span className="muted">{data.status.status}</span> : data.injury?.detail ? <span className="muted">{data.injury.detail}</span> : null}
+            </p>
+          ) : (
+            data.injury && <p className={`prop-head__inj is-${data.injury.severity}`}>{data.injury.status}</p>
+          )}
         </div>
       </header>
       <Section id="player-props" title={sportInfo(sport).calendar === 'week' ? 'This week’s props' : 'Props on the board'}>

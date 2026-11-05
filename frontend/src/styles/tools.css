@@ -1,0 +1,418 @@
+/* Player status badges, return games, CLV, subscriber picks, the account tools and live slips. */
+
+/* ---- status badges ------------------------------------------------------------------------- */
+.inj-chip {
+  display: inline-block;
+  margin: 0 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 0.02em;
+  vertical-align: 1px;
+  background: var(--seat);
+  color: var(--chalk-2);
+  white-space: nowrap;
+}
+.inj-chip.is-out {
+  background: var(--flag-dim);
+  color: var(--flag);
+}
+.inj-chip.is-doubtful {
+  background: rgba(255, 90, 90, 0.1);
+  color: #ff8a8a;
+}
+.inj-chip.is-questionable,
+.inj-chip.is-daytoday {
+  background: rgba(252, 216, 0, 0.14);
+  color: var(--gold);
+}
+.inj-chip.is-probable,
+.inj-chip.is-clear {
+  background: var(--turf-dim);
+  color: var(--turf);
+}
+.inj-chip.is-returning {
+  background: rgba(143, 194, 255, 0.14);
+  color: var(--link);
+}
+.prop-head__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0 0;
+  font-size: var(--t-s);
+}
+.prop-head__status .inj-chip {
+  margin-left: 0;
+}
+
+/* ---- return games -------------------------------------------------------------------------- */
+.returns {
+  margin: 24px 0;
+  padding: 16px;
+  border-radius: var(--r-l);
+  border: 1px solid var(--seat);
+  background: var(--stand);
+}
+.returns__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+}
+.returns__sum {
+  margin: 0;
+  color: var(--chalk-2);
+}
+.returns__sum b {
+  font-size: 22px;
+  color: var(--chalk);
+}
+.returns__table tr.is-hit td:nth-child(5) {
+  color: var(--turf);
+}
+.returns__table tr.is-miss td:nth-child(5) {
+  color: var(--flag);
+}
+
+/* ---- picks: CLV and subscriber picks ------------------------------------------------------- */
+.clv-chip,
+.subs-tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--seat);
+  color: var(--chalk-2);
+}
+.clv-chip.is-plus {
+  background: var(--turf-dim);
+  color: var(--turf);
+}
+.clv-chip.is-minus {
+  background: var(--flag-dim);
+  color: var(--flag);
+}
+.subs-tag {
+  background: rgba(252, 216, 0, 0.12);
+  color: var(--gold);
+}
+.pick.is-subs {
+  border-style: dashed;
+}
+.pick__subs {
+  margin: 0;
+  color: var(--chalk-2);
+}
+.board__note {
+  margin-top: 10px;
+}
+@media (max-width: 560px) {
+  .board__minor {
+    display: none;
+  }
+}
+
+/* ---- slip: before posting ------------------------------------------------------------------ */
+.slip-warn {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: var(--t-s);
+  color: var(--chalk-2);
+}
+.slip-warn .inj-chip {
+  margin-left: 0;
+}
+.tilt {
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  border: 1px solid rgba(252, 216, 0, 0.4);
+  background: rgba(252, 216, 0, 0.06);
+}
+.tilt p {
+  margin: 0 0 10px;
+}
+
+/* ---- the account tools --------------------------------------------------------------------- */
+.me-tools {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+}
+.tool-card {
+  padding: 16px;
+  border-radius: var(--r-l);
+  border: 1px solid var(--seat);
+  background: var(--stand);
+  scroll-margin-top: calc(var(--header) + 12px);
+}
+.tool-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.tool-card__title {
+  margin: 0;
+  font-size: var(--t-l);
+}
+.count-dot {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--gold);
+  color: var(--gold-ink);
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  vertical-align: 3px;
+}
+.alerts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.alerts li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--t-s);
+}
+.alerts li.is-new span:nth-child(2) {
+  color: var(--chalk);
+}
+.alerts .inj-chip {
+  margin-left: 0;
+}
+.week {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.week div {
+  padding: 8px 10px;
+  border-radius: var(--r-s);
+  background: var(--stand-2);
+}
+.week dt {
+  font-size: 12px;
+  color: var(--chalk-3);
+}
+.week dd {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+.insights {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.insight {
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  border-left: 3px solid var(--seat-2);
+}
+.insight.is-warn {
+  border-left-color: var(--gold);
+}
+.insight.is-good {
+  border-left-color: var(--turf);
+}
+.insight p {
+  margin: 0 0 6px;
+}
+.insight__title {
+  font-weight: 700;
+}
+.insight__picks {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.insight__picks li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'legs res' 'meta res';
+  gap: 2px 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--seat);
+}
+.ip__legs {
+  grid-area: legs;
+}
+.ip__meta {
+  grid-area: meta;
+  font-size: 12px;
+}
+.ip__res {
+  grid-area: res;
+  white-space: nowrap;
+}
+.pick-leg__what .inj-chip {
+  align-self: flex-start;
+  margin: 2px 0;
+}
+@media (max-width: 560px) {
+  .returns__missed {
+    display: none;
+  }
+}
+.rg-paused {
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: rgba(143, 194, 255, 0.08);
+  border: 1px solid rgba(143, 194, 255, 0.3);
+}
+.rg-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.rg-form input::placeholder {
+  color: var(--chalk-3);
+}
+.rg-form__foot {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.rg-pause {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.rg-pause__title {
+  margin: 6px 0 0;
+  font-weight: 700;
+}
+.rg-confirm {
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  border: 1px solid var(--seat-2);
+  background: var(--stand-2);
+}
+.rg-confirm p {
+  margin: 0 0 10px;
+}
+.rg-help {
+  margin: 14px 0 0;
+  color: var(--chalk-3);
+}
+.subs-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.subs-list li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.subs-list li button {
+  margin-left: auto;
+}
+
+/* ---- live slips ---------------------------------------------------------------------------- */
+.live-slip {
+  padding: 14px 16px;
+  border-radius: var(--r-l);
+  border: 1px solid var(--seat);
+  background: var(--stand);
+}
+.live-slip__legs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.live-leg {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.live-leg__what {
+  display: grid;
+  gap: 2px;
+}
+.live-leg__chance {
+  font-size: 24px;
+}
+.live-leg.is-win .live-leg__chance,
+.live-leg.is-hit .live-leg__chance,
+.live-leg.is-on_pace .live-leg__chance {
+  color: var(--turf);
+}
+.live-leg.is-loss .live-leg__chance,
+.live-leg.is-miss .live-leg__chance,
+.live-leg.is-at_risk .live-leg__chance {
+  color: var(--flag);
+}
+.live-leg.is-behind .live-leg__chance {
+  color: var(--gold);
+}
+.live-slip__sum {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--seat);
+}
+.live-slip__sum dt {
+  font-size: 12px;
+  color: var(--chalk-3);
+}
+.live-slip__sum dd {
+  margin: 2px 0 0;
+  font-size: 20px;
+}
+.live-slip__tools {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.live-slip__say {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  border-left: 3px solid var(--seat-2);
+}
+.live-slip__say.is-cash {
+  border-left-color: var(--turf);
+}
+.live-slip__say.is-hold {
+  border-left-color: var(--gold);
+}
+.live-slip__say.is-hedge {
+  border-left-color: var(--link);
+}

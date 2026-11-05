@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSlip } from '../lib/useSlip.js'
 import { removeLeg, setLegPrice, setParlayPrice, setMode, clearSlip, parlayMath, shareUrl, sharePath, slipText } from '../lib/slip.js'
-import { useSport, sp, legRef, sportInfo } from '../lib/sport.js'
+import { useSport, sp, legRef, sportInfo, apiOf } from '../lib/sport.js'
 import { trackLegs } from '../lib/track.js'
 import { pct, odds, parseOdds, decimalOf, bookName } from '../lib/format.js'
 import { kellyFraction } from '../lib/kelly.js'
@@ -230,7 +230,7 @@ export function SlipPanel({ open, onClose }) {
                     <ImpliedHint a={slip.parlayPrice ?? (math.priced ? math.book : null)} />
                   </span>
                 </div>
-                {math.sameGame && <p className="slip__warn">Legs from the same game tend to win or lose together, so the real chance is different from the multiplied one. Books price same-game parlays for that.</p>}
+                {math.sameGame && <SameGame legs={legs} prob={math.prob} />}
               </div>
             )}
 
@@ -324,6 +324,42 @@ function StakeLine({ p, d, bankroll, frac, label, cap = RULES.stake.single }) {
   )
 }
 
+/**
+ * Same-game legs move together: the simulator plays them out jointly, and the slip shows that
+ * chance next to the multiplied one.
+ */
+function SameGame({ legs, prob }) {
+  const sport = useSport()
+  const [sim, setSim] = useState(null)
+  const key = legs.map(legRef).join(',')
+  useEffect(() => {
+    const ac = new AbortController()
+    setSim(null)
+    const leagues = new Set(legs.map((l) => l.sport || sport))
+    if (leagues.size !== 1) return () => ac.abort()
+    api(`${apiOf([...leagues][0])}/sim`, { method: 'POST', body: { legs: legs.map(legRef), iterations: 10000 }, signal: ac.signal })
+      .then((r) => setSim(r?.parlay || null))
+      .catch(() => {})
+    return () => ac.abort()
+  }, [key])
+  const corr = sim && Number.isFinite(sim.hitRate) ? sim.hitRate : null
+  return (
+    <p className="slip__warn">
+      Legs from the same game tend to win or lose together, so the real chance is different from the multiplied one.
+      {corr != null && Math.abs(corr - prob) > 0.003 ? (
+        <>
+          {' '}
+          Played out together: <b className="num">{pct(corr, 1)}</b> against <b className="num">{pct(prob, 1)}</b> multiplied
+          {sim.correlated?.length ? `, ${sim.correlated.length} ${sim.correlated.length === 1 ? 'pair moves' : 'pairs move'} together` : ''}.{' '}
+          <Link to="/tools/sim">Open in the simulator</Link>
+        </>
+      ) : (
+        ' Books price same-game parlays for that.'
+      )}
+    </p>
+  )
+}
+
 /** Post the slip to your picks page. Picks lock at kickoff and grade themselves. */
 function PostPick({ open, onClose, legs, mode }) {
   const [units, setUnits] = useState(1)
@@ -332,15 +368,23 @@ function PostPick({ open, onClose, legs, mode }) {
   const [state, setState] = useState({ busy: false, err: null, done: null })
   const nav = useNavigate()
   const [checked, setChecked] = useState([])
+  const [warnings, setWarnings] = useState([])
+  const [subs, setSubs] = useState(false)
+  const { has, paywall } = useBilling()
+  const elite = !paywall || has('elite')
   useEffect(() => {
     if (!open) return undefined
     setSeparate(mode === 'singles')
     setState({ busy: false, err: null, done: null })
     setChecked([])
+    setWarnings([])
     // ask up front which legs can go on a record, so nobody fills in the form for nothing
     const ac = new AbortController()
     api('/api/picks/check', { method: 'POST', body: { legs: legs.map(legRef) }, signal: ac.signal })
-      .then((r) => setChecked(r.legs || []))
+      .then((r) => {
+        setChecked(r.legs || [])
+        setWarnings(r.warnings || [])
+      })
       .catch(() => {})
     return () => ac.abort()
   }, [open, mode])
@@ -351,16 +395,24 @@ function PostPick({ open, onClose, legs, mode }) {
   useEffect(() => {
     if (state.err?.body?.legs?.length && !bad.length) setState((x) => ({ ...x, err: null }))
   }, [state.err, bad.length])
-  const submit = async (e) => {
-    e.preventDefault()
+  const submit = async (e, extra = {}) => {
+    e?.preventDefault?.()
     setState({ busy: true, err: null, done: null })
+    let tz
     try {
-      const out = await api('/api/picks', { method: 'POST', body: { legs: legs.map(legRef), mode: separate ? 'separate' : 'parlay', units, note } })
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    } catch {
+      tz = undefined
+    }
+    try {
+      const out = await api('/api/picks', { method: 'POST', body: { legs: legs.map(legRef), mode: separate ? 'separate' : 'parlay', units, note, tz, subs: elite && subs, ...extra } })
       setState({ busy: false, err: null, done: out })
     } catch (err) {
       setState({ busy: false, err, done: null })
     }
   }
+  const warn = warnings.filter((w) => legs.some((l) => legRef(l) === w.id))
+  const rgCode = state.err && ['cooling_off', 'self_excluded', 'limit_picks', 'limit_units_day', 'limit_units_week', 'limit_loss'].includes(state.err.code)
   return (
     <Dialog open={open} onClose={onClose} title="Post to your picks page">
       {state.done ? (
@@ -404,18 +456,56 @@ function PostPick({ open, onClose, legs, mode }) {
             <span>Note (optional)</span>
             <textarea maxLength={280} rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why you like it" />
           </label>
-          {state.err && !bad.length && (
-            <p className="form-err" role="alert">
-              {state.err.message}
-              {state.err.code === 'no_profile' && (
-                <>
-                  {' '}
-                  <Link to="/me" onClick={onClose}>
-                    Make your page
-                  </Link>
-                </>
-              )}
-            </p>
+          {elite && (
+            <label className="check">
+              <input type="checkbox" checked={subs} onChange={(e) => setSubs(e.target.checked)} />
+              Subscribers only (everyone else sees it when it locks)
+            </label>
+          )}
+          {warn.length > 0 && (
+            <ul className="slip-warn" aria-label="Before you post">
+              {warn.map((w) => (
+                <li key={w.id}>
+                  <span className={`inj-chip is-${w.tag}`}>{w.label}</span> {w.text}
+                </li>
+              ))}
+            </ul>
+          )}
+          {state.err?.code === 'tilt' ? (
+            <div className="tilt" role="alert">
+              <p>{state.err.message}</p>
+              <div className="row">
+                <button type="button" className="btn btn--quiet" onClick={() => submit(null, { ackTilt: true })} disabled={state.busy}>
+                  Post anyway
+                </button>
+                <Link to="/me#limits" className="btn btn--gold" onClick={onClose}>
+                  Take a break
+                </Link>
+              </div>
+            </div>
+          ) : (
+            state.err &&
+            !bad.length && (
+              <p className="form-err" role="alert">
+                {state.err.message}
+                {state.err.code === 'no_profile' && (
+                  <>
+                    {' '}
+                    <Link to="/me" onClick={onClose}>
+                      Make your page
+                    </Link>
+                  </>
+                )}
+                {rgCode && (
+                  <>
+                    {' '}
+                    <Link to="/me#limits" onClick={onClose}>
+                      Limits and breaks
+                    </Link>
+                  </>
+                )}
+              </p>
+            )
           )}
           {bad.length > 0 && (
             <div className="form-err" role="alert">

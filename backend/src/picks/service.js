@@ -949,7 +949,18 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
 
   async function coachFor(user) {
     if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
-    return cached(`coach:${user.uid}`, 60_000, async () => coachOf(await allPicksOf(user.uid), { now: now(), tz: billingConfig().usageTz }))
+    return cached(`coach:${user.uid}`, 60_000, async () => {
+      const all = await allPicksOf(user.uid)
+      const out = coachOf(all, { now: now(), tz: billingConfig().usageTz })
+      // the picks behind every insight, so each one can be checked
+      const ids = new Set([...out.insights.flatMap((x) => x.picks), ...out.week.picks])
+      const refs = {}
+      for (const p of all) {
+        if (!ids.has(p.id)) continue
+        refs[p.id] = { id: p.id, createdAt: p.createdAt, result: p.result, units: p.units, profit: p.profit ?? null, price: p.price, clv: Number.isFinite(p.clv) ? p.clv : null, legs: p.legs.map((l) => `${l.short || l.name} ${l.label}`) }
+      }
+      return { ...out, refs }
+    })
   }
 
   // ---- responsible betting ---------------------------------------------------------------------

@@ -15,7 +15,8 @@ import { PropRow } from '../ui/PropRow.jsx'
 import { ReadFeed } from '../ui/ReadFeed.jsx'
 import { AskApex } from '../ui/AskApex.jsx'
 import { Locked } from '../ui/Locked.jsx'
-import { Skeleton, ErrorBox, Section } from '../ui/Bits.jsx'
+import { Skeleton, ErrorBox, Section, InjChip } from '../ui/Bits.jsx'
+import { ReturnGames } from '../ui/ReturnGames.jsx'
 import { Odds, ImpliedHint } from '../ui/Odds.jsx'
 import { useSport, apiOf, sp } from '../lib/sport.js'
 
@@ -108,11 +109,18 @@ export function PropPage() {
               </>
             )}
           </p>
-          {data.injury && (
-            <p className={`prop-head__inj is-${data.injury.severity}`}>
-              {data.injury.status}
-              {data.injury.detail ? `, ${data.injury.detail}` : ''}
+          {data.status ? (
+            <p className="prop-head__status">
+              <InjChip inj={data.status} />
+              <span className="muted">{data.status.tag === 'returning' ? data.status.status : [data.injury?.status !== data.status.label ? data.injury?.status : null, data.injury?.detail].filter(Boolean).join(', ')}</span>
             </p>
+          ) : (
+            data.injury && (
+              <p className={`prop-head__inj is-${data.injury.severity}`}>
+                {data.injury.status}
+                {data.injury.detail ? `, ${data.injury.detail}` : ''}
+              </p>
+            )
           )}
         </div>
       </header>
@@ -212,6 +220,8 @@ export function PropPage() {
       </div>
 
       <LineShop row={p} />
+
+      {data.returning?.show && <ReturnGames r={data.returning} name={p.short || p.name} marketLabel={p.marketLabel} />}
 
       {live && !live.untracked && (
         <div className={`live-now is-${live.status}`}>
