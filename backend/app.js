@@ -26,6 +26,8 @@ import { registerAdminSportsRoutes } from './adminSportsRoutes.js'
 import { createAdminMetrics } from './src/admin/metrics.js'
 import { adminRoutes, cronHandler } from './src/admin/routes.js'
 import { createAdminLock } from './src/admin/session.js'
+import { createCalibration } from './src/calibration/service.js'
+import { calibrationRoutes } from './src/calibration/routes.js'
 import { getDisabledSportKeys } from './sportsConfig.js'
 import {
   handleMlbPlayerPropsShowcaseRequest,
@@ -215,7 +217,10 @@ export function createApexApp({
   const metrics = createAdminMetrics({ engines, store: engineStore, billing, listUsers, ...(now ? { now } : {}) })
   const lock = createAdminLock({ store: engineStore, ...(now ? { now } : {}) })
   app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks }))
-  app.get('/api/cron/daily', cronHandler({ metrics }))
+  // the public calibration page (src/calibration); the daily run also fingerprints the days it closed
+  const calibration = createCalibration({ engines, store: engineStore, ...(now ? { now } : {}) })
+  app.use('/api/calibration', calibrationRoutes({ calibration }))
+  app.get('/api/cron/daily', cronHandler({ metrics: calibration.afterDaily(metrics) }))
 
   // ---- the AI analyzer (chat) ---------------------------------------------------------------
   // one analysis per game, written once and served to every member (see src/ai/shared.js)
