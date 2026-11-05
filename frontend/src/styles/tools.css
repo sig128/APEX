@@ -453,3 +453,29 @@
 .live-slip__say.is-hedge {
   border-left-color: var(--link);
 }
+
+/* ---- header fit: the full nav, search, slip and sign-in at 960-1099px, and phones under 360px */
+@media (min-width: 960px) and (max-width: 1099px) {
+  .header__inner {
+    gap: 12px;
+  }
+  .header__link {
+    padding: 8px 8px;
+  }
+  .header__link.is-on::after {
+    left: 8px;
+    right: 8px;
+  }
+  .header__search {
+    width: 168px;
+  }
+}
+@media (max-width: 359px) {
+  .header__inner {
+    gap: 8px;
+    padding: 0 12px;
+  }
+  .header__tools {
+    gap: 6px;
+  }
+}
