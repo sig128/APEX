@@ -137,6 +137,7 @@ const TOOLS = [
   { to: '/tools/check', title: 'Parlay check', body: 'Paste your legs or upload a screenshot of your betslip. The model says which legs to keep and which to cut, and why.', plan: 'Pro' },
   { to: '/kelly', title: 'Kelly calculator', body: 'How much to bet from your edge and your bankroll, and thousands of simulated seasons of betting it.', plan: 'Pro' },
   { to: '/contests', title: 'Weekly contest', body: 'Pick over or under on a weekly slate of props. Every right pick is a point, and the most points wins. Free to enter.', plan: 'Free' },
+  { to: '/calibration', title: 'Calibration', body: 'Every graded prop against the probability the model gave it: when it says 70%, does it hit 70%? Each day’s rows are public and fingerprinted.', plan: 'Free' },
 ]
 
 export function ToolsPage() {

@@ -7485,3 +7485,438 @@ code {
   overflow-wrap: anywhere;
 }
 /* ======================================================================== end of contests */
+
+/* ================================================================================ calibration
+   The public calibration page (/calibration, pages/CalibrationPage.jsx): the model's ratings
+   against how often they hit. One gold series on the stand; small samples are hollow, with a
+   dashed range and a "Small" tag; every number also sits in the table. Everything here is
+   prefixed cal- and nothing above depends on it. */
+.cal-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  margin: 0 0 14px;
+}
+.cal-filter {
+  flex: 1 1 170px;
+  max-width: 260px;
+  min-width: 0;
+}
+.cal-filter--window {
+  flex: 0 1 auto;
+  max-width: none;
+}
+.cal-filter--window .seg {
+  justify-self: start;
+}
+@media (max-width: 599px) {
+  .cal-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .cal-filter {
+    max-width: none;
+  }
+  .cal-filter--window {
+    grid-column: 1 / -1;
+  }
+}
+.cal-body {
+  transition: opacity 0.15s ease;
+}
+.cal-body.is-stale {
+  opacity: 0.45;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cal-body {
+    transition: none;
+  }
+}
+.cal-range {
+  margin: 0 0 14px;
+  max-width: 80ch;
+  color: var(--chalk-2);
+  font-size: 14px;
+}
+.cal-range p {
+  margin: 0 0 4px;
+}
+.cal-warn {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--r-s);
+  background: var(--flag-dim);
+  color: var(--chalk);
+}
+/* the headline */
+.cal-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.cal-hero__big {
+  margin: 0;
+  font-size: 64px;
+  line-height: 0.9;
+  color: var(--gold);
+  font-variant-numeric: normal;
+}
+.cal-hero__words {
+  min-width: 0;
+}
+.cal-hero__text {
+  margin: 0;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1.25;
+}
+.cal-hero__sub {
+  margin: 4px 0 0;
+  color: var(--chalk-2);
+  font-size: 15px;
+}
+.cal-hero__all {
+  grid-column: 1 / -1;
+  margin: 6px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--seat);
+  color: var(--chalk-2);
+  font-size: 14px;
+}
+@media (max-width: 599px) {
+  .cal-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+  .cal-hero__big {
+    font-size: 52px;
+  }
+  .cal-hero__text {
+    font-size: 18px;
+  }
+}
+.cal-section {
+  margin-top: 32px;
+}
+.cal-section > .section__title {
+  margin-bottom: 12px;
+}
+.cal-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+.cal-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.cal-caption {
+  margin: 10px 0 0;
+  max-width: 72ch;
+  color: var(--chalk-3);
+  font-size: 13px;
+}
+/* the key to the chart's marks: under it on a phone, beside it on a wide screen */
+.cal-key {
+  min-width: 0;
+}
+.cal-key__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 14px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--chalk-2);
+  font-size: 14px;
+}
+.cal-key__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cal-key__list svg {
+  flex: none;
+}
+@media (min-width: 960px) {
+  .cal-card {
+    display: grid;
+    grid-template-columns: minmax(0, 540px) minmax(0, 1fr);
+    align-items: center;
+    gap: 12px 36px;
+    padding: 20px 24px;
+  }
+  .cal-key__list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin: 0 0 6px;
+    font-size: 15px;
+  }
+}
+/* the chart: rated across, hit up, on one scale */
+.cal-chart {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+}
+.cal-chart svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.cal-grid {
+  stroke: var(--seat);
+  stroke-width: 1;
+}
+.cal-ref {
+  stroke: var(--chalk-3);
+  stroke-width: 1.5;
+}
+.cal-tick {
+  fill: var(--chalk-3);
+  font: 600 11px/1 var(--font-ui);
+}
+.cal-tick--strong {
+  fill: var(--chalk-2);
+}
+.cal-axis {
+  fill: var(--chalk-2);
+  font: 600 12px/1 var(--font-ui);
+}
+.cal-whisker {
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+.cal-whisker.is-small {
+  stroke-dasharray: 3 3;
+  opacity: 0.45;
+}
+.cal-dot {
+  fill: var(--gold);
+  stroke: var(--stand);
+  stroke-width: 2;
+}
+.cal-dot.is-small {
+  fill: var(--stand);
+  stroke: var(--gold);
+}
+.cal-dot.is-hover {
+  stroke: var(--chalk);
+}
+.cal-pt:focus-visible {
+  outline: none;
+}
+.cal-pt:focus-visible .cal-dot {
+  stroke: var(--chalk);
+  stroke-width: 2.5;
+}
+.cal-tip {
+  position: absolute;
+  z-index: 3;
+  width: 200px;
+  padding: 8px 10px;
+  pointer-events: none;
+  transform: translateY(-100%);
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-s);
+  background: var(--stand-3);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  color: var(--chalk-2);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.cal-tip b {
+  color: var(--chalk);
+  font-size: 18px;
+}
+.cal-tip__sub {
+  display: block;
+  margin-top: 2px;
+}
+/* the table: every band, every number */
+.cal-tablewrap {
+  min-width: 0;
+}
+.cal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.cal-table th,
+.cal-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--seat);
+  text-align: left;
+  vertical-align: top;
+}
+.cal-table thead th {
+  padding-top: 4px;
+  color: var(--chalk-3);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.cal-table tbody th,
+.cal-table tfoot th {
+  color: var(--chalk);
+  font-weight: 600;
+}
+.cal-table td {
+  white-space: nowrap;
+}
+.cal-table td.num {
+  font-size: 16px;
+}
+.cal-table tr.is-small td {
+  color: var(--chalk-2);
+}
+.cal-table tr.is-empty td {
+  color: var(--chalk-3);
+}
+.cal-table tfoot tr:first-child th,
+.cal-table tfoot tr:first-child td {
+  border-top: 1px solid var(--seat-2);
+}
+.cal-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 7px;
+  border: 1px dashed var(--chalk-3);
+  border-radius: 999px;
+  color: var(--chalk-2);
+  font: 600 11px/1.6 var(--font-ui);
+  vertical-align: 1px;
+}
+.cal-note,
+.cal-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--chalk-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+.cal-sub {
+  display: none;
+}
+/* below desktop width the table keeps four columns; the rest of each band's numbers ride under its name */
+@media (max-width: 959px) {
+  .cal-wide {
+    display: none;
+  }
+  .cal-sub {
+    display: block;
+  }
+}
+@media (max-width: 639px) {
+  .cal-table th,
+  .cal-table td {
+    padding: 8px 5px;
+  }
+  .cal-table td.num {
+    font-size: 15px;
+  }
+}
+/* how it's counted, and the daily fingerprints */
+.cal-list {
+  display: grid;
+  gap: 8px;
+  max-width: 80ch;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--chalk-2);
+}
+.cal-list b {
+  color: var(--chalk);
+}
+.cal-fps {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cal-fp {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-m);
+  background: var(--stand);
+}
+.cal-fp.is-off {
+  border-color: rgba(255, 90, 90, 0.5);
+}
+.cal-fp__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 6px;
+}
+.cal-fp__lg {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--seat);
+  color: var(--chalk-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.cal-fp__hash {
+  display: block;
+  color: var(--chalk);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+.cal-fp__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 6px 0 0;
+}
+.cal-more {
+  margin-top: 12px;
+}
+.cal-check {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-m);
+}
+.cal-check > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.cal-check[open] > summary {
+  margin-bottom: 10px;
+}
+.cal-check code {
+  overflow-wrap: anywhere;
+}
+.cal-code {
+  margin: 6px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-s);
+  background: var(--night);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cal-code code {
+  word-break: normal;
+}

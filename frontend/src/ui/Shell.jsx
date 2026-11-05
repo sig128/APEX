@@ -281,6 +281,7 @@ function Footer() {
           <Link to="/contests">Weekly contest</Link>
           <Link to={sp(sport, '/dvp')}>Defense vs position</Link>
           <Link to="/apex">Game analyzer</Link>
+          <Link to="/calibration">Calibration</Link>
           {isAdmin && <Link to="/admin">Admin</Link>}
           <button type="button" className="linkish" onClick={() => playIntro({ force: true, chipText: sportInfo(sport).name })}>
             Replay intro
