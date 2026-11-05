@@ -529,8 +529,11 @@ function cardRead(c, P, cy, s) {
   const top = cy - 960
   const hd = s.verdictHead
   // a small sparkle mark, then the header
-  if (hd > 0) { star(c, 300, top + 286, 40, hd * 0.9) }
-  txt(c, 'PROPIFY AI READ', 560, top + 300, { font: font(UI, 800, 40), color: C.chalk2, ls: 12, alpha: hd })
+  const head = 'PROPIFY MODEL READ'
+  const hf = font(UI, 800, 38)
+  const hw = measure(c, head, hf, 10).width
+  if (hd > 0) { star(c, 560 - hw / 2 - 34, top + 286, 40, hd * 0.9) }
+  txt(c, head, 560, top + 300, { font: hf, color: C.chalk2, ls: 10, alpha: hd })
   txt(c, 'VERDICT', 540, top + 470, { font: font(UI, 800, 36), color: C.chalk3, ls: 16, alpha: hd })
   const v = s.verdict
   if (v > 0) {
@@ -818,7 +821,7 @@ function scene5(c, t) {
     x += ws[i] + 40
   })
   const d = E.outCubic(seg(t, 26.6, 27.1)) * (1 - fadeOut)
-  txt(c, 'Hit rates, real prices, AI reads and live', CX, 1150 + (1 - d) * 24, { font: font(UI, 600, 44), color: C.chalk2, alpha: d })
+  txt(c, 'Hit rates, real prices, model reads and live', CX, 1150 + (1 - d) * 24, { font: font(UI, 600, 44), color: C.chalk2, alpha: d })
   txt(c, 'tracking for every player prop.', CX, 1210 + (1 - d) * 24, { font: font(UI, 600, 44), color: C.chalk2, alpha: d })
   const cta = E.outBack(seg(t, 27.6, 28.0), 1.4)
   if (cta > 0) {
