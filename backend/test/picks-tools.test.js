@@ -128,6 +128,11 @@ test('coach: only patterns with enough picks, each traced to its picks', () => {
   for (let k = 0; k < THRESHOLD; k++) late.push(mk(1, 'win', 1, 20))
   const lo = coach(late, { now: t0 + 900 * 3600_000 })
   assert.ok(lo.insights.find((x) => x.id === 'late'), JSON.stringify(lo.insights.map((x) => x.id)))
+  // CLV week by week
+  const withClv = picks.slice(0, 4).map((p, k) => ({ ...p, clv: k % 2 ? 0.02 : -0.01 }))
+  const tr = coach(withClv, { now: Math.max(...withClv.map((p) => p.gradedAt)) + 3600_000 }).clvTrend
+  assert.equal(tr.reduce((s, w) => s + w.n, 0), 4)
+  assert.ok(tr.every((w) => w.weeksAgo >= 0 && w.weeksAgo < 12))
 })
 
 test('live chance: settled legs, time left, and the slip', () => {
