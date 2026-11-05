@@ -785,7 +785,8 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     const at = Math.min(t, seen || t, leg.kickoff)
     if (g && g.status?.state !== 'pre' && !(seen && seen <= leg.kickoff)) return leg
     const snap = closeSnap(row, leg.side, at)
-    if (!snap || sameClose(snap, leg.close)) return leg
+    // the same prices seen again still move the close's time up, every half hour at most
+    if (!snap || (sameClose(snap, leg.close) && snap.at - (leg.close?.at || 0) < 30 * 60_000)) return leg
     return { ...leg, close: snap }
   }
 
