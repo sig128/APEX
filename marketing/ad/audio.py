@@ -1,4 +1,4 @@
-"""The soundtrack for the Propify ad, synthesized from scratch.
+"""The soundtrack for the PropPickz ad, synthesized from scratch.
 
 30 s, 48 kHz stereo, 120 BPM in F minor. Every hit lands on the same time as the picture
 (the IMPACTS, flips, whips and counters in ad.html). Writes audio.wav, mastered to -14 LUFS.

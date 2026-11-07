@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Propify ad</title>
+<title>PropPickz ad</title>
 <style>
 /*
   "Read the line." A 30 s vertical spot, 1080x1920, rendered frame by frame.
@@ -457,7 +457,7 @@ function cardChart(c, P, cy, s, hero) {
 
 function cardRing(c, P, cy, s) {
   const top = cy - 960
-  txt(c, 'PROPIFY PROBABILITY', 540, top + 300, { font: font(UI, 800, 40), color: C.chalk2, ls: 12, alpha: s.ring > 0 ? 1 : 0 })
+  txt(c, 'PROPPICKZ PROBABILITY', 540, top + 300, { font: font(UI, 800, 40), color: C.chalk2, ls: 12, alpha: s.ring > 0 ? 1 : 0 })
   const ry = top + 900, R = 300
   c.save(); c.lineWidth = 52; c.strokeStyle = 'rgba(42,60,92,0.7)'; c.beginPath(); c.arc(540, ry, R, 0, Math.PI * 2); c.stroke(); c.restore()
   const k = E.outCubic(s.ring)
@@ -512,7 +512,7 @@ function cardPrice(c, P, cy, s) {
   }
   const m = E.outCubic(s.cmp)
   if (m > 0) {
-    const rows = [['BOOK', P.book, 'rgba(117,131,154,0.9)'], ['PROPIFY', P.prob, C.gold]]
+    const rows = [['BOOK', P.book, 'rgba(117,131,154,0.9)'], ['PROPPICKZ', P.prob, C.gold]]
     rows.forEach(([label, v, col], i) => {
       const y = top + 1330 + i * 130
       txt(c, label, 100, y + 14, { font: font(UI, 900, 34), color: i ? C.gold : C.chalk3, align: 'left', ls: 6, alpha: m })
@@ -529,7 +529,7 @@ function cardRead(c, P, cy, s) {
   const top = cy - 960
   const hd = s.verdictHead
   // a small sparkle mark, then the header
-  const head = 'PROPIFY MODEL READ'
+  const head = 'PROPPICKZ MODEL READ'
   const hf = font(UI, 800, 38)
   const hw = measure(c, head, hf, 10).width
   if (hd > 0) { star(c, 560 - hw / 2 - 34, top + 286, 40, hd * 0.9) }
@@ -832,7 +832,7 @@ function scene5(c, t) {
   const legal = E.outCubic(seg(t, 27.9, 28.35)) * (1 - fadeOut)
   txt(c, '21+. Please bet responsibly.', CX, 1480, { font: font(UI, 600, 30), color: C.chalk3, alpha: legal })
   txt(c, 'Gambling problem? Call 1-800-MY-RESET.', CX, 1524, { font: font(UI, 600, 30), color: C.chalk3, alpha: legal })
-  txt(c, 'Propify is a research tool, not a sportsbook.', CX, 1568, { font: font(UI, 600, 30), color: C.chalk3, alpha: legal })
+  txt(c, 'PropPickz is a research tool, not a sportsbook.', CX, 1568, { font: font(UI, 600, 30), color: C.chalk3, alpha: legal })
 }
 
 // =====================================================================================

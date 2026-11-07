@@ -20,7 +20,7 @@ ffmpeg -framerate 30 -i frames/f%05d.png -i audio.wav \
   -vf "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p" \
   -c:v libx264 -preset slow -crf 17 -profile:v high \
   -colorspace bt709 -color_primaries bt709 -color_trc bt709 -color_range tv \
-  -c:a aac -b:a 256k -ar 48000 -movflags +faststart propify-ad.mp4
+  -c:a aac -b:a 256k -ar 48000 -movflags +faststart proppickz-ad.mp4
 ```
 
 You need Python 3 with Playwright (Chromium), numpy, scipy and Pillow, plus ffmpeg.
@@ -30,6 +30,6 @@ You need Python 3 with Playwright (Chromium), numpy, scipy and Pillow, plus ffmp
 - Timing lives in `ad.html`. The big hits are listed in `IMPACTS`. If you move a hit, move
   the same moment in `audio.py`, since the soundtrack places each sound at a fixed time.
 - The end card's small print reads "21+. Please bet responsibly.", "Gambling problem? Call
-  1-800-MY-RESET." and "Propify is a research tool, not a sportsbook." Check the rules for
+  1-800-MY-RESET." and "PropPickz is a research tool, not a sportsbook." Check the rules for
   the state or platform you run it in, which may require a different helpline or wording.
 - Fonts: Big Shoulders Display and Barlow, both under the SIL Open Font License.
