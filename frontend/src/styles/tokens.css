@@ -1,6 +1,6 @@
-/* Propify under the lights: night navy, floodlight gold for the Propify read, chalk for text, turf
-   and flag colors only for hit and miss. Numbers are set like stadium signage (Big Shoulders),
-   everything else in Barlow. */
+/* PropPickz: a black field under neon. Lime is the brand and the PropPickz read (scores, fair
+   odds, the main button), chalk is text, turf and flag colors are only for hit and miss. Numbers
+   are set like stadium signage (Big Shoulders), everything else in Barlow. */
 @font-face { font-family: 'Barlow'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/barlow-400.woff') format('woff'); }
 @font-face { font-family: 'Barlow'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/barlow-500.woff') format('woff'); }
 @font-face { font-family: 'Barlow'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/barlow-600.woff') format('woff'); }
@@ -10,24 +10,28 @@
 
 :root {
   color-scheme: dark;
-  --night: #050a14;
-  --stand: #0a1220;
-  --stand-2: #0f1a2d;
-  --stand-3: #15233b;
-  --seat: #1c2b45;
-  --seat-2: #2a3c5c;
-  --chalk: #e8edf5;
-  --chalk-2: #aab5c7;
-  --chalk-3: #75839a;
-  --gold: #fcd800;
-  --gold-2: #f2c200;
-  --gold-ink: #1a1400;
+  --night: #030605;
+  --stand: #090e0c;
+  --stand-2: #0e1512;
+  --stand-3: #141d19;
+  --seat: #1e2a25;
+  --seat-2: #2c3b34;
+  --chalk: #eef3ec;
+  --chalk-2: #a9b5ae;
+  --chalk-3: #77847d;
+  --lime: #b8ff1f;
+  --lime-2: #8cf516;
+  --lime-hi: #e9ff9a;
+  --lime-ink: #0a1300;
+  --lime-dim: rgba(184, 255, 31, 0.12);
+  --lime-glow: 0 0 18px rgba(140, 245, 22, 0.38);
+  --lime-grad: linear-gradient(100deg, #7cfc00 0%, #b8ff1f 55%, #e9ff9a 100%);
   --turf: #2fd47a;
   --turf-dim: rgba(47, 212, 122, 0.16);
   --flag: #ff5a5a;
   --flag-dim: rgba(255, 90, 90, 0.16);
-  --push: #8b97aa;
-  --link: #8fc2ff;
+  --push: #8b9a92;
+  --link: #a8e7ff;
 
   --font-ui: 'Barlow', 'Helvetica Neue', Arial, system-ui, sans-serif;
   --font-num: 'Big Shoulders Display', 'Barlow', 'Arial Narrow', sans-serif;
@@ -47,7 +51,7 @@
   --max: 1200px;
   --header: 56px;
   --tabbar: 62px;
-  --focus: 0 0 0 2px var(--night), 0 0 0 4px var(--gold);
+  --focus: 0 0 0 2px var(--night), 0 0 0 4px var(--lime);
 }
 
 *,
@@ -101,7 +105,7 @@ img {
 }
 
 ::selection {
-  background: rgba(252, 216, 0, 0.35);
+  background: rgba(184, 255, 31, 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {

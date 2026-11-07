@@ -64,7 +64,7 @@ function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
     }
   }
   const status = pick.status === 'graded' ? pick.result : locked ? 'live' : 'open'
-  const shareText = `${pick.legs.length > 1 ? `${pick.legs.length}-leg parlay` : pick.legs[0].label}${pick.legs.length === 1 ? ` (${pick.legs[0].name})` : ''} ${odds(pick.price)}, ${pick.units}u. Graded live on Propify.`
+  const shareText = `${pick.legs.length > 1 ? `${pick.legs.length}-leg parlay` : pick.legs[0].label}${pick.legs.length === 1 ? ` (${pick.legs[0].name})` : ''} ${odds(pick.price)}, ${pick.units}u. Graded live on PropPickz.`
   const pageUrl = `${SITE_URL}/u/${pick.handle}`
   return (
     <article className={`pick is-${status}`}>
@@ -95,7 +95,7 @@ function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
               </Link>
               {!locked && <InjChip inj={l.inj} />}
               <span className="muted">
-                {l.teamAbbr} {l.oppAbbr ? `vs ${l.oppAbbr}` : ''}, Propify {pct(l.prob)} when posted, {Number.isFinite(l.price) ? `${odds(l.price)} (${pct(impliedOf(l.price), 1)})${l.book ? ` at ${bookName(l.book)}` : ''}` : 'no price listed (graded at -110)'}
+                {l.teamAbbr} {l.oppAbbr ? `vs ${l.oppAbbr}` : ''}, PropPickz {pct(l.prob)} when posted, {Number.isFinite(l.price) ? `${odds(l.price)} (${pct(impliedOf(l.price), 1)})${l.book ? ` at ${bookName(l.book)}` : ''}` : 'no price listed (graded at -110)'}
                 {l.close && Number.isFinite(l.close.price) ? `, closed ${odds(l.close.price)}${l.close.line !== l.line ? ` at ${l.close.line}` : ''}` : ''}
               </span>
             </span>
@@ -124,7 +124,7 @@ function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
         </span>
         <span className="pick__acts">
           {!locked && !owner && (
-            <button type="button" className="btn btn--gold btn--s pick__tail" onClick={tail}>
+            <button type="button" className="btn btn--lime btn--s pick__tail" onClick={tail}>
               Tail
             </button>
           )}

@@ -180,7 +180,7 @@ test('AI reads: sign in, then Pro, then a daily allowance, and a read is shared,
   const events = ndjson(read.text)
   assert.deepEqual(events.map((e) => e.type), ['start', 'text_delta', 'complete'])
   assert.match(events[2].text, /VERDICT: PRIME/)
-  assert.match(ai.calls.at(-1).messages[0].content, /PROP:/i, 'the model gets the Propify brief')
+  assert.match(ai.calls.at(-1).messages[0].content, /PROP:/i, 'the model gets the PropPickz brief')
 
   // the same prop again, by anyone with access: the shared read, no new AI call, no allowance
   const calls = ai.calls.length
@@ -226,7 +226,7 @@ test('the game analyzer: Pro only, each game analysed once and served to everyon
   const done = ndjson(r.text).find((e) => e.type === 'complete')
   assert.ok(done && done.messages.length === 2)
   const written = ai.calls.at(-1).messages[0].content
-  assert.match(written, /Top Propify props/, 'Propify numbers go into the analysis')
+  assert.match(written, /Top PropPickz props/, 'PropPickz numbers go into the analysis')
   for (const personal of ['5000', 'my secret angle', '-9999']) assert.ok(!written.includes(personal), `a shared analysis leaves out "${personal}"`)
   // the same game again, by the same member or another, typed a little differently: the stored
   // analysis, at once, with no AI call and no allowance
@@ -311,7 +311,7 @@ test('parlay simulator: Pro only, real legs, numbers that add up', async () => {
   assert.equal(r.status, 200, JSON.stringify(r.body))
   assert.equal(r.body.iterations, 25000)
   assert.equal(r.body.legs.length, 3)
-  for (const l of r.body.legs) assert.ok(Math.abs(l.hitRate + l.pushRate * 0 - l.apex) < 0.03, `${l.label}: ${l.hitRate} vs Propify ${l.apex}`)
+  for (const l of r.body.legs) assert.ok(Math.abs(l.hitRate + l.pushRate * 0 - l.apex) < 0.03, `${l.label}: ${l.hitRate} vs PropPickz ${l.apex}`)
   const sumHit = r.body.parlay.legsHit.reduce((a, b) => a + b, 0)
   assert.ok(Math.abs(sumHit - 1) < 1e-9, 'every run lands somewhere')
   assert.ok(r.body.price.implied > 0.14 && r.body.price.implied < 0.15)

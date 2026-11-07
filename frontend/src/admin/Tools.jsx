@@ -57,7 +57,7 @@ export function Tools({ data, onChanged, onLocked }) {
             <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Why (only you see it)" />
           </label>
           <div className="row">
-            <button type="submit" className="btn btn--gold">
+            <button type="submit" className="btn btn--lime">
               Give pass
             </button>
             <button type="button" className="btn btn--quiet" onClick={() => form.email && window.confirm(`Take away ${form.email}'s pass?`) && act('/api/admin/revoke', { email: form.email.trim() }, `Took away ${form.email}'s pass.`)}>
@@ -65,7 +65,7 @@ export function Tools({ data, onChanged, onLocked }) {
             </button>
           </div>
         </form>
-        <p className="adm-note">They need to have signed in to Propify once. A pass you give shows as free in Money, not as revenue.</p>
+        <p className="adm-note">They need to have signed in to PropPickz once. A pass you give shows as free in Money, not as revenue.</p>
       </section>
       <section className="adm-panel">
         <h3 className="adm-h3">Hide a picks page</h3>

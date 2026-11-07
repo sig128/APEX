@@ -52,7 +52,7 @@ export function MePage() {
     <div className="container page narrow">
       <header className="page-head">
         <h1 className="page-title">{p ? 'Your page' : 'Make your picks page'}</h1>
-        <p className="page-sub">{p ? `propify/u/${p.handle}` : 'Post picks before kickoff and Propify grades them from the box score. Your record builds itself, and nobody can fake one.'}</p>
+        <p className="page-sub">{p ? `proppickz.com/u/${p.handle}` : 'Post picks before kickoff and PropPickz grades them from the box score. Your record builds itself, and nobody can fake one.'}</p>
       </header>
       {p && (
         <div className="me-card">
@@ -113,7 +113,7 @@ export function MePage() {
         )}
         {state.saved && <p className="form-ok">Saved.</p>}
         <div className="row">
-          <button type="submit" className="btn btn--gold" disabled={state.busy}>
+          <button type="submit" className="btn btn--lime" disabled={state.busy}>
             {state.busy ? 'Saving' : p ? 'Save changes' : 'Create my page'}
           </button>
           {p && (

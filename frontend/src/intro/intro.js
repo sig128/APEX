@@ -1,12 +1,13 @@
 /*
- * Propify intro: "Under the lights".
+ * PropPickz intro: "Under the lights".
  *
  * About 4.7 seconds, drawn with WebGL. The stadium lights clank on one bank at a
- * time, the camera rushes down a night field past live stat chips, and the Propify
- * logo painted at midfield peels off the turf as thousands of particles. They
- * stand up, the logo ignites (flash, shockwave, flare, sparks), the tagline
- * decodes, then a gold triangle portal opens onto the site while the logo flies
- * into its place in the header.
+ * time and the bowl's rim glows neon, the camera rushes down a black-green field
+ * past live stat chips, and the PropPickz logo painted at midfield peels off the
+ * turf as thousands of lime particles. They stand up, the three speed lines streak
+ * in from the left, the logo ignites (flash, shockwave, flare, sparks), the tagline
+ * decodes, then the screen is wiped open in three slanted speed lines while the
+ * mark and the word fly into their places in the header.
  *
  * No dependencies. It plays at most once every INTRO_EVERY_HOURS per browser and
  * is always skippable (click, tap or any key). It never runs for reduced motion,
@@ -15,7 +16,7 @@
  * removes itself and the site is simply there.
  */
 
-import { WORDMARK } from '../brand/wordmark.js'
+import { MARK, WORD, LOCKUP, BRAND } from '../brand/wordmark.js'
 
 export const INTRO_EVERY_HOURS = 6
 const STORE_KEY = 'apex_intro_at'
@@ -31,6 +32,7 @@ const T = {
   spot: 1.65,
   lift: 1.98,
   wipe: 0.38,
+  streak: 2.62,
   ignite: 2.9,
   stamp: 3.04,
   tag: 3.08,
@@ -60,11 +62,11 @@ const CHIP_SPOTS = [
 ]
 
 const GENERIC_CHIPS = [
-  ['L5', '5/5', 'green'], ['PROPIFY SCORE', '92', 'gold'], ['L10', '9/10', 'green'], ['FAIR ODDS', '-341', 'gold'],
-  ['HIT RATE', '80%', 'green'], ['VS DEFENSE', '#3', 'chalk'], ['PROJECTION', '74.5', 'gold'], ['L20', '17/20', 'green'],
+  ['L5', '5/5', 'green'], ['PROPPICKZ SCORE', '92', 'lime'], ['L10', '9/10', 'green'], ['FAIR ODDS', '-341', 'lime'],
+  ['HIT RATE', '80%', 'green'], ['VS DEFENSE', '#3', 'chalk'], ['PROJECTION', '74.5', 'lime'], ['L20', '17/20', 'green'],
 ]
 
-const TAGLINE = 'EVERY PROP. EVERY EDGE. LIVE.'
+const TAGLINE = 'EVERY PROP. EVERY PICK. LIVE.'
 const SCRAMBLE = '0123456789+-%./'
 
 const F_NUM = (px) => `800 ${px}px "Big Shoulders Display", Impact, "Arial Narrow", sans-serif`
@@ -252,12 +254,12 @@ float beam(vec3 ro, vec3 rd, vec3 a, vec3 b, float smax) {
 
 vec3 sky(vec3 dir) {
   float e = dir.y;
-  vec3 c = mix(vec3(0.030, 0.048, 0.080), vec3(0.006, 0.010, 0.020), smoothstep(0.0, 0.5, e));
+  vec3 c = mix(vec3(0.014, 0.031, 0.019), vec3(0.002, 0.006, 0.004), smoothstep(0.0, 0.5, e));
   c *= 0.35 + 0.85 * uHaze;
   float az = atan(dir.x, dir.z);
   float rim = 0.064 + 0.03 * (1.0 - cos(az * 2.0)) * 0.5 + 0.0025 * sin(az * 23.0);
   float bowl = 1.0 - smoothstep(rim - 0.003, rim + 0.001, e);
-  vec3 stands = vec3(0.015, 0.023, 0.039) * (0.55 + 1.25 * uHaze);
+  vec3 stands = vec3(0.011, 0.022, 0.015) * (0.55 + 1.25 * uHaze);
   c = mix(c, stands, bowl);
   vec2 q = vec2(az * 150.0, e * 820.0);
   vec2 id = floor(q);
@@ -265,8 +267,8 @@ vec3 sky(vec3 dir) {
   float h = hash12(id);
   float on = step(0.83, h) * bowl * step(0.004, e);
   float tw = pow(max(0.0, sin(uTime * (2.0 + h * 8.0) + h * 60.0)), 28.0);
-  c += vec3(1.0, 0.95, 0.86) * on * tw * smoothstep(0.42, 0.0, length(f)) * 1.6 * uCrowd;
-  c += vec3(0.95, 0.82, 0.5) * exp(-pow((e - rim) / 0.0035, 2.0)) * 0.10 * uHaze;
+  c += vec3(0.9, 1.0, 0.84) * on * tw * smoothstep(0.42, 0.0, length(f)) * 1.6 * uCrowd;
+  c += vec3(0.5, 1.0, 0.12) * (exp(-pow((e - rim) / 0.0032, 2.0)) * 0.22 + exp(-pow((e - rim) / 0.02, 2.0)) * 0.035) * uHaze;
   return c;
 }
 
@@ -281,12 +283,12 @@ vec3 ground(vec2 g, float s) {
   float inZ = smoothstep(0.0, fz, z) * (1.0 - smoothstep(120.0, 120.0 + fz, z));
   float band = mod(floor((z - 10.0) / 5.0), 2.0);
   band = mix(band, 0.5, smoothstep(1.5, 5.0, fz));
-  vec3 turf = mix(vec3(0.030, 0.063, 0.102), vec3(0.041, 0.083, 0.130), band);
+  vec3 turf = mix(vec3(0.016, 0.048, 0.025), vec3(0.022, 0.062, 0.031), band);
   float ez = clamp((1.0 - smoothstep(10.0 - fz * 0.5, 10.0 + fz * 0.5, z)) + smoothstep(110.0 - fz * 0.5, 110.0 + fz * 0.5, z), 0.0, 1.0);
-  turf = mix(turf, vec3(0.024, 0.043, 0.082), ez);
+  turf = mix(turf, vec3(0.011, 0.034, 0.018), ez);
   float grain = mix(0.86 + 0.28 * vnoise(g * 0.9) * (0.6 + 0.4 * vnoise(g * 0.17)), 1.0, smoothstep(0.4, 1.6, fz));
   turf *= grain;
-  vec3 alb = mix(vec3(0.013, 0.022, 0.040), turf, inX * inZ);
+  vec3 alb = mix(vec3(0.008, 0.016, 0.011), turf, inX * inZ);
 
   float inPlay = step(10.0, z) * step(z, 110.0) * inX;
   float d5 = abs(fract((z - 10.0) / 5.0 + 0.5) - 0.5) * 5.0;
@@ -314,7 +316,7 @@ vec3 ground(vec2 g, float s) {
   float num = texture2D(uNums, auv).a * inCell * valid;
   chalk = max(chalk, num * 0.95);
 
-  vec3 col = mix(alb, vec3(0.86, 0.89, 0.93), chalk);
+  vec3 col = mix(alb, vec3(0.86, 0.92, 0.86), chalk);
   vec4 dn = decal(g, uEnd.xy, uEnd.zw) * uDecalA.x;
   vec4 df = decal(g, vec2(uEnd.x, 120.0 - uEnd.y), uEnd.zw) * uDecalA.z;
   vec2 muv = vec2((x - uMid.x) / uMid.z + 0.5, 0.5 - (z - uMid.y) / uMid.w);
@@ -333,10 +335,10 @@ vec3 ground(vec2 g, float s) {
   }
   vec2 dsp = g - uMid.xy;
   L += uSpot * exp(-dot(dsp, dsp) / 75.0);
-  vec3 lit = col * L * vec3(1.0, 0.965, 0.9);
-  lit += vec3(1.0, 0.85, 0.32) * dm.a * burn * 2.4 * uDecalA.y;
+  vec3 lit = col * L * vec3(0.95, 1.0, 0.93);
+  lit += vec3(0.62, 1.0, 0.16) * dm.a * burn * 2.4 * uDecalA.y;
   float fog = 1.0 - exp(-s * 0.0095);
-  vec3 fogc = vec3(0.034, 0.054, 0.088) * (0.3 + uHaze);
+  vec3 fogc = vec3(0.015, 0.034, 0.021) * (0.3 + uHaze);
   return mix(lit, fogc, fog);
 }
 
@@ -350,7 +352,7 @@ void main() {
   vec2 g = uEye.xz + dir.xz * s;
   vec3 col = gnd > 0.5 ? ground(g, s) : sky(dir);
   float smax = gnd > 0.5 ? s : 10000.0;
-  vec3 warm = vec3(1.0, 0.93, 0.8);
+  vec3 warm = vec3(0.9, 1.0, 0.84);
   float bs = 0.0;
   vec3 glare = vec3(0.0);
   for (int i = 0; i < 8; i++) {
@@ -417,7 +419,8 @@ void main() {
 `
 
 // Modes: 0 texture, 1 soft glow, 2 ring, 3 anamorphic streak, 4 sheen over a texture's alpha,
-// 5 soft ellipse with alpha (darkens under normal blending), 6 vertical streak (turf reflections).
+// 5 soft ellipse with alpha (darkens under normal blending), 6 vertical streak (turf reflections),
+// 7 comet: a horizontal streak bright at its right end, fading back to nothing on the left.
 const QUAD_FS = `
 precision mediump float;
 uniform sampler2D uTex;
@@ -442,9 +445,13 @@ void main() {
   } else if (m > 4.5 && m < 5.5) {
     float a = (1.0 - smoothstep(vPar.y, 1.0, length(p))) * vCol.a;
     gl_FragColor = vec4(vCol.rgb * a, a);
-  } else if (m > 5.5) {
+  } else if (m > 5.5 && m < 6.5) {
     float a = exp(-p.x * p.x * vPar.y) * pow(max(0.0, 1.0 - abs(p.y)), vPar.z);
     gl_FragColor = vec4(vCol.rgb * vCol.a * a, 0.0);
+  } else if (m > 6.5) {
+    float u = vUv.x;
+    float a = exp(-p.y * p.y * vPar.y) * pow(u, vPar.z) * (1.0 - smoothstep(0.93, 1.0, u));
+    gl_FragColor = vec4(mix(vCol.rgb, vec3(1.0), pow(u, 12.0) * 0.6) * vCol.a * a, 0.0);
   } else {
     float t = texture2D(uTex, vUv).a;
     float b = vUv.x + (1.0 - vUv.y) * 0.32 - vPar.y;
@@ -473,28 +480,26 @@ void main() {
 `
 
 const PORTAL_FS = `${COMMON}
-uniform vec2 uCenter;
-uniform float uR;
-uniform float uRound;
+uniform vec3 uFront;
+uniform vec2 uBand;
+uniform float uSlant;
+uniform float uMidY;
 uniform float uRim;
 uniform float uMode;
-float sdTri(vec2 p, float r) {
-  const float k = 1.7320508;
-  p.x = abs(p.x) - r;
-  p.y = p.y + r / k;
-  if (p.x + k * p.y > 0.0) p = vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0;
-  p.x -= clamp(p.x, -2.0 * r, 0.0);
-  return -length(p) * sign(p.y);
-}
 void main() {
   vec2 css = cssCoord();
-  vec2 p = vec2(css.x - uCenter.x, uCenter.y - css.y);
-  float d = sdTri(p, uR) - uRound;
+  float f = css.y < uBand.x ? uFront.x : (css.y < uBand.y ? uFront.y : uFront.z);
+  float d = css.x + (css.y - uMidY) * uSlant - f;
+  float gap = min(abs(css.y - uBand.x), abs(css.y - uBand.y));
   if (uMode < 0.5) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, smoothstep(-1.2, 1.2, d));
+    float keep = smoothstep(-1.2, 1.2, d);
+    keep = max(keep, (1.0 - smoothstep(0.0, 2.2, gap)) * smoothstep(-160.0, 0.0, d));
+    gl_FragColor = vec4(0.0, 0.0, 0.0, keep);
   } else {
-    float e = (exp(-abs(d) / 5.0) * 0.95 + exp(-abs(d) / 36.0) * 0.38) * uRim;
-    gl_FragColor = vec4(vec3(1.0, 0.86, 0.22) * e, e * 0.9);
+    float e = (exp(-abs(d) / 3.5) * 1.0 + exp(-abs(d) / 34.0) * 0.42) * step(d, 24.0) * uRim;
+    float tail = exp(-max(0.0, -d) / 260.0) * exp(-gap / 1.6) * 0.55 * uRim * step(d, 0.0);
+    vec3 col = mix(vec3(0.49, 0.99, 0.0), vec3(0.93, 1.0, 0.75), exp(-abs(d) / 2.5));
+    gl_FragColor = vec4(col * (e + tail), (e + tail) * 0.9);
   }
 }
 `
@@ -502,13 +507,13 @@ void main() {
 /* ---------------------------------------------------------------- styles */
 
 const CSS = `
-.apex-intro{position:fixed;inset:0;z-index:2147483000;background:#03060c;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;overflow:hidden}
+.apex-intro{position:fixed;inset:0;z-index:2147483000;background:#030605;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;overflow:hidden}
 .apex-intro>canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
 .apex-intro.is-portal{background:transparent;cursor:default}
-.apex-intro__skip{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:2;display:flex;align-items:center;gap:10px;font:600 12px/1 Barlow,"Helvetica Neue",Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(232,237,245,.78);background:rgba(6,11,20,.5);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:10px 14px 10px 16px;cursor:pointer;opacity:0;transform:translateY(6px);transition:opacity .45s ease,transform .45s ease,color .2s,border-color .2s;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.apex-intro__skip{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:2;display:flex;align-items:center;gap:10px;font:600 12px/1 Barlow,"Helvetica Neue",Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(238, 243, 236,.78);background:rgba(4, 8, 6,.5);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:10px 14px 10px 16px;cursor:pointer;opacity:0;transform:translateY(6px);transition:opacity .45s ease,transform .45s ease,color .2s,border-color .2s;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .apex-intro__skip.is-on{opacity:1;transform:none}
-.apex-intro__skip:hover,.apex-intro__skip:focus-visible{color:#fcd800;border-color:rgba(252,216,0,.6);outline:none}
-.apex-intro__skip kbd{font:inherit;font-size:10px;letter-spacing:.08em;color:rgba(232,237,245,.5);border:1px solid rgba(255,255,255,.18);border-radius:5px;padding:3px 5px}
+.apex-intro__skip:hover,.apex-intro__skip:focus-visible{color:#b8ff1f;border-color:rgba(184, 255, 31,.6);outline:none}
+.apex-intro__skip kbd{font:inherit;font-size:10px;letter-spacing:.08em;color:rgba(238, 243, 236,.5);border:1px solid rgba(255,255,255,.18);border-radius:5px;padding:3px 5px}
 .apex-intro.is-portal .apex-intro__skip{opacity:0;transition-duration:.15s}
 .apex-intro-fly{position:fixed;left:0;top:0;z-index:2147483001;pointer-events:none;transform-origin:0 0;will-change:transform}
 .apex-intro-fly>canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
@@ -600,86 +605,173 @@ function roundRect(ctx, x, y, w, h, r) {
 
 /* ---------------------------------------------------------------- 2D art (logo, decals, numbers, chips) */
 
-let wordmarkPath = null
-function wordmark() {
-  if (!wordmarkPath) wordmarkPath = new Path2D(WORDMARK.d)
-  return wordmarkPath
+// The logo in lockup units: x from 0 to LOCKUP.w, y from 0 to LOCKUP.h (the mark's height, with
+// the word centred on it), the same proportions as the header's <Logo>.
+const LOCK_W = LOCKUP.w
+const LOCK_H = LOCKUP.h
+const PART = {
+  mark: { x: LOCKUP.mark.x, y: 0, w: LOCKUP.mark.w, h: LOCK_H },
+  word: { x: LOCKUP.word.x, y: LOCKUP.word.y - LOCKUP.top, w: WORD.w, h: WORD.h },
+}
+let brandPaths = null
+function paths() {
+  if (!brandPaths) {
+    brandPaths = {
+      mark: new Path2D(MARK.p + MARK.lines.join('')),
+      lines: MARK.lines.map((d) => new Path2D(d)),
+      prop: new Path2D(WORD.prop),
+      pickz: new Path2D(WORD.pickz),
+    }
+  }
+  return brandPaths
 }
 
-/** Wordmark box for a given cap height (css px). The path's viewBox is tight to the letters. */
+/** Where the three speed lines sit, in lockup units: their right ends and centre heights. */
+const SPEED_LINES = MARK.lines.map((d) => {
+  const n = d.match(/-?\d+(?:\.\d+)?/g).map(Number)
+  const xs = n.filter((_, i) => i % 2 === 0)
+  const ys = n.filter((_, i) => i % 2 === 1)
+  const s = LOCKUP.mark.s
+  return {
+    x0: LOCKUP.mark.x + Math.min(...xs) * s,
+    x1: LOCKUP.mark.x + Math.max(...xs) * s,
+    y: (LOCKUP.mark.y - LOCKUP.top + ((Math.min(...ys) + Math.max(...ys)) / 2) * s),
+    h: (Math.max(...ys) - Math.min(...ys)) * s,
+  }
+})
+
+/** Lockup box for a given height (css px). */
 function logoMetrics(h) {
-  return { w: (h * WORDMARK.w) / WORDMARK.h, h, s: h / WORDMARK.h }
+  return { w: (h * LOCK_W) / LOCK_H, h, s: h / LOCK_H }
 }
 
-function metalGradient(ctx) {
-  const g = ctx.createLinearGradient(0, 0, 0, WORDMARK.h)
-  g.addColorStop(0, '#fff7cc')
-  g.addColorStop(0.16, '#ffe65e')
-  g.addColorStop(0.4, '#fcd800')
-  g.addColorStop(0.56, '#d89e00')
-  g.addColorStop(0.7, '#f6c400')
-  g.addColorStop(0.88, '#ffe57a')
-  g.addColorStop(1, '#fff4b0')
+/** Draw the lockup (or only its 'mark' or 'word') with ctx in lockup units; fill(ctx, part, path). */
+function drawLockup(ctx, fill, only = null) {
+  const P = paths()
+  if (only !== 'word') {
+    ctx.save()
+    ctx.translate(LOCKUP.mark.x, LOCKUP.mark.y - LOCKUP.top)
+    ctx.scale(LOCKUP.mark.s, LOCKUP.mark.s)
+    fill(ctx, 'mark', P.mark)
+    ctx.restore()
+  }
+  if (only !== 'mark') {
+    ctx.save()
+    ctx.translate(LOCKUP.word.x, LOCKUP.word.y - LOCKUP.top)
+    fill(ctx, 'prop', P.prop)
+    fill(ctx, 'pickz', P.pickz)
+    ctx.restore()
+  }
+}
+
+function markGradient(ctx) {
+  const g = ctx.createLinearGradient(0, MARK.h, MARK.w, 0)
+  g.addColorStop(0, BRAND.markFrom)
+  g.addColorStop(0.55, BRAND.markMid)
+  g.addColorStop(1, BRAND.markTo)
   return g
 }
+function pickzGradient(ctx) {
+  const g = ctx.createLinearGradient(WORD.pickzX, WORD.h, WORD.w, 0)
+  g.addColorStop(0, BRAND.pickzFrom)
+  g.addColorStop(1, BRAND.pickzTo)
+  return g
+}
+/** The standing logo's finish: the brand colors with a chrome band across the middle. */
+function metalFill(ctx, part) {
+  if (part === 'prop') {
+    const g = ctx.createLinearGradient(0, 0, 0, WORD.h)
+    g.addColorStop(0, '#ffffff')
+    g.addColorStop(0.42, '#f3f7f0')
+    g.addColorStop(0.5, '#c9d4c6')
+    g.addColorStop(0.62, '#eef3ec')
+    g.addColorStop(1, '#ffffff')
+    return g
+  }
+  if (part === 'pickz') {
+    const g = ctx.createLinearGradient(0, 0, 0, WORD.h)
+    g.addColorStop(0, '#f2ffc0')
+    g.addColorStop(0.4, '#c8ff3a')
+    g.addColorStop(0.5, '#86e000')
+    g.addColorStop(0.64, '#b8ff1f')
+    g.addColorStop(1, '#e4ff5c')
+    return g
+  }
+  return markGradient(ctx)
+}
 
-/** The wordmark in a padded canvas. kind: metal | glow | flat | mask */
-function paintLogo(L, kind, scale) {
+/**
+ * The lockup in a padded canvas. kind: metal | glow | flat | mask. With only = 'mark' or 'word'
+ * the canvas holds just that part (padded the same way), for the hand-off to the header.
+ */
+function paintLogo(L, kind, scale, only = null) {
   const { m, pad } = L
-  const [c, ctx] = canvas2d((m.w + pad * 2) * scale, (m.h + pad * 2) * scale)
+  const box = only ? PART[only] : { x: 0, y: 0, w: LOCK_W, h: LOCK_H }
+  const [c, ctx] = canvas2d((box.w * m.s + pad * 2) * scale, (box.h * m.s + pad * 2) * scale)
   ctx.scale(scale, scale)
   ctx.translate(pad, pad)
   ctx.scale(m.s, m.s)
-  const path = wordmark()
+  ctx.translate(-box.x, -box.y)
   if (kind === 'metal') {
-    ctx.fillStyle = metalGradient(ctx)
-    ctx.fill(path, 'evenodd')
-    ctx.globalCompositeOperation = 'source-atop'
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'
-    ctx.fillRect(-10, -1, WORDMARK.w + 20, 6.5)
-    ctx.fillStyle = 'rgba(120,70,0,0.18)'
-    ctx.fillRect(-10, 93, WORDMARK.w + 20, 8)
-    ctx.globalCompositeOperation = 'source-over'
-    ctx.lineJoin = 'round'
-    ctx.lineWidth = 0.8
-    ctx.strokeStyle = 'rgba(110,70,0,0.5)'
-    ctx.stroke(path)
+    drawLockup(ctx, (x, part, path) => {
+      x.fillStyle = metalFill(x, part)
+      x.fill(path)
+      // a crisp dark keyline and a bright top edge, so it reads as a solid object
+      x.save()
+      x.clip(path)
+      x.lineWidth = 3.2
+      x.strokeStyle = 'rgba(255,255,255,0.55)'
+      x.translate(0, 1.6)
+      x.stroke(path)
+      x.restore()
+      x.lineJoin = 'round'
+      x.lineWidth = 0.9
+      x.strokeStyle = 'rgba(6, 26, 0, 0.6)'
+      x.stroke(path)
+    }, only)
   } else if (kind === 'glow') {
-    ctx.shadowColor = 'rgba(255,196,0,0.95)'
-    ctx.shadowBlur = m.h * 0.3 * scale
-    ctx.fillStyle = 'rgba(255,196,0,0.85)'
-    ctx.fill(path, 'evenodd')
-    ctx.shadowBlur = m.h * 0.08 * scale
-    ctx.fill(path, 'evenodd')
+    ctx.shadowColor = 'rgba(140, 250, 20, 0.95)'
+    const draw = () => drawLockup(ctx, (x, _part, path) => x.fill(path), only)
+    ctx.fillStyle = 'rgba(124, 252, 0, 0.85)'
+    ctx.shadowBlur = m.h * 0.42 * scale
+    draw()
+    ctx.shadowBlur = m.h * 0.1 * scale
+    draw()
     ctx.shadowBlur = 0
     ctx.globalCompositeOperation = 'destination-out'
     ctx.fillStyle = '#000'
-    ctx.fill(path, 'evenodd')
+    draw()
     ctx.globalCompositeOperation = 'source-over'
+  } else if (kind === 'flat') {
+    drawLockup(ctx, (x, part, path) => {
+      x.fillStyle = part === 'mark' ? markGradient(x) : part === 'pickz' ? pickzGradient(x) : BRAND.white
+      x.fill(path)
+    }, only)
   } else {
-    ctx.fillStyle = kind === 'mask' ? '#fff' : '#fcd800'
-    ctx.fill(path, 'evenodd')
+    ctx.fillStyle = '#fff'
+    drawLockup(ctx, (x, _part, path) => x.fill(path), only)
   }
   return c
 }
 
-/** Field paint: the wordmark centered in a 1024x512 texture, gold with a chalk keyline. */
+/** Field paint: the lockup across a 1024x512 texture, lime and chalk with a chalk keyline. */
 function paintDecal() {
   const [c, ctx] = canvas2d(1024, 512)
-  const s = (1024 * 0.92) / WORDMARK.w
-  const w = WORDMARK.w * s
-  const h = WORDMARK.h * s
+  const s = (1024 * 0.92) / LOCK_W
+  const w = LOCK_W * s
+  const h = LOCK_H * s
   const x = (1024 - w) / 2
   const y = (512 - h) / 2
   ctx.translate(x, y)
   ctx.scale(s, s)
-  const path = wordmark()
   ctx.lineJoin = 'round'
-  ctx.lineWidth = 5
-  ctx.strokeStyle = 'rgba(236,240,246,0.92)'
-  ctx.stroke(path)
-  ctx.fillStyle = '#f2c900'
-  ctx.fill(path, 'evenodd')
+  drawLockup(ctx, (cx, part, path) => {
+    cx.lineWidth = part === 'mark' ? 3.2 : 5
+    cx.strokeStyle = 'rgba(238, 243, 236, 0.9)'
+    cx.stroke(path)
+    cx.fillStyle = part === 'prop' ? '#e3ebe0' : part === 'mark' ? '#8ee81a' : '#a9f02a'
+    cx.fill(path)
+  })
   return { canvas: c, mx: x / 1024, my: y / 512 }
 }
 
@@ -700,7 +792,7 @@ function paintNumbers() {
   return c
 }
 
-const TONES = { green: '#2fd47a', gold: '#fcd800', chalk: '#e8edf5', red: '#ff5a5a' }
+const TONES = { green: '#2fd47a', lime: '#b8ff1f', gold: '#b8ff1f', chalk: '#eef3ec', red: '#ff5a5a' }
 
 function paintChips(chips) {
   const [c, ctx] = canvas2d(1024, 512)
@@ -710,25 +802,25 @@ function paintChips(chips) {
     const w = 480
     const h = 104
     roundRect(ctx, x, y, w, h, 26)
-    ctx.fillStyle = 'rgba(8,14,26,0.88)'
+    ctx.fillStyle = 'rgba(5, 10, 8,0.88)'
     ctx.fill()
     ctx.lineWidth = 2
     ctx.strokeStyle = 'rgba(255,255,255,0.16)'
     ctx.stroke()
-    ctx.fillStyle = TONES[tone] || TONES.gold
+    ctx.fillStyle = TONES[tone] || TONES.lime
     ctx.beginPath()
     ctx.arc(x + 34, y + h / 2, 7, 0, Math.PI * 2)
     ctx.fill()
     ctx.textBaseline = 'middle'
     ctx.textAlign = 'left'
     ctx.font = F_UI(600, 30)
-    ctx.fillStyle = 'rgba(232,237,245,0.92)'
+    ctx.fillStyle = 'rgba(238, 243, 236,0.92)'
     let text = String(label).toUpperCase()
     while (ctx.measureText(text).width > w - 210 && text.length > 3) text = `${text.slice(0, -2)}…`
     ctx.fillText(text, x + 58, y + h / 2 + 1)
     ctx.textAlign = 'right'
     ctx.font = F_NUM(56)
-    ctx.fillStyle = TONES[tone] || TONES.gold
+    ctx.fillStyle = TONES[tone] || TONES.lime
     ctx.fillText(String(value), x + w - 26, y + h / 2 + 2)
   })
   return c
@@ -741,12 +833,12 @@ function paintChipBadge(L, scale) {
   ctx.scale(scale, scale)
   const lw = Math.max(1.2, chipH * 0.055)
   roundRect(ctx, p + lw / 2, p + lw / 2, chipW - lw, chipH - lw, Math.max(3, chipH * 0.19))
-  ctx.fillStyle = 'rgba(8,14,24,0.92)'
+  ctx.fillStyle = 'rgba(5, 10, 8,0.92)'
   ctx.fill()
   ctx.lineWidth = lw
-  ctx.strokeStyle = 'rgba(232,237,245,0.62)'
+  ctx.strokeStyle = 'rgba(238, 243, 236,0.62)'
   ctx.stroke()
-  ctx.fillStyle = '#f4f6fa'
+  ctx.fillStyle = '#f4f7f2'
   ctx.font = F_NUM(chipFont)
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -790,7 +882,7 @@ function normalizeStats(s) {
   if (Array.isArray(s.chips)) {
     const chips = s.chips
       .filter((c) => Array.isArray(c) && c.length >= 2)
-      .map(([a, b, tone]) => [String(a).slice(0, 40), String(b).slice(0, 8), tone || 'gold'])
+      .map(([a, b, tone]) => [String(a).slice(0, 40), String(b).slice(0, 8), tone || 'lime'])
     if (chips.length) out.chips = chips
   }
   return out
@@ -906,27 +998,33 @@ function createIntro(opts) {
   const [, measureCtx] = canvas2d(4, 4)
   function makeLayout() {
     const portrait = H > W * 1.05
-    const maxW = Math.min(W * (portrait ? 0.7 : 0.5), 820)
-    const m = logoMetrics((maxW * WORDMARK.h) / WORDMARK.w)
+    // the lockup and the league chip together take up to this much of the width
+    const room = Math.min(W * (portrait ? 0.9 : 0.62), 1000)
+    const chipFor = (h) => {
+      const chipH = Math.round(h * 0.62)
+      const chipFont = Math.round(chipH * 0.66)
+      measureCtx.font = F_NUM(chipFont)
+      return { chipH, chipFont, chipW: Math.round(measureCtx.measureText(chipText).width + chipH * 0.62), gap: Math.round(h * 0.3) }
+    }
+    let h = room / ((LOCK_W / LOCK_H) + 1.6)
+    const c0 = chipFor(h)
+    h *= room / ((h * LOCK_W) / LOCK_H + c0.gap + c0.chipW)
+    const m = logoMetrics(h)
     const size = m.h
-    const chipH = Math.round(m.h * 0.5)
-    const chipFont = Math.round(chipH * 0.66)
-    measureCtx.font = F_NUM(chipFont)
-    const chipW = Math.round(measureCtx.measureText(chipText).width + chipH * 0.62)
-    const gap = Math.round(m.h * 0.17)
+    const { chipH, chipFont, chipW, gap } = chipFor(h)
     const lockW = m.w + gap + chipW
     const cx = W / 2
     const cy = H * (portrait ? 0.42 : 0.43)
     const logoX = cx - lockW / 2
     const logoY = cy - m.h / 2
-    const tagSize = Math.max(12, Math.round(m.h * 0.15))
-    const liveSize = Math.max(11, Math.round(m.h * 0.105))
-    const tagY = logoY + m.h + Math.max(24, m.h * 0.46)
+    const tagSize = Math.max(12, Math.round(m.w * 0.026))
+    const liveSize = Math.max(11, Math.round(m.w * 0.018))
+    const tagY = logoY + m.h + Math.max(26, m.h * 0.5)
     return {
       portrait,
       m,
       size,
-      pad: Math.ceil(size * 0.5),
+      pad: Math.ceil(size * 0.6),
       chipW,
       chipH,
       chipFont,
@@ -946,7 +1044,7 @@ function createIntro(opts) {
       liveY: tagY + tagSize * 1.25 + Math.max(10, liveSize * 1.1),
       tagSpacing: tagSize * (W < 520 ? 0.24 : 0.36),
       // The painted midfield logo and end-zone paint, in yards.
-      midW: portrait ? 9.5 : 14,
+      midW: portrait ? 12 : 17,
       midZ: 60,
     }
   }
@@ -963,7 +1061,10 @@ function createIntro(opts) {
     const badge = paintChipBadge(L, scale)
     const [tagC, tagX] = canvas2d(Math.min(W * 0.96, 1400) * scale, L.tagSize * 1.7 * scale)
     const [liveC, liveX] = canvas2d(Math.min(W * 0.96, 1400) * scale, L.liveSize * 1.9 * scale)
-    art = { metal, glow, flat, mask, decal, badge, tagC, tagX, liveC, liveX, scale }
+    // the mark and the word on their own, for the flight into the header
+    const pieces = {}
+    for (const part of ['mark', 'word']) pieces[part] = { metal: paintLogo(L, 'metal', scale, part), glow: paintLogo(L, 'glow', scale, part), flat: paintLogo(L, 'flat', scale, part) }
+    art = { metal, glow, flat, mask, decal, badge, pieces, tagC, tagX, liveC, liveX, scale }
     tex.metal = makeTexture(gl, metal)
     tex.glow = makeTexture(gl, glow)
     tex.badge = makeTexture(gl, badge.canvas)
@@ -1377,19 +1478,19 @@ function createIntro(opts) {
       if (!p) continue
       const s = Math.min(900, (12 / p[2] / view.tanY) * (H / 2))
       const surge = 1 + (ign > 0 ? 0.6 * Math.exp(-ign * 5) : 0)
-      quad(p[0] - s, p[1] - s, s * 2, s * 2, [1, 0.92, 0.78, 0.34 * Math.min(lv, 1.3) * surge], 1, 5.5)
+      quad(p[0] - s, p[1] - s, s * 2, s * 2, [0.86, 1, 0.78, 0.34 * Math.min(lv, 1.3) * surge], 1, 5.5)
       const dt = tt - T.banks[i]
       const streak = dt > 0.15 ? Math.exp(-(dt - 0.15) * 5) : 0.35
       if (streak > 0.02) {
         const sw = Math.min(W * 0.7, s * 7)
-        quad(p[0] - sw / 2, p[1] - 22, sw, 44, [0.88, 0.92, 1, 0.5 * streak], 3, 90, 2.4)
+        quad(p[0] - sw / 2, p[1] - 22, sw, 44, [0.84, 1, 0.9, 0.5 * streak], 3, 90, 2.4)
       }
       const hy = H / 2 - (Math.tan(cam.pitch) / view.tanY) * (H / 2) + shy
       if (p[1] < hy) {
         const ry = hy + (hy - p[1]) * 0.55
         const rh = Math.min(H * 0.6, (hy - p[1]) * 1.6 + s * 0.4)
         const rw = Math.max(10, s * 0.5)
-        quad(p[0] - rw / 2, ry - rh / 2, rw, rh, [1, 0.9, 0.72, 0.16 * Math.min(lv, 1.2) * surge], 6, 9, 1.6)
+        quad(p[0] - rw / 2, ry - rh / 2, rw, rh, [0.8, 1, 0.66, 0.16 * Math.min(lv, 1.2) * surge], 6, 9, 1.6)
       }
     }
     const horizon = H / 2 - (Math.tan(cam.pitch) / view.tanY) * (H / 2) + shy
@@ -1397,15 +1498,15 @@ function createIntro(opts) {
     const beamA = clamp01(1 - (tt - 0.66) / 0.45)
     if (bk > 0 && beamA > 0) {
       const len = W * 1.02 * easeInOutCubic(bk)
-      quad(W / 2 - len / 2, horizon - 1.5, len, 3, [1, 0.95, 0.7, beamA], 3, 1, 0.5)
-      quad(W / 2 - len / 2, horizon - 46, len, 92, [0.99, 0.82, 0.2, 0.42 * beamA], 3, 10, 0.8)
+      quad(W / 2 - len / 2, horizon - 1.5, len, 3, [0.86, 1, 0.66, beamA], 3, 1, 0.5)
+      quad(W / 2 - len / 2, horizon - 46, len, 92, [0.49, 0.99, 0.0, 0.46 * beamA], 3, 10, 0.8)
       const hs = 46 * beamA
       for (const sx of [W / 2 - len / 2, W / 2 + len / 2]) {
-        quad(sx - hs, horizon - hs, hs * 2, hs * 2, [1, 0.95, 0.78, 0.95 * beamA * (1 - bk * 0.7)], 1, 7)
-        quad(sx - hs * 3, horizon - 6, hs * 6, 12, [1, 0.95, 0.8, 0.6 * beamA * (1 - bk * 0.7)], 3, 6, 2)
+        quad(sx - hs, horizon - hs, hs * 2, hs * 2, [0.86, 1, 0.74, 0.95 * beamA * (1 - bk * 0.7)], 1, 7)
+        quad(sx - hs * 3, horizon - 6, hs * 6, 12, [0.86, 1, 0.78, 0.6 * beamA * (1 - bk * 0.7)], 3, 6, 2)
       }
       const ig = clamp01(1 - tt / 0.35)
-      quad(W / 2 - 160, horizon - 160, 320, 320, [1, 0.85, 0.3, 0.55 * ig * bk], 1, 5)
+      quad(W / 2 - 160, horizon - 160, 320, 320, [0.55, 1, 0.12, 0.55 * ig * bk], 1, 5)
     }
     flushQuads(null, true)
 
@@ -1414,13 +1515,13 @@ function createIntro(opts) {
       const st = clamp01((tt - (T.lift + 0.25)) / 0.6) * (1 - P.q)
       const sw = L.lockW * 1.75
       const sh = (L.liveY - L.logoY + L.m.h) * 2.1
-      quad(L.cx - sw / 2, (L.logoY + L.liveY) / 2 - sh / 2, sw, sh, [0.008, 0.014, 0.028, 0.55 * st], 5, 0.15)
+      quad(L.cx - sw / 2, (L.logoY + L.liveY) / 2 - sh / 2, sw, sh, [0.005, 0.013, 0.008, 0.55 * st], 5, 0.15)
       if (tt > T.tag - 0.1) {
         const pa = clamp01((tt - (T.tag - 0.1)) / 0.3) * (1 - P.q)
         const pw = Math.min(W * 1.05, L.lockW * 1.35)
         const top = L.tagY - L.tagSize * 2.2
         const bot = L.liveY + L.liveSize * 2.4
-        quad(L.cx - pw / 2, top, pw, bot - top, [0.006, 0.011, 0.022, 0.8 * pa], 5, 0.42)
+        quad(L.cx - pw / 2, top, pw, bot - top, [0.004, 0.01, 0.007, 0.8 * pa], 5, 0.42)
       }
       flushQuads(null, false)
     }
@@ -1442,7 +1543,7 @@ function createIntro(opts) {
           if (!p) continue
           const size = Math.max(2, Math.min(64, (1.15 / p[2] / view.tanY) * (H / 2)))
           const flick = 0.85 + 0.15 * hash(i * 13 + r * 7 + c + Math.floor(tt * 24))
-          point(p[0], p[1], size, 1, 0.95, 0.85, Math.min(1.4, lv) * flick, 1)
+          point(p[0], p[1], size, 0.9, 1, 0.84, Math.min(1.4, lv) * flick, 1)
         }
       }
     }
@@ -1456,11 +1557,14 @@ function createIntro(opts) {
         if (!p || p[2] < 1.2) continue
         const size = Math.max(1, Math.min(7, 14 / p[2]))
         const tw = 0.5 + 0.5 * Math.sin(tt * (1.5 + hash(i) * 3) + i)
-        point(p[0], p[1], size, 1, 0.94, 0.82, dustA * (0.25 + 0.5 * tw) * clamp01((90 - p[2]) / 40), 0)
+        point(p[0], p[1], size, 0.82, 1, 0.74, dustA * (0.25 + 0.5 * tw) * clamp01((90 - p[2]) / 40), 0)
       }
     }
     if (parts && tt >= T.lift) drawParticles(tt, P)
     flushPoints()
+
+    /* the three speed lines streak in from the left and land on the mark as it ignites */
+    if (ready && tt >= T.streak && tt < T.ignite + 0.5 && !(flyer && P.on)) drawStreaks(tt, P)
 
     /* the logo */
     if (ready && tt >= T.ignite - 0.02 && !(flyer && P.on)) drawLogo(tt, P)
@@ -1478,25 +1582,25 @@ function createIntro(opts) {
     }
     const flash = ign > 0 ? 0.12 * Math.exp(-ign * 16) : 0
     gl.uniform1f(pp.u.uFlash, flash)
-    gl.uniform3f(pp.u.uFlashCol, 1, 0.93, 0.72)
+    gl.uniform3f(pp.u.uFlashCol, 0.8, 1, 0.6)
     gl.uniform1f(pp.u.uGrain, 0.028)
     gl.uniform1f(pp.u.uLift, lift)
     gl.uniform1f(pp.u.uTime, tt)
     gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
-    /* portal */
+    /* portal: three slanted speed lines wipe the screen open, the middle one leading */
     if (P.on) {
       const pr = progs.portal
       fullscreen(pr)
-      const cx = W / 2
-      const cy = L ? L.cy : H / 2
-      const far = Math.max(Math.hypot(cx, cy), Math.hypot(W - cx, cy), Math.hypot(cx, H - cy), Math.hypot(W - cx, H - cy))
-      const rMax = far * 1.7320508 * 1.12 + 40
-      const r = P.q * rMax
-      gl.uniform2f(pr.u.uCenter, cx, cy)
-      gl.uniform1f(pr.u.uR, r)
-      gl.uniform1f(pr.u.uRound, Math.min(28, r * 0.12))
+      const slant = 0.36
+      const from = -H * slant - 30
+      const to = W + H * slant + 30
+      const front = (lag) => from + (to - from) * easeInOutQuart(clamp01((P.k - lag) / 0.84))
+      gl.uniform3f(pr.u.uFront, front(0.08), front(0), front(0.16))
+      gl.uniform2f(pr.u.uBand, H / 3, (H * 2) / 3)
+      gl.uniform1f(pr.u.uSlant, slant)
+      gl.uniform1f(pr.u.uMidY, H / 2)
       gl.uniform1f(pr.u.uRim, Math.sin(Math.PI * Math.min(1, P.k * 1.05)) ** 0.6)
       gl.uniform1f(pr.u.uMode, 0)
       gl.blendFuncSeparate(gl.ZERO, gl.SRC_ALPHA, gl.ZERO, gl.SRC_ALPHA)
@@ -1561,18 +1665,18 @@ function createIntro(opts) {
         const hot = Math.sin(Math.min(1, k) * Math.PI)
         if (k < 1) {
           const a = 0.85 * fadeP * fade
-          point(pa[0], pa[1], parts.size[i] * (1 + hot * 0.8), 1, 0.8 + 0.2 * hot, 0.22 + 0.68 * hot, a, 0)
+          point(pa[0], pa[1], parts.size[i] * (1 + hot * 0.8), 0.5 + 0.48 * hot, 1, 0.1 + 0.72 * hot, a, 0)
           for (let j = 1; j <= trails; j++) {
             const kt = particleAt(i, tt - j * 0.022, s, tx, ty, cx, cy, pa)
             if (kt <= 0) break
-            point(pa[0], pa[1], parts.size[i] * (1.1 - j * 0.25), 1, 0.74, 0.16, a * (0.5 - j * 0.16) * hot, 0)
+            point(pa[0], pa[1], parts.size[i] * (1.1 - j * 0.25), 0.45, 1, 0.06, a * (0.5 - j * 0.16) * hot, 0)
           }
         } else {
           const jit = 0.6 + charge * 2.2
           const x = tx + Math.sin(parts.seed[i] + tt * 31) * jit
           const y = ty + Math.cos(parts.seed[i] * 1.7 + tt * 27) * jit
           const a = (0.6 + 0.4 * charge) * fadeP * fade
-          point(x, y, parts.size[i] * (1 + charge * 0.5), 1, 0.84 + 0.16 * charge, 0.26 + 0.6 * charge, a, 0)
+          point(x, y, parts.size[i] * (1 + charge * 0.5), 0.55 + 0.42 * charge, 1, 0.14 + 0.64 * charge, a, 0)
         }
       }
       if (ign > 0 && parts.spark[i] && ign < parts.slife[i]) {
@@ -1583,13 +1687,40 @@ function createIntro(opts) {
         const sx = tx + parts.svx[i] * ek
         const sy = ty + (g / kd) * ign + (parts.svy[i] - g / kd) * ek
         const a = (1 - life) ** 1.3 * fade
-        point(sx, sy, 2.8 * (1 - life * 0.6), 1, 0.92 - life * 0.42, 0.6 - life * 0.55, a * 1.3, 0)
+        point(sx, sy, 2.8 * (1 - life * 0.6), 0.86 - life * 0.4, 1, 0.55 - life * 0.5, a * 1.3, 0)
         const ek2 = (1 - Math.exp(-kd * Math.max(0, ign - 0.02))) / kd
         const px = tx + parts.svx[i] * ek2
         const py = ty + (g / kd) * Math.max(0, ign - 0.02) + (parts.svy[i] - g / kd) * ek2
-        point(px, py, 2.0 * (1 - life * 0.6), 1, 0.75, 0.25, a * 0.5, 0)
+        point(px, py, 2.0 * (1 - life * 0.6), 0.5, 1, 0.12, a * 0.5, 0)
       }
     }
+  }
+
+  function drawStreaks(tt, P) {
+    const { m } = L
+    const pop = logoPop(tt)
+    const cx = L.logoX + m.w / 2
+    const cy = L.logoY + m.h / 2
+    const fade = 1 - P.q
+    SPEED_LINES.forEach((ln, i) => {
+      // bottom line first, the top one last, each about 0.21s from off screen to its place
+      const t0 = T.streak + (2 - i) * 0.035
+      const k = clamp01((tt - t0) / 0.21)
+      if (k <= 0) return
+      const head = easeOutExpo(k)
+      const x1 = cx + (L.logoX + ln.x1 * m.s - cx) * pop
+      const y = cy + (L.logoY + ln.y * m.s - cy) * pop + view.sy
+      const hx = lerp(-W * 0.15, x1, head) + view.sx
+      const len = Math.max(40, lerp(W * 0.55, (ln.x1 - ln.x0) * m.s * 1.4, head))
+      const after = clamp01((tt - (t0 + 0.21)) / 0.32)
+      const a = (k < 1 ? 1 : 1 - after) * fade
+      if (a <= 0.01) return
+      const th = Math.max(5, ln.h * m.s * 2.4)
+      quad(hx - len, y - th / 2, len, th, [0.55, 1, 0.15, 0.95 * a], 7, 7, 1.6)
+      quad(hx - len * 0.6, y - th * 1.6, len * 0.6, th * 3.2, [0.45, 1, 0.1, 0.28 * a], 7, 3, 2.2)
+      if (k >= 1) quad(hx - th * 2.2, y - th * 2.2, th * 4.4, th * 4.4, [0.85, 1, 0.6, 0.7 * (1 - after)], 1, 4)
+    })
+    flushQuads(null, true)
   }
 
   function logoPop(tt) {
@@ -1616,19 +1747,19 @@ function createIntro(opts) {
     quad(x, y, w, h, [a, a, a, a], 0)
     flushQuads(tex.metal, false)
     const glow = (0.42 * Math.exp(-Math.max(0, ign) * 2.6) + 0.15 + 0.03 * Math.sin(tt * 5)) * a
-    quad(x, y, w, h, [glow, glow * 0.82, glow * 0.55, glow], 0)
+    quad(x, y, w, h, [glow, glow, glow, glow], 0)
     flushQuads(tex.glow, true)
     const sh = ign - 0.12
     if (sh > 0 && sh < 0.95) {
       const band = lerp(-0.45, 1.6, sh / 0.95)
-      quad(x, y, w, h, [1, 0.97, 0.86, 0.62 * a], 4, band, 0.07)
+      quad(x, y, w, h, [0.94, 1, 0.86, 0.62 * a], 4, band, 0.07)
       flushQuads(tex.metal, true)
     }
     if (ign > 0 && ign < 1.0) {
       const span = Math.max(W, H)
       for (const [delay, amp, width, col] of [
-        [0, 1, 0.005, [1, 0.94, 0.72]],
-        [0.014, 0.38, 0.006, [0.5, 0.7, 1]],
+        [0, 1, 0.005, [0.76, 1, 0.42]],
+        [0.014, 0.38, 0.006, [0.4, 0.95, 0.85]],
       ]) {
         const k = clamp01((ign - delay) / 0.5)
         if (k <= 0 || k >= 1) continue
@@ -1639,9 +1770,9 @@ function createIntro(opts) {
       const fl = Math.exp(-ign * 3.6)
       const burst = Math.exp(-ign * 9)
       const bs = m.w * 1.9
-      quad(cx - bs / 2, cy - bs / 2, bs, bs, [1, 0.86, 0.5, 0.65 * burst], 1, 5)
-      quad(-W * 0.3, cy - 70, W * 1.6, 140, [1, 0.92, 0.74, 0.8 * fl], 3, 300, 1.3)
-      quad(-W * 0.3, cy - 200, W * 1.6, 400, [0.55, 0.7, 1, 0.16 * fl], 3, 26, 2.2)
+      quad(cx - bs / 2, cy - bs / 2, bs, bs, [0.68, 1, 0.3, 0.65 * burst], 1, 5)
+      quad(-W * 0.3, cy - 70, W * 1.6, 140, [0.84, 1, 0.66, 0.8 * fl], 3, 300, 1.3)
+      quad(-W * 0.3, cy - 200, W * 1.6, 400, [0.36, 0.95, 0.7, 0.16 * fl], 3, 26, 2.2)
       flushQuads(null, true)
     }
     const st = tt - T.stamp
@@ -1689,11 +1820,11 @@ function createIntro(opts) {
         const w = ctx.measureText(ch).width
         if (ch !== ' ' && lt >= ti) {
           if (lt >= ti + 0.12) {
-            ctx.fillStyle = i >= liveFrom ? '#fcd800' : 'rgba(232,237,245,0.94)'
+            ctx.fillStyle = i >= liveFrom ? '#b8ff1f' : 'rgba(238, 243, 236,0.94)'
             ctx.fillText(ch, x, y)
           } else {
             const r = SCRAMBLE[Math.floor(hash(i * 7.7 + Math.floor(lt * 40)) * SCRAMBLE.length)]
-            ctx.fillStyle = 'rgba(252,216,0,0.9)'
+            ctx.fillStyle = 'rgba(184, 255, 31,0.9)'
             ctx.fillText(r, x, y)
           }
         }
@@ -1723,7 +1854,7 @@ function createIntro(opts) {
       let x = (c.width / sc - total) / 2
       const y = (c.height / sc) / 2
       segs.forEach(([s, tone]) => {
-        ctx.fillStyle = tone === 'num' ? '#fcd800' : 'rgba(232,237,245,0.66)'
+        ctx.fillStyle = tone === 'num' ? '#b8ff1f' : 'rgba(238, 243, 236,0.66)'
         for (const glyph of s) {
           ctx.fillText(glyph, x, y)
           x += ctx.measureText(glyph).width + sp
@@ -1762,20 +1893,28 @@ function createIntro(opts) {
     return out
   }
 
-  /* ---------- the hand-off: the logo flies into the header ---------- */
-  // The header wordmark is an <svg> whose box is tight to the letters, so its rect is the glyph box.
+  /* ---------- the hand-off: the mark and the word fly into the header ---------- */
+  // The header logo is two <svg>s, each tight to its shapes, so their rects are the shapes' boxes.
+  // On the narrowest phones the header shows the mark alone; then the word fades on the way.
   function findTarget() {
     const el = document.querySelector(opts.logo || '[data-apex-logo]')
     if (!el) return null
     const r = el.getBoundingClientRect()
     if (r.width < 4 || r.height < 4 || r.bottom < 0 || r.top > H || r.right < 0 || r.left > W) return null
+    const box = (sel) => {
+      const n = el.querySelector(sel)
+      const b = n ? n.getBoundingClientRect() : null
+      return b && b.width > 2 && b.height > 2 ? b : null
+    }
+    const mark = box('[data-logo-mark]')
+    if (!mark) return null
     let chip = null
     const chipEl = document.querySelector(opts.chip || '[data-apex-chip]')
     if (chipEl) {
       const cr = chipEl.getBoundingClientRect()
       if (cr.width && cr.height) chip = cr
     }
-    return { rect: r, chip, el, chipEl: chip ? chipEl : null }
+    return { rect: r, mark, word: box('[data-logo-word]'), chip, el, chipEl: chip ? chipEl : null }
   }
 
   // The real header logo hides while its stand-in is in flight, so there is never a double.
@@ -1792,25 +1931,46 @@ function createIntro(opts) {
     }
   }
 
+  function flyPart(part, targetRect) {
+    const { m, pad } = L
+    const px = PART[part].x * m.s
+    const py = PART[part].y * m.s
+    const ph = PART[part].h * m.s
+    const src = art.pieces[part]
+    const box = document.createElement('div')
+    box.className = 'apex-intro-fly'
+    box.setAttribute('aria-hidden', 'true')
+    box.style.width = `${PART[part].w * m.s + pad * 2}px`
+    box.style.height = `${ph + pad * 2}px`
+    const glow = cloneCanvas(src.glow)
+    glow.style.mixBlendMode = 'screen'
+    const metal = cloneCanvas(src.metal)
+    const flat = cloneCanvas(src.flat)
+    flat.style.opacity = '0'
+    box.append(glow, metal, flat)
+    document.body.appendChild(box)
+    const from = { x: L.logoX + px - pad, y: L.logoY + py - pad, s: 1 }
+    let to
+    if (targetRect) {
+      const s1 = targetRect.height / ph
+      to = { x: targetRect.left - pad * s1, y: targetRect.top - pad * s1, s: s1 }
+    }
+    return { box, glow, metal, flat, from, to }
+  }
+
   function startFlyer() {
     flyerTried = true
     if (!art || t < T.ignite) return
     const target = findTarget()
     if (!target) return
-    const { m, pad } = L
-    const box = document.createElement('div')
-    box.className = 'apex-intro-fly'
-    box.setAttribute('aria-hidden', 'true')
-    const cw = m.w + pad * 2
-    const ch = m.h + pad * 2
-    box.style.width = `${cw}px`
-    box.style.height = `${ch}px`
-    const glow = cloneCanvas(art.glow)
-    glow.style.mixBlendMode = 'screen'
-    const metal = cloneCanvas(art.metal)
-    const flat = cloneCanvas(art.flat)
-    flat.style.opacity = '0'
-    box.append(glow, metal, flat)
+    const mark = flyPart('mark', target.mark)
+    const word = flyPart('word', target.word)
+    if (!word.to) {
+      // no word in the header: it rides along with the mark and fades out
+      const s1 = mark.to.s
+      word.to = { x: mark.to.x + (word.from.x - mark.from.x) * s1, y: mark.to.y + (word.from.y - mark.from.y) * s1, s: s1 }
+      word.fadeOut = true
+    }
     let chipBox = null
     if (target.chip && t > T.stamp + 0.16) {
       chipBox = document.createElement('div')
@@ -1822,18 +1982,11 @@ function createIntro(opts) {
       chipBox.appendChild(cloneCanvas(art.badge.canvas))
       document.body.appendChild(chipBox)
     }
-    document.body.appendChild(box)
     hideTarget(target.el)
     if (chipBox) hideTarget(target.chipEl)
-    const s1 = target.rect.height / m.h
     flyer = {
-      box,
-      glow,
-      metal,
-      flat,
+      parts: [mark, word],
       chipBox,
-      from: { x: L.logoX - pad, y: L.logoY - pad, s: 1 },
-      to: { x: target.rect.left - pad * s1, y: target.rect.top - pad * s1, s: s1 },
       chipFrom: { x: L.chipX - art.badge.pad, y: L.chipY - art.badge.pad, s: 1 },
       chipTo:
         chipBox && target.chip
@@ -1860,16 +2013,21 @@ function createIntro(opts) {
   function updateFlyer(tt, P) {
     if (!flyer) return
     const k = easeInOutCubic(P.k)
-    const place = (el, a, b) => {
-      const x = lerp(a.x, b.x, k)
-      const y = lerp(a.y, b.y, k)
-      const s = lerp(a.s, b.s, k)
+    const place = (el, a, b, kk = k) => {
+      const x = lerp(a.x, b.x, kk)
+      const y = lerp(a.y, b.y, kk)
+      const s = lerp(a.s, b.s, kk)
       el.style.transform = `translate3d(${x}px,${y}px,0) scale(${s})`
     }
-    place(flyer.box, flyer.from, flyer.to)
-    flyer.glow.style.opacity = String(Math.max(0, 0.5 * (1 - k * 1.6)))
-    flyer.metal.style.opacity = String(1 - clamp01((k - 0.45) / 0.35))
-    flyer.flat.style.opacity = String(clamp01((k - 0.4) / 0.35))
+    flyer.parts.forEach((p, i) => {
+      // the word trails the mark by a beat, like the speed lines behind the P
+      const kk = easeInOutCubic(clamp01((P.k - i * 0.06) / 0.94))
+      place(p.box, p.from, p.to, kk)
+      p.glow.style.opacity = String(Math.max(0, 0.6 * (1 - kk * 1.6)))
+      p.metal.style.opacity = String(1 - clamp01((kk - 0.45) / 0.35))
+      p.flat.style.opacity = String(clamp01((kk - 0.4) / 0.35))
+      if (p.fadeOut) p.box.style.opacity = String(1 - clamp01(kk / 0.6))
+    })
     if (flyer.chipBox) {
       if (flyer.chipTo) place(flyer.chipBox, flyer.chipFrom, flyer.chipTo)
       flyer.chipBox.style.opacity = '1'
@@ -1894,7 +2052,7 @@ function createIntro(opts) {
     root.remove()
     restoreTargets()
     if (flyer) {
-      const els = [flyer.box, flyer.chipBox].filter(Boolean)
+      const els = [...flyer.parts.map((p) => p.box), flyer.chipBox].filter(Boolean)
       els.forEach((el) => {
         el.style.transition = 'opacity .18s ease'
         el.style.opacity = '0'

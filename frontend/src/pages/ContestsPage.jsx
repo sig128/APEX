@@ -241,7 +241,7 @@ function Contest({ data, user, reload, setYou }) {
               <b className="num">{picked}</b> of {c.slate.length} picked
               {dirty ? <span className="ct-save__dirty">, not saved yet</span> : entered ? <span className="muted">, saved</span> : null}
             </p>
-            <button type="button" className="btn btn--gold" onClick={save} disabled={!dirty || st.busy || (!entered && !confirm)}>
+            <button type="button" className="btn btn--lime" onClick={save} disabled={!dirty || st.busy || (!entered && !confirm)}>
               {st.busy ? 'Saving…' : entered ? 'Save changes' : 'Enter for free'}
             </button>
           </div>
@@ -285,7 +285,7 @@ function EntryLine({ c, you, entry, user, total, signIn }) {
     return (
       <div className="ct-entry">
         <p>Sign in to enter. It’s free, and it takes one tap with Google.</p>
-        <Link to={signIn} className="btn btn--gold btn--s">
+        <Link to={signIn} className="btn btn--lime btn--s">
           Sign in to enter
         </Link>
       </div>

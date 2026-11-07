@@ -1,12 +1,21 @@
-# Propify
+# PropPickz
 
-> Propify was called APEX until October 2026. Settings, file names, storage keys and headers
-> still use `apex` (for example `APEX_ADMIN_EMAILS`), so existing deployments and saved data keep
-> working. The logo and icons come from `scripts/brand/build.py`.
+> PropPickz was called APEX until October 2026 and Propify until November 2026. Settings, file
+> names, storage keys and headers still use `apex` (for example `APEX_ADMIN_EMAILS`), and a few
+> internal ids still say `propify` (the admin cookie), so existing deployments and saved data keep
+> working. Invite codes made under either old name still redeem.
+>
+> The brand art (the P mark, the banner and the app icon) is in `marketing/brand/`, and the logo
+> the site draws comes from it: `python3 scripts/brand/build.py` turns the mark (traced from the
+> art into `scripts/brand/mark.json`) and the PROPPICKZ wordmark (Archivo ExtraBold Italic, fitted
+> to the banner's lettering) into `frontend/src/brand/wordmark.js`, and
+> `node scripts/brand/render.cjs` then draws the favicons, app icons, `logo.png` and the
+> link-preview `og.png`. Colors: black `#030605`, lime `#b8ff1f` (the brand and the PropPickz read),
+> the mark's gradient `#7cfc00` → `#f0fde0`.
 
 Player-prop research, live, for the NFL, NBA, MLB, NHL, college football, college basketball and
 the WNBA: every prop on the slate with its hit rates, head to head, matchup, line move and the
-Propify probability (shown as a percentage next to every price); game pages; a live tracker; a bet
+PropPickz probability (shown as a percentage next to every price); game pages; a live tracker; a bet
 slip that prices parlays fairly, shops the line across sportsbooks and sends the parlay to the
 book's app; the 3-Leg Lock; and a picks showcase where every pick is graded from the box score.
 Stats are free. Two passes, paid in USDC on Base:
@@ -18,7 +27,7 @@ Stats are free. Two passes, paid in USDC on Base:
 | Line shopping across books, "Send to sportsbook" | yes | yes | yes |
 | Kelly calculator (OddsJam-style) | yes | yes | yes |
 | Your picks page at /u/handle with an auto-graded record, tailing picks | yes | yes | yes |
-| AI read of any prop (your Propify ruleset), AI game analyzer | | 15 / 8 a day | 30 / 15 a day |
+| AI read of any prop (your PropPickz ruleset), AI game analyzer | | 15 / 8 a day | 30 / 15 a day |
 | The 3-Leg Lock and its season ledger (the record is public) | | yes | yes |
 | Parlay check: upload a betslip, AI keeps or cuts every leg | | yes | yes |
 | Monte Carlo parlay simulator (10k-100k runs, luck vs skill) | | yes | yes |
@@ -29,7 +38,7 @@ Stats are free. Two passes, paid in USDC on Base:
 A pass runs 30 days. When it ends there are 7 days of grace with everything still on, then the
 paid features lock until it's renewed. Renewing early stacks, and renewing during the grace week
 starts the new 30 days where the old pass ended; switching plans converts unused days at the
-price ratio. Propify never holds money: people send USDC straight to your wallet, and
+price ratio. PropPickz never holds money: people send USDC straight to your wallet, and
 the API checks the transfer on-chain.
 
 ## What's where
@@ -149,8 +158,8 @@ instead, add that range to `APEX_TRUSTED_PROXIES` in functions/.env and deploy a
 
 ## Turn on payments
 
-1. Use a wallet you control on Base (a hardware wallet or a fresh one just for Propify). Its address
-   is the treasury; Propify only reads the chain and never needs its keys.
+1. Use a wallet you control on Base (a hardware wallet or a fresh one just for PropPickz). Its address
+   is the treasury; PropPickz only reads the chain and never needs its keys.
 2. Try it on the test network first: set `APEX_BILLING_NETWORK=base-sepolia` and
    `APEX_TREASURY_ADDRESS=0x...` (in Vercel's environment variables, or functions/.env on
    Firebase), deploy, buy a pass with test USDC (Circle's faucet gives it out free), and watch it
@@ -165,7 +174,7 @@ instead, add that range to `APEX_TRUSTED_PROXIES` in functions/.env and deploy a
 
 How a payment works: the Account page asks for a payment request, which has an exact amount
 like 29.004213 USDC (the last digits make it unique), valid for 24 hours. The person sends
-exactly that to the treasury on Base, from a connected wallet or from anywhere, and Propify finds
+exactly that to the treasury on Base, from a connected wallet or from anywhere, and PropPickz finds
 the transfer (or takes the transaction hash), waits for 3 confirmations, and starts the pass.
 A transaction can only ever pay one request.
 

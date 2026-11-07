@@ -45,7 +45,7 @@ export function SlipPage() {
         <h1 className="page-title">{ids.length > 1 ? `${ids.length}-leg slip` : 'Shared pick'}</h1>
         {math && found.length > 1 && (
           <p className="page-sub">
-            Propify gives it <b className="num">{pct(math.prob, 1)}</b>, fair <b className="num">{odds(math.fair)}</b>
+            PropPickz gives it <b className="num">{pct(math.prob, 1)}</b>, fair <b className="num">{odds(math.fair)}</b>
             {math.book ? `, shared at ${odds(math.book)}` : ''}
           </p>
         )}
@@ -64,7 +64,7 @@ export function SlipPage() {
           <div className="row">
             <button
               type="button"
-              className="btn btn--gold"
+              className="btn btn--lime"
               disabled={!found.length}
               onClick={() => {
                 importLegs(found, prices)

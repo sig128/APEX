@@ -432,7 +432,7 @@ test('fingerprints: taken the first time a closed day is read, written once, a c
   assert.deepEqual(list.body.days.map((d) => d.day), ['2026-11-03', '2026-10-20'], 'newest first')
   assert.equal(list.body.days[0].sha256, first.sha256)
   assert.equal(list.body.days[0].url, '/api/calibration/day/nhl/2026-11-03')
-  assert.equal(list.body.verify.format, 'propify-calibration-v1')
+  assert.equal(list.body.verify.format, 'proppickz-calibration-v1')
 
   // a row changes after the fact: the fingerprint stays, the change is reported
   now.add(HOUR)

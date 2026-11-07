@@ -8,7 +8,7 @@ export function NotFound() {
       <div className="empty">
         <p className="empty__title">That page isn't here.</p>
         <p className="empty__body">The link may be old, or the game may be off this week's board.</p>
-        <Link to="/" className="btn btn--gold">
+        <Link to="/" className="btn btn--lime">
           Back to today's props
         </Link>
       </div>

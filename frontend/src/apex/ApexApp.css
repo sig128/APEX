@@ -45,8 +45,8 @@
   --panel: #ffffff;
   --border: rgba(60, 60, 67, 0.18);
   --border2: rgba(60, 60, 67, 0.12);
-  --gold: #007aff;
-  --gold2: #5ac8fa;
+  --lime: #007aff;
+  --lime2: #5ac8fa;
   --teal: #34c759;
   --red: #ff3b30;
   --blue: #007aff;
@@ -69,8 +69,8 @@
   --panel: #1c1c1e;
   --border: rgba(255, 255, 255, 0.12);
   --border2: rgba(255, 255, 255, 0.08);
-  --gold: #0a84ff;
-  --gold2: #64d2ff;
+  --lime: #0a84ff;
+  --lime2: #64d2ff;
   --teal: #30d158;
   --red: #ff453a;
   
@@ -1715,18 +1715,18 @@
   cursor: pointer;
   border: 1px solid rgba(61, 139, 255, 0.25);
   background: rgba(0, 0, 0, 0.25);
-  color: var(--text3, #7a9bb5);
+  color: var(--text3, #7fa08e);
   border-radius: 4px;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .apex-analyzer .prm-subtab:hover {
-  color: var(--text2, #c8d8e8);
+  color: var(--text2, #cfe0d6);
   border-color: rgba(61, 139, 255, 0.45);
 }
 
 .apex-analyzer .prm-subtab.on {
-  color: var(--gold, #ffffff);
+  color: var(--lime, #ffffff);
   border-color: rgba(255, 255, 255, 0.45);
   background: rgba(255, 255, 255, 0.08);
 }
@@ -1741,12 +1741,12 @@
 
 .apex-analyzer .prm-pane--past {
   padding: 12px 14px 16px;
-  border-top: 1px solid var(--border2, #0f1f2d);
+  border-top: 1px solid var(--border2, #0f1d18);
 }
 
 .apex-analyzer .past-games-hint {
   font-size: 10px;
-  color: var(--text3, #7a9bb5);
+  color: var(--text3, #7fa08e);
   margin-bottom: 12px;
   line-height: 1.45;
 }
@@ -1766,9 +1766,9 @@
   font-family: inherit;
   padding: 12px 14px;
   border-radius: 6px;
-  border: 1px solid var(--border, #1a2d3d);
+  border: 1px solid var(--border, #1a2c25);
   background: rgba(0, 0, 0, 0.35);
-  color: var(--text2, #c8d8e8);
+  color: var(--text2, #cfe0d6);
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
 }
@@ -1804,7 +1804,7 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: var(--gold, #ffffff);
+  color: var(--lime, #ffffff);
   margin-bottom: 0;
 }
 
@@ -1844,19 +1844,19 @@
 .apex-analyzer .past-game-logo-fallback {
   font-size: 10px;
   font-weight: 800;
-  color: var(--text2, #c8d8e8);
+  color: var(--text2, #cfe0d6);
 }
 
 .apex-analyzer .past-game-analyzed-at {
   font-size: 9px;
   font-weight: 600;
-  color: var(--text3, #7a9bb5);
+  color: var(--text3, #7fa08e);
   white-space: nowrap;
 }
 
 .apex-analyzer .past-game-when {
   font-size: 10px;
-  color: var(--text2, #c8d8e8);
+  color: var(--text2, #cfe0d6);
   line-height: 1.4;
   margin-top: 4px;
 }

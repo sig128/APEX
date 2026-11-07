@@ -1,4 +1,4 @@
-// The leagues on Propify and where each one's pages and API live, with no React in it (the slip
+// The leagues on PropPickz and where each one's pages and API live, with no React in it (the slip
 // math and the tests use it). NFL keeps the root of the site ("/" is NFL Today); every other
 // league lives under its key ("/nba", "/nba/props"). The hooks are in sport.js.
 

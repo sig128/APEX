@@ -112,7 +112,7 @@ export function SlipPanel({ open, onClose }) {
     const url = shareUrl(legs)
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Propify slip', text: slipText(legs, slip.parlayPrice), url })
+        await navigator.share({ title: 'PropPickz slip', text: slipText(legs, slip.parlayPrice), url })
         return
       } catch (e) {
         if (e?.name === 'AbortError') return
@@ -149,7 +149,7 @@ export function SlipPanel({ open, onClose }) {
         {!legs.length ? (
           <div className="slip__empty">
             <p>Your slip is empty.</p>
-            <p className="muted">Tap + on any prop to add it. Propify multiplies the probabilities, prices the parlay fairly, and sizes your stake.</p>
+            <p className="muted">Tap + on any prop to add it. PropPickz multiplies the probabilities, prices the parlay fairly, and sizes your stake.</p>
             <Link to={sp(sport, '/props')} className="btn btn--quiet" onClick={onClose}>
               Find props
             </Link>
@@ -171,7 +171,7 @@ export function SlipPanel({ open, onClose }) {
                       </Link>
                       <span className="slip-leg__label">{l.label}</span>
                       <span className="slip-leg__read">
-                        Propify <b className="num">{pct(l.prob)}</b> fair {odds(l.fair)}
+                        PropPickz <b className="num">{pct(l.prob)}</b> fair {odds(l.fair)}
                         {l.book && Number.isFinite(l.price) && <span className="slip-leg__book">, best at {bookName(l.book)}</span>}
                         {lv && (
                           <span className="slip-leg__live">
@@ -216,7 +216,7 @@ export function SlipPanel({ open, onClose }) {
             {mode === 'parlay' && legs.length > 1 && math && (
               <div className="slip__math">
                 <div className="slip__row">
-                  <span>Propify chance all {legs.length} hit</span>
+                  <span>PropPickz chance all {legs.length} hit</span>
                   <b className="num">{pct(math.prob, 1)}</b>
                 </div>
                 <div className="slip__row">
@@ -259,7 +259,7 @@ export function SlipPanel({ open, onClose }) {
                     ) : (
                       legs.filter((l) => Number.isFinite(l.price)).map((l) => <StakeLine key={l.id} p={l.prob} d={decimalOf(l.price)} bankroll={bankroll} frac={frac} cap={RULES.stake.single} label={l.short || l.name} />)
                     )}
-                    <p className="muted small">Kelly sizes each bet by your edge at your price. Propify caps a parlay at {RULES.stake.lock * 100}% of bankroll, a single at {RULES.stake.single * 100}%, and a whole day at {RULES.stake.daily * 100}%.</p>
+                    <p className="muted small">Kelly sizes each bet by your edge at your price. PropPickz caps a parlay at {RULES.stake.lock * 100}% of bankroll, a single at {RULES.stake.single * 100}%, and a whole day at {RULES.stake.daily * 100}%.</p>
                   </>
                 ) : (
                   <p className="slip__locked">
@@ -269,7 +269,7 @@ export function SlipPanel({ open, onClose }) {
               </div>
             )}
 
-            <button type="button" className="btn btn--gold btn--block slip__send" onClick={() => setSending(true)}>
+            <button type="button" className="btn btn--lime btn--block slip__send" onClick={() => setSending(true)}>
               Send to sportsbook
               <span className="slip__send-sub">{legs.length > 1 ? 'Compare the parlay price at every book' : 'Compare the price at every book'}</span>
             </button>
@@ -423,7 +423,7 @@ function PostPick({ open, onClose, legs, mode }) {
           <div className="row">
             <button
               type="button"
-              className="btn btn--gold"
+              className="btn btn--lime"
               onClick={() => {
                 onClose()
                 nav('/me')
@@ -478,7 +478,7 @@ function PostPick({ open, onClose, legs, mode }) {
                 <button type="button" className="btn btn--quiet" onClick={() => submit(null, { ackTilt: true })} disabled={state.busy}>
                   Post anyway
                 </button>
-                <Link to="/me#limits" className="btn btn--gold" onClick={onClose}>
+                <Link to="/me#limits" className="btn btn--lime" onClick={onClose}>
                   Take a break
                 </Link>
               </div>
@@ -523,7 +523,7 @@ function PostPick({ open, onClose, legs, mode }) {
             </div>
           )}
           <div className="row">
-            <button type="submit" className="btn btn--gold" disabled={state.busy || blocked || !legs.length}>
+            <button type="submit" className="btn btn--lime" disabled={state.busy || blocked || !legs.length}>
               {state.busy ? 'Posting' : 'Post pick'}
             </button>
             <button type="button" className="btn btn--quiet" onClick={onClose}>

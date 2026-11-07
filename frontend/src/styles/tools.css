@@ -25,8 +25,8 @@
 }
 .inj-chip.is-questionable,
 .inj-chip.is-daytoday {
-  background: rgba(252, 216, 0, 0.14);
-  color: var(--gold);
+  background: rgba(184, 255, 31, 0.14);
+  color: var(--lime);
 }
 .inj-chip.is-probable,
 .inj-chip.is-clear {
@@ -99,8 +99,8 @@
   color: var(--flag);
 }
 .subs-tag {
-  background: rgba(252, 216, 0, 0.12);
-  color: var(--gold);
+  background: rgba(184, 255, 31, 0.12);
+  color: var(--lime);
 }
 .pick.is-subs {
   border-style: dashed;
@@ -134,8 +134,8 @@
 .tilt {
   padding: 12px 14px;
   border-radius: var(--r-m);
-  border: 1px solid rgba(252, 216, 0, 0.4);
-  background: rgba(252, 216, 0, 0.06);
+  border: 1px solid rgba(184, 255, 31, 0.4);
+  background: rgba(184, 255, 31, 0.06);
 }
 .tilt p {
   margin: 0 0 10px;
@@ -171,8 +171,8 @@
   margin-left: 6px;
   padding: 0 6px;
   border-radius: 10px;
-  background: var(--gold);
-  color: var(--gold-ink);
+  background: var(--lime);
+  color: var(--lime-ink);
   font-size: 12px;
   line-height: 20px;
   text-align: center;
@@ -231,7 +231,7 @@
   border-left: 3px solid var(--seat-2);
 }
 .insight.is-warn {
-  border-left-color: var(--gold);
+  border-left-color: var(--lime);
 }
 .insight.is-good {
   border-left-color: var(--turf);
@@ -414,7 +414,7 @@
   color: var(--flag);
 }
 .live-leg.is-behind .live-leg__chance {
-  color: var(--gold);
+  color: var(--lime);
 }
 .live-slip__sum {
   display: grid;
@@ -448,7 +448,7 @@
   border-left-color: var(--turf);
 }
 .live-slip__say.is-hold {
-  border-left-color: var(--gold);
+  border-left-color: var(--lime);
 }
 .live-slip__say.is-hedge {
   border-left-color: var(--link);

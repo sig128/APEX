@@ -275,7 +275,7 @@ export function createViews(engine) {
     let list = base.filter((r) => marketOk(r) && (!side || r.side === side))
     // Sort by one number, highest first (start time: earliest first); dir flips it. Props
     // without that number (no price, no sample) stay at the bottom either way, and ties go to
-    // the better Propify read.
+    // the better PropPickz read.
     const SORT = {
       score: (r) => r.rank ?? r.score,
       prob: (r) => r.prob,
@@ -589,7 +589,7 @@ export function createViews(engine) {
   // ---- head to head -----------------------------------------------------------------------------
   /**
    * One game through the matchup: each prop ranked by how the player has done against this
-   * opponent (two seasons of logs, 2+ meetings), blended with the Propify probability, plus the
+   * opponent (two seasons of logs, 2+ meetings), blended with the PropPickz probability, plus the
    * recent meetings between the teams.
    */
   function h2h(id) {

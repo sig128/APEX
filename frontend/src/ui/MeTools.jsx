@@ -232,7 +232,7 @@ export function LimitsCard() {
           </label>
         ))}
         <div className="rg-form__foot">
-          <button type="submit" className="btn btn--gold" disabled={state.busy}>
+          <button type="submit" className="btn btn--lime" disabled={state.busy}>
             Save limits
           </button>
           <span className="muted small">Lower limits apply at once. Raising or removing one takes 24 hours.</span>
@@ -260,7 +260,7 @@ export function LimitsCard() {
           <div className="rg-confirm" role="alertdialog" aria-label="Confirm">
             <p>{confirm.text}</p>
             <div className="row">
-              <button type="button" className="btn btn--gold" disabled={state.busy} onClick={() => pause(confirm.kind === 'cool' ? { kind: 'cool', days: confirm.days } : { kind: 'exclude', months: confirm.months })}>
+              <button type="button" className="btn btn--lime" disabled={state.busy} onClick={() => pause(confirm.kind === 'cool' ? { kind: 'cool', days: confirm.days } : { kind: 'exclude', months: confirm.months })}>
                 Yes, start it
               </button>
               <button type="button" className="btn btn--quiet" onClick={() => setConfirm(null)}>

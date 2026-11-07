@@ -4,7 +4,7 @@
   padding: 28px 20px 48px;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   color: #e8eaed;
-  background: #0f1115;
+  background: var(--stand);
   min-height: 100vh;
   box-sizing: border-box;
 }
@@ -65,7 +65,7 @@
 .admin-sports__cb {
   width: 18px;
   height: 18px;
-  accent-color: #3b82f6;
+  accent-color: var(--lime);
 }
 
 .admin-sports__name {
@@ -111,7 +111,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #1a1d24;
+  background: var(--stand-2);
   color: #e8eaed;
   font-size: 0.95rem;
 }
@@ -120,15 +120,15 @@
   padding: 10px 22px;
   border-radius: 8px;
   border: none;
-  background: #3b82f6;
-  color: #fff;
+  background: var(--lime);
+  color: var(--lime-ink);
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
 }
 
 .admin-sports__btn:hover {
-  background: #2563eb;
+  background: #d6ff5c;
 }
 
 .admin-sports__status {

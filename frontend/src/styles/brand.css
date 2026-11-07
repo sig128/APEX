@@ -1,0 +1,84 @@
+/* PropPickz brand layer, after the banner art: the logo's sizes, a neon edge under the header,
+   lime light on the main button and the active tab, and a faint glow at the top of each page.
+   Loaded after app.css so it can lean on the same classes. */
+
+/* ---------------------------------------------------------------- the header logo
+   The full lockup, scaled to the room a phone leaves next to the league switcher and sign-in;
+   under 360px the mark alone. --mh is the mark's height; the word is 100/160 of it. */
+.logo--header {
+  --mh: 30px;
+  gap: calc(var(--mh) * 0.28125);
+}
+.logo--header .logo-mark {
+  height: var(--mh);
+  width: auto;
+}
+.logo--header .logo-word {
+  height: calc(var(--mh) * 0.625);
+  width: auto;
+}
+@media (max-width: 959px) {
+  .logo--header {
+    --mh: clamp(16px, calc((100vw - 230px) / 8.1), 28px);
+  }
+}
+@media (max-width: 359px) {
+  .logo--header {
+    --mh: 24px;
+  }
+  .logo--header .logo-word {
+    display: none;
+  }
+}
+.brand__home .logo-mark {
+  transition: filter 0.25s ease;
+}
+.brand__home:hover .logo-mark,
+.brand__home:focus-visible .logo-mark {
+  filter: drop-shadow(0 0 9px rgba(124, 252, 0, 0.55));
+}
+
+/* ---------------------------------------------------------------- neon */
+body {
+  background:
+    radial-gradient(1100px 440px at 50% -240px, rgba(124, 252, 0, 0.1), transparent 72%) no-repeat,
+    var(--night);
+}
+.header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 4%, rgba(124, 252, 0, 0.18) 22%, rgba(184, 255, 31, 0.6) 50%, rgba(124, 252, 0, 0.18) 78%, transparent 96%);
+}
+.header__link.is-on::after {
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(184, 255, 31, 0.75);
+}
+.tabbar__item.is-on {
+  text-shadow: 0 0 14px rgba(184, 255, 31, 0.45);
+}
+
+/* the main button: lime with a little lift, glowing on hover */
+.btn--lime {
+  background: linear-gradient(100deg, #a5f71b, #c6ff3f);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 0 rgba(124, 252, 0, 0);
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.btn--lime:hover:not(:disabled) {
+  background: linear-gradient(100deg, #b4fb25, #d9ff6a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 22px rgba(124, 252, 0, 0.32);
+}
+.btn--lime:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand__home .logo-mark,
+  .btn--lime {
+    transition: none;
+  }
+}

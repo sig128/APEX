@@ -17,7 +17,7 @@
 //                                   replaced. A later read that hashes differently is kept beside
 //                                   it (first one only) and reported, never written over it.
 //
-// Fingerprint format "propify-calibration-v1" (the same text GET /day/:league/:day?format=text
+// Fingerprint format "proppickz-calibration-v1" (the same text GET /day/:league/:day?format=text
 // returns):
 //   1. Every row of the closed day. All of them are graded: res is w, l, p (push) or v (void).
 //   2. Each row is one line: JSON.stringify([id, p, p0, t0, t1, res, val]). Compact JSON, no
@@ -37,7 +37,7 @@ import { ApiError } from '../lib/router.js'
 import { mapLimit } from '../lib/util.js'
 import { log, errText } from '../lib/log.js'
 
-export const FORMAT = 'propify-calibration-v1'
+export const FORMAT = 'proppickz-calibration-v1'
 export const FIELDS = ['id', 'p', 'p0', 't0', 't1', 'res', 'val']
 /** A band needs this many graded props (wins plus losses) before its hit rate means much. */
 export const SMALL = 30

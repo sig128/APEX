@@ -6,7 +6,7 @@ from fontTools.ttLib import TTFont
 from fontTools.pens.recordingPen import RecordingPen
 
 import os
-FONT = os.environ.get('PROPIFY_FONT', '/usr/share/fonts/opentype/inter/InterDisplay-BlackItalic.otf')
+FONT = os.environ.get('BRAND_FONT', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'archivo-latin-800-italic.woff'))
 
 class Font:
     def __init__(self, path=FONT):

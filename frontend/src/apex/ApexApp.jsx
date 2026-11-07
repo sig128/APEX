@@ -819,7 +819,7 @@ export function ApexApp() {
     if (!t || t.length === 0) {
       mountApexBetCards(root, null)
       chatLog.innerHTML =
-        '<div class="chat-placeholder" id="chat-placeholder">Run Analyze to generate the full Propify breakdown. Then ask questions about that game here.</div>'
+        '<div class="chat-placeholder" id="chat-placeholder">Run Analyze to generate the full PropPickz breakdown. Then ask questions about that game here.</div>'
       const chatIn = root.querySelector('#chat-input')
       const sendBtn = root.querySelector('#sendbtn')
       if (chatIn) chatIn.disabled = true
@@ -831,7 +831,7 @@ export function ApexApp() {
       d.className = `chat-msg ${m.role === 'user' ? 'u' : 'a'}`
       const lab = document.createElement('div')
       lab.className = 'who'
-      lab.textContent = m.role === 'user' ? 'You' : 'Propify'
+      lab.textContent = m.role === 'user' ? 'You' : 'PropPickz'
       const body = document.createElement('div')
       body.textContent = m.content
       d.appendChild(lab)
@@ -1635,7 +1635,7 @@ export function ApexApp() {
             onEvent(ev) {
               if (ev.type === 'start' && statusEl) {
                 // each game is analysed once and shared: a stored one comes back at once
-                statusEl.textContent = ev.shared ? (ev.waiting ? 'Another member is analysing this game: it’s yours the moment it’s done' : 'This game’s shared analysis') : ev.webSearch ? 'Propify, with web search' : 'Propify'
+                statusEl.textContent = ev.shared ? (ev.waiting ? 'Another member is analysing this game: it’s yours the moment it’s done' : 'This game’s shared analysis') : ev.webSearch ? 'PropPickz, with web search' : 'PropPickz'
               }
               if (ev.type === 'activity' && statusEl) {
                 statusEl.textContent = ev.detail || ev.phase || '…'
@@ -1758,7 +1758,7 @@ export function ApexApp() {
           {
           onEvent(ev) {
             if (ev.type === 'start' && statusEl) {
-              statusEl.textContent = ev.webSearch ? 'Propify, with web search' : 'Propify'
+              statusEl.textContent = ev.webSearch ? 'PropPickz, with web search' : 'PropPickz'
             }
             if (ev.type === 'activity' && statusEl) {
               statusEl.textContent = ev.detail || ev.phase || '…'

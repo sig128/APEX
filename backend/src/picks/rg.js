@@ -1,5 +1,5 @@
 // Responsible betting: limits someone sets on their own picks, a cool-off, self-exclusion, and a
-// tilt check. Propify doesn't take bets, so these apply to what happens here: posting picks,
+// tilt check. PropPickz doesn't take bets, so these apply to what happens here: posting picks,
 // tailing and contests. Lowering a limit works at once; raising or removing one waits a day, so
 // it can't be undone in the heat of a bad night. A cool-off or exclusion can't be ended early.
 import { ApiError } from '../lib/router.js'

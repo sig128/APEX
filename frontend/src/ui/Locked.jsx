@@ -35,11 +35,11 @@ export function Locked({ need = 'pro', children, title, inline = false, ai = fal
       </p>
       <div className="locked__actions">
         {!user ? (
-          <Link className="btn btn--gold" to={`/login?next=${encodeURIComponent(loc.pathname + loc.search)}`}>
+          <Link className="btn btn--lime" to={`/login?next=${encodeURIComponent(loc.pathname + loc.search)}`}>
             Sign in
           </Link>
         ) : (
-          <Link className="btn btn--gold" to={`/account?buy=${need}`}>
+          <Link className="btn btn--lime" to={`/account?buy=${need}`}>
             {lapsed ? 'Renew' : `Get ${c.plan}`}
             {price ? ` for $${price}` : ''}
           </Link>
@@ -64,12 +64,12 @@ function AiLocked({ title, inline, signedIn, paywall, lapsed, price, next }) {
       </p>
       <div className="locked__actions">
         {!signedIn ? (
-          <Link className="btn btn--gold" to={`/login?next=${encodeURIComponent(next)}`}>
+          <Link className="btn btn--lime" to={`/login?next=${encodeURIComponent(next)}`}>
             Sign in
           </Link>
         ) : (
           paywall && (
-            <Link className="btn btn--gold" to="/account?buy=pro">
+            <Link className="btn btn--lime" to="/account?buy=pro">
               {lapsed ? 'Renew' : 'Get Pro'}
               {price ? ` for $${price}` : ''}
             </Link>

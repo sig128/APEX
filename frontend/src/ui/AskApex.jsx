@@ -100,7 +100,7 @@ function useRead(key) {
 }
 
 /**
- * The AI read of one prop, written with the Propify ruleset. Members with a Pro or Elite pass
+ * The AI read of one prop, written with the PropPickz ruleset. Members with a Pro or Elite pass
  * (the AI costs money per read); a read someone already got for the same line comes back free.
  */
 export function AskApex({ propId }) {
@@ -118,9 +118,9 @@ export function AskApex({ propId }) {
     <Locked need="pro" ai title="Model read of this prop">
       <div className={`ask ${tone}`}>
         <div className="ask__head">
-          <p className="ask__title">Propify model read</p>
+          <p className="ask__title">PropPickz model read</p>
           {state !== 'streaming' && (
-            <button type="button" className="btn btn--gold" onClick={run}>
+            <button type="button" className="btn btn--lime" onClick={run}>
               {state === 'idle' ? 'Read this prop' : 'Read again'}
             </button>
           )}
@@ -130,7 +130,7 @@ export function AskApex({ propId }) {
             </button>
           )}
         </div>
-        {state === 'idle' && <p className="muted">Runs this prop through the Propify ruleset: verdict, the reasons, the risks, and how much to stake.</p>}
+        {state === 'idle' && <p className="muted">Runs this prop through the PropPickz ruleset: verdict, the reasons, the risks, and how much to stake.</p>}
         {err && (
           <p className="ask__err" role="alert">
             {err.message}

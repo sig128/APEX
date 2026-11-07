@@ -57,7 +57,7 @@ export function AccountPage() {
         {paywall && ent.status !== 'admin' && (
           <div className="row">
             {plans.map((p) => (
-              <button key={p.id} type="button" className={`btn ${p.id === (ent.paidPlan || 'elite') ? 'btn--gold' : 'btn--quiet'}`} onClick={() => setBuy(p.id)}>
+              <button key={p.id} type="button" className={`btn ${p.id === (ent.paidPlan || 'elite') ? 'btn--lime' : 'btn--quiet'}`} onClick={() => setBuy(p.id)}>
                 {ent.paidPlan === p.id && ent.status !== 'expired' ? `Add 30 days of ${p.name}` : ent.paidPlan === 'elite' && p.id === 'pro' ? 'Switch to Pro' : `Get ${p.name}`} (${p.priceUsd})
               </button>
             ))}
@@ -175,7 +175,7 @@ function Redeem({ redeem, after }) {
     <section className="acct-list">
       <p className="acct-plan__k">Have a code?</p>
       <form className="row" onSubmit={submit}>
-        <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="PROPIFY-XXXX-XXXX-XXXX-XXXX" aria-label="Code" autoCapitalize="characters" spellCheck="false" />
+        <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="PROPPICKZ-XXXX-XXXX-XXXX-XXXX" aria-label="Code" autoCapitalize="characters" spellCheck="false" />
         <button type="submit" className="btn btn--quiet" disabled={busy || code.trim().length < 4}>
           {busy ? 'Checking' : 'Redeem'}
         </button>

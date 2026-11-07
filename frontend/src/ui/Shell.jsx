@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { SPORTS, sportInfo, useSport, apiOf, sp, isSharedPath, setLeague, leagueSwitchPath } from '../lib/sport.js'
-import { WORDMARK } from '../brand/wordmark.js'
+import { Logo } from '../brand/Logo.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useBilling } from '../context/BillingContext.jsx'
 import { useSlip } from '../lib/useSlip.js'
@@ -13,12 +13,9 @@ import { playIntro } from '../intro/intro.js'
 import { DAY } from './time.js'
 import { Headshot } from './Img.jsx'
 
-export function Wordmark({ height = 20 }) {
-  return (
-    <svg data-apex-logo className="wordmark" viewBox={`0 0 ${WORDMARK.w} ${WORDMARK.h}`} height={height} width={(height * WORDMARK.w) / WORDMARK.h} role="img" aria-label="Propify">
-      <path fillRule="evenodd" d={WORDMARK.d} fill="currentColor" />
-    </svg>
-  )
+/** The PropPickz lockup at a given mark height (kept under this name for older imports). */
+export function Wordmark({ height = 28 }) {
+  return <Logo height={height} />
 }
 
 /** The main links for the league on screen (Picks and Tools are the same everywhere). */
@@ -144,8 +141,8 @@ function Header({ onSlip, slipCount, onSearch }) {
     <header className="header">
       <div className="header__inner">
         <div className="brand">
-          <Link to={sp(sport, '')} className="brand__home" aria-label="Propify home">
-            <Wordmark height={20} />
+          <Link to={sp(sport, '')} className="brand__home" aria-label="PropPickz home">
+            <Logo height={30} className="logo--header" />
           </Link>
           <SportPicker />
         </div>
@@ -244,7 +241,7 @@ function RenewBanner() {
   return (
     <div className={`renew renew--${ent.status}`} role="status">
       <p>{text}</p>
-      <Link to={`/account?buy=${ent.paidPlan || 'pro'}`} className="btn btn--gold btn--s">
+      <Link to={`/account?buy=${ent.paidPlan || 'pro'}`} className="btn btn--lime btn--s">
         Renew {plan}
       </Link>
       <button
@@ -274,8 +271,8 @@ function Footer() {
   return (
     <footer className="footer">
       <div className="footer__inner">
-        <Wordmark height={14} />
-        <p className="footer__note">Stats and probabilities for research. Propify doesn't take bets. Bet within your means; if gambling stops being fun, call <a href="tel:18006973738">1-800-MY-RESET</a>.</p>
+        <Logo height={24} className="logo--footer" />
+        <p className="footer__note">Stats and probabilities for research. PropPickz doesn't take bets. Bet within your means; if gambling stops being fun, call <a href="tel:18006973738">1-800-MY-RESET</a>.</p>
         <nav className="footer__links" aria-label="More">
           <Link to="/pricing">Plans</Link>
           <Link to="/contests">Weekly contest</Link>

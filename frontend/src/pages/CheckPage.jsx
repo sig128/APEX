@@ -15,7 +15,7 @@ import { useSport, apiOf, sp, sportInfo, SPORTS, setLeague, legRef, legsSport } 
 const MODES = [
   { key: 'shot', label: 'Screenshot' },
   { key: 'text', label: 'Type it out' },
-  { key: 'slip', label: 'My Propify slip' },
+  { key: 'slip', label: 'My PropPickz slip' },
 ]
 const VERDICT = { KEEP: 'Keep', CUT: 'Cut', SWAP: 'Swap', RISKY: 'Risky' }
 // what a typed-out slip looks like in each league
@@ -29,7 +29,7 @@ const EXAMPLE = {
   nhl: 'Connor McDavid over 1.5 points +110\nAuston Matthews anytime goal +130\nIgor Shesterkin over 27.5 saves -115',
 }
 
-/** The AI's call, held to the rules: a leg that fails a Propify rule check can't be a Keep. */
+/** The AI's call, held to the rules: a leg that fails a PropPickz rule check can't be a Keep. */
 const finalCall = (leg, call) => (call?.v === 'KEEP' && leg.lean !== 'keep' ? { ...call, v: 'RISKY', overridden: true } : call)
 const LEAN = { keep: 'Looks solid', risky: 'Risky', cut: 'Weak link' }
 
@@ -136,7 +136,7 @@ export function CheckPage() {
       body.legs = slip.legs.map(legRef)
       body.prices = Object.fromEntries(slip.legs.filter((l) => Number.isFinite(l.price)).map((l) => [legRef(l), l.price]))
     }
-    // a screenshot or typed slip is read against the league picked here; the Propify slip's legs know theirs
+    // a screenshot or typed slip is read against the league picked here; the PropPickz slip's legs know theirs
     const league = mode === 'slip' ? legsSport(slip.legs, sport) : sport
     setRun({ ...IDLE, state: 'reading' })
     let acc = ''
@@ -170,7 +170,7 @@ export function CheckPage() {
     <div className="container page">
       <header className="page-head">
         <h1 className="page-title">Parlay check</h1>
-        <p className="page-sub">Show Propify the parlay before you place it. Every leg gets a call, keep, cut or swap, with the numbers behind it, and the whole slip is played out 20,000 times.</p>
+        <p className="page-sub">Show PropPickz the parlay before you place it. Every leg gets a call, keep, cut or swap, with the numbers behind it, and the whole slip is played out 20,000 times.</p>
       </header>
       <Locked need="pro" ai title="The parlay check">
         <div className="pcheck">
@@ -244,7 +244,7 @@ export function CheckPage() {
                       <span>
                         <b>{l.short || l.name}</b> {l.shortLabel || l.label}
                       </span>
-                      <span className="num muted">{Number.isFinite(l.price) ? odds(l.price) : `Propify ${pct(l.prob)}`}</span>
+                      <span className="num muted">{Number.isFinite(l.price) ? odds(l.price) : `PropPickz ${pct(l.prob)}`}</span>
                     </li>
                   ))}
                 </ul>
@@ -267,7 +267,7 @@ export function CheckPage() {
                   Stop
                 </button>
               ) : (
-                <button type="button" className="btn btn--gold" disabled={!ready} onClick={go}>
+                <button type="button" className="btn btn--lime" disabled={!ready} onClick={go}>
                   Check my parlay
                 </button>
               )}
@@ -307,7 +307,7 @@ export function CheckPage() {
                 {run.state === 'done' && (
                   <div className="check__acts">
                     {keepers.length > 0 && keepers.length < run.legs.length && (
-                      <button type="button" className="btn btn--gold" onClick={() => importLegs(keepers.map((k) => ({ ...k, kind: 'player' })), Object.fromEntries(keepers.filter((k) => Number.isFinite(k.odds)).map((k) => [legRef(k), k.odds])))}>
+                      <button type="button" className="btn btn--lime" onClick={() => importLegs(keepers.map((k) => ({ ...k, kind: 'player' })), Object.fromEntries(keepers.filter((k) => Number.isFinite(k.odds)).map((k) => [legRef(k), k.odds])))}>
                         {keepers.length === 1 ? 'Put the keeper on my slip' : `Put the ${keepers.length} keepers on my slip`}
                       </button>
                     )}
@@ -389,10 +389,10 @@ function Call({ leg, call, sim, streaming }) {
         <span className="call__stamp">{v ? VERDICT[v] : streaming ? '…' : LEAN[leg.lean]}</span>
       </div>
       <p className="call__why">{call?.why || (streaming ? <span className="ask__cursor" aria-hidden="true" /> : null)}</p>
-      {call?.overridden && <p className="call__override">The model liked it, but it fails a Propify rule check below, so it isn’t a Keep.</p>}
+      {call?.overridden && <p className="call__override">The model liked it, but it fails a PropPickz rule check below, so it isn’t a Keep.</p>}
       <dl className="call__facts">
         <div>
-          <dt>Propify chance</dt>
+          <dt>PropPickz chance</dt>
           <dd className="num">{pct(leg.prob)}</dd>
         </div>
         {leg.implied != null && (
@@ -432,7 +432,7 @@ function Call({ leg, call, sim, streaming }) {
       )}
       {leg.checks && (
         <p className="call__passed">
-          {leg.checks.filter((c) => c.state === 'pass').length} of {leg.checks.length} Propify rule checks passed
+          {leg.checks.filter((c) => c.state === 'pass').length} of {leg.checks.length} PropPickz rule checks passed
         </p>
       )}
       <Link className="call__link" to={sp(leg.sport || sport, `/prop/${encodeURIComponent(leg.id)}`)}>

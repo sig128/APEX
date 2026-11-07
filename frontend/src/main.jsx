@@ -9,6 +9,7 @@ import { sportFromPath, sportInfo, isSport, apiOf } from './lib/sport.js'
 import './styles/tokens.css'
 import './styles/app.css'
 import './styles/tools.css'
+import './styles/brand.css'
 
 // A picks page the server couldn't render itself arrives as /?to=/u/handle: open it in place.
 {

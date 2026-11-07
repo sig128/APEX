@@ -53,7 +53,7 @@ export function Contests({ onLocked }) {
       <section className="adm-panel">
         <div className="adm-ct__head">
           <h3 className="adm-h3">Weekly contests</h3>
-          <button type="button" className="btn btn--gold btn--s" onClick={() => setSel('new')}>
+          <button type="button" className="btn btn--lime btn--s" onClick={() => setSel('new')}>
             New contest
           </button>
         </div>
@@ -267,7 +267,7 @@ function Editor({ id, locked, onSaved, onClose }) {
             <button type="button" className="btn btn--quiet" disabled={busy} onClick={save}>
               Save draft
             </button>
-            <button type="button" className="btn btn--gold" disabled={busy || !id || !sizeOk || needsRules || !form.title.trim()} onClick={publish} title={id ? undefined : 'Save the draft first'}>
+            <button type="button" className="btn btn--lime" disabled={busy || !id || !sizeOk || needsRules || !form.title.trim()} onClick={publish} title={id ? undefined : 'Save the draft first'}>
               Publish
             </button>
             {c && (

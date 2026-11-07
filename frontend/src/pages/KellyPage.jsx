@@ -14,7 +14,7 @@ const PRESETS = [0.1, 0.25, 0.5, 1]
 
 /**
  * The Kelly calculator (free): your sportsbook's odds and the fair win chance in, the stake out,
- * with any Kelly multiplier and the Propify caps. Below it, the bankroll simulator (Pro).
+ * with any Kelly multiplier and the PropPickz caps. Below it, the bankroll simulator (Pro).
  */
 export function KellyPage() {
   useTitle('Kelly calculator and simulator')
@@ -38,7 +38,7 @@ export function KellyPage() {
   })
   const [bets, setBets] = useState('250')
   const [mult, setMult] = useState('0.25')
-  const [kind, setKind] = useState('single') // single | parlay: which Propify cap applies
+  const [kind, setKind] = useState('single') // single | parlay: which PropPickz cap applies
   const [capped, setCapped] = useState(true)
   const [humble, setHumble] = useState(false)
 
@@ -146,7 +146,7 @@ export function KellyPage() {
             </div>
             <label className="check">
               <input type="checkbox" checked={capped} onChange={(e) => setCapped(e.target.checked)} />
-              Propify caps: {RULES.stake.single * 100}% of bankroll on a single, {RULES.stake.lock * 100}% on a parlay ({RULES.stake.daily * 100}% a day in all)
+              PropPickz caps: {RULES.stake.single * 100}% of bankroll on a single, {RULES.stake.lock * 100}% on a parlay ({RULES.stake.daily * 100}% a day in all)
             </label>
             {fromSlip && fromSlip.priced && (
               <button
@@ -199,7 +199,7 @@ export function KellyPage() {
                 </dl>
                 <p className="kcalc__say">
                   {ev > 0
-                    ? `The odds say ${pct(implied, 1)}; you have it at ${pct(pp, 1)}. Full Kelly bets ${pct(full, 1)} of your bankroll; at ${m}x that's ${pct(full * m, 2)}${capped && full * m > cap ? `, capped at ${pct(cap, 0)} by the Propify rules` : ''}.`
+                    ? `The odds say ${pct(implied, 1)}; you have it at ${pct(pp, 1)}. Full Kelly bets ${pct(full, 1)} of your bankroll; at ${m}x that's ${pct(full * m, 2)}${capped && full * m > cap ? `, capped at ${pct(cap, 0)} by the PropPickz rules` : ''}.`
                     : `No edge: the odds say ${pct(implied, 1)} and you have it at ${pct(pp, 1)}. Kelly says don't bet. Edge or Pass.`}
                 </p>
               </>
@@ -281,9 +281,9 @@ function FanChart({ sim, bankroll }) {
             </text>
           </g>
         ))}
-        <path d={area('p5', 'p95')} fill="var(--gold)" opacity="0.12" />
-        <path d={area('p25', 'p75')} fill="var(--gold)" opacity="0.22" />
-        <path d={line} fill="none" stroke="var(--gold)" strokeWidth="2.5" />
+        <path d={area('p5', 'p95')} fill="var(--lime)" opacity="0.12" />
+        <path d={area('p25', 'p75')} fill="var(--lime)" opacity="0.22" />
+        <path d={line} fill="none" stroke="var(--lime)" strokeWidth="2.5" />
         <text x={W - pad.r} y={H - 6} textAnchor="end" className="fan__t">
           bet {sim.steps}
         </text>

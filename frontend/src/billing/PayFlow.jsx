@@ -11,7 +11,7 @@ const POLL_MAX = 75 // five minutes
 
 /**
  * Buy or renew a pass: get a payment request with an exact USDC amount, pay it (Privy, a
- * browser wallet, or by hand from anywhere), then Propify checks the chain until it's confirmed.
+ * browser wallet, or by hand from anywhere), then PropPickz checks the chain until it's confirmed.
  */
 export function PayFlow({ plan, onDone }) {
   const { refresh, config } = useBilling()
@@ -105,7 +105,7 @@ export function PayFlow({ plan, onDone }) {
       <div className="stack pay-done">
         <p className="pay-done__title">You're in. {inv.planName} is on.</p>
         <p className="muted">Your pass runs 30 days from today (added to any time you had left).</p>
-        <button type="button" className="btn btn--gold" onClick={onDone}>
+        <button type="button" className="btn btn--lime" onClick={onDone}>
           Done
         </button>
       </div>
@@ -136,7 +136,7 @@ export function PayFlow({ plan, onDone }) {
             </Suspense>
           )}
           {injected() && (
-            <button type="button" className={`btn btn--block ${PrivyPay ? 'btn--quiet' : 'btn--gold'}`} onClick={payInjected}>
+            <button type="button" className={`btn btn--block ${PrivyPay ? 'btn--quiet' : 'btn--lime'}`} onClick={payInjected}>
               Pay with my browser wallet
             </button>
           )}

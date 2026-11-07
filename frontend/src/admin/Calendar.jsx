@@ -8,7 +8,7 @@ import { stats, unitsTxt, record, dayKey, shiftDay, dayLong, pctTxt, signedPct, 
 
 export const SERIES = [
   { key: 'all', label: 'Every lean', note: 'The board’s side on every line it priced, 1 unit each at the best price seen.' },
-  { key: 'top', label: 'Top 10 a day', note: 'The 10 highest Propify scores each day.' },
+  { key: 'top', label: 'Top 10 a day', note: 'The 10 highest PropPickz scores each day.' },
   { key: 'edge', label: 'Edge 3+', note: 'Leans at least 3 points better than the book’s no-vig price.' },
   { key: 'lock', label: '3-Leg Lock', note: 'The lock in every league, at its posted stake.' },
   { key: 'mine', label: 'Your bets', note: 'What you posted on your picks page, graded from the box score.' },

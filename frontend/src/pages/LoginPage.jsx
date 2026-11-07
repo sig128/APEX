@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Navigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useTitle } from '../lib/hooks.js'
-import { Wordmark } from '../ui/Shell.jsx'
+import { Logo } from '../brand/Logo.jsx'
 
 /** What went wrong with Google sign-in, in plain words (Firebase's codes otherwise). */
 export function signInError(e) {
@@ -36,7 +36,7 @@ export function LoginPage() {
   return (
     <div className="container page login">
       <div className="login__card">
-        <Wordmark height={28} />
+        <Logo height={44} className="logo--login" />
         <h1 className="login__title">Sign in</h1>
         <p className="muted">Your picks page, passes and model reads live on your account. Browsing props never needs one.</p>
         {!firebaseConfigured ? (
@@ -44,7 +44,7 @@ export function LoginPage() {
         ) : (
           <button
             type="button"
-            className="btn btn--gold btn--block btn--google"
+            className="btn btn--lime btn--block btn--google"
             disabled={busy || loading}
             onClick={async () => {
               setBusy(true)

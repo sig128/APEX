@@ -193,7 +193,7 @@ function PasswordGate({ unset, onOpen }) {
         <h1 className="page-title">Admin</h1>
         <p>{unset ? 'The admin password isn’t set up on the server yet.' : 'Enter the admin password to open the dashboard.'}</p>
         {/* lets a password manager save and fill it */}
-        <input className="sr-only" type="text" name="username" autoComplete="username" value="Propify admin" readOnly tabIndex={-1} aria-hidden="true" />
+        <input className="sr-only" type="text" name="username" autoComplete="username" value="PropPickz admin" readOnly tabIndex={-1} aria-hidden="true" />
         <div className="field">
           <label htmlFor="adm-password">Password</label>
           <div className="adm-pw">
@@ -222,7 +222,7 @@ function PasswordGate({ unset, onOpen }) {
             {err}
           </p>
         )}
-        <button type="submit" className="btn btn--gold btn--block" disabled={busy || unset || !pw.trim()}>
+        <button type="submit" className="btn btn--lime btn--block" disabled={busy || unset || !pw.trim()}>
           {busy ? 'Checking…' : 'Unlock'}
         </button>
         <p className="adm-note">You stay unlocked on this device for 7 days, or until you press Lock.</p>

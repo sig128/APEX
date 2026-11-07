@@ -61,7 +61,7 @@ const BASEBALL = {
   pitcher_hits_allowed: 'haP',
   pitcher_walks: 'bbP',
 }
-/** Propify league -> The Odds API sport key and the player markets it carries there. */
+/** PropPickz league -> The Odds API sport key and the player markets it carries there. */
 export const ODDS_SPORTS = {
   nfl: { key: 'americanfootball_nfl', markets: FOOTBALL },
   ncaaf: { key: 'americanfootball_ncaaf', markets: FOOTBALL },

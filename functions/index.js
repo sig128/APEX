@@ -1,5 +1,5 @@
 /**
- * Propify on Firebase: one HTTP function (`chat`, the name Hosting rewrites already point at) runs
+ * PropPickz on Firebase: one HTTP function (`chat`, the name Hosting rewrites already point at) runs
  * the whole API from backend/ (copied to functions/apex/ by scripts/sync-functions.mjs before
  * every deploy), plus the `redeemInvite` callable.
  *
@@ -80,8 +80,8 @@ export const chat = onRequest(
       const app = await apexApp()
       app(req, res)
     } catch (e) {
-      console.error('Propify failed to start', e)
-      if (!res.headersSent) res.status(503).json({ error: 'Propify is starting up. Try again in a moment.', code: 'starting' })
+      console.error('PropPickz failed to start', e)
+      if (!res.headersSent) res.status(503).json({ error: 'PropPickz is starting up. Try again in a moment.', code: 'starting' })
     }
   },
 )

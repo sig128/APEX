@@ -16,7 +16,7 @@ export default function PrivyPay({ appId, invoice, onHash, onError }) {
     <PrivyProvider
       appId={appId}
       config={{
-        appearance: { theme: 'dark', accentColor: '#fcd800', showWalletLoginFirst: false },
+        appearance: { theme: 'dark', accentColor: '#b8ff1f', showWalletLoginFirst: false },
         loginMethods: ['email', 'google', 'wallet'],
         embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
         defaultChain: chain,
@@ -36,7 +36,7 @@ function Inner({ invoice, onHash, onError }) {
   if (!ready) return <p className="muted">Loading wallet sign-in…</p>
   if (!authenticated)
     return (
-      <button type="button" className="btn btn--gold btn--block" onClick={() => login()}>
+      <button type="button" className="btn btn--lime btn--block" onClick={() => login()}>
         Pay with Privy (email, Google or wallet)
       </button>
     )
@@ -56,7 +56,7 @@ function Inner({ invoice, onHash, onError }) {
   }
   return (
     <div className="privy stack">
-      <button type="button" className="btn btn--gold btn--block" onClick={pay} disabled={busy}>
+      <button type="button" className="btn btn--lime btn--block" onClick={pay} disabled={busy}>
         {busy ? 'Approve in your wallet' : `Pay ${invoice.amount} USDC`}
       </button>
       <p className="muted small">

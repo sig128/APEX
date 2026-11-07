@@ -119,7 +119,7 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
                       <span className="muted">No price posted</span>
                     )}
                   </div>
-                  <a className={`btn ${isBest ? 'btn--gold' : 'btn--quiet'} shop__go`} href={withState(b.link, state)} target="_blank" rel="noopener noreferrer" onClick={() => go(b.book)}>
+                  <a className={`btn ${isBest ? 'btn--lime' : 'btn--quiet'} shop__go`} href={withState(b.link, state)} target="_blank" rel="noopener noreferrer" onClick={() => go(b.book)}>
                     {b.allOnSlip ? `Open ${b.name} with ${legs.length > 1 ? 'all legs' : 'the bet'}` : `Open ${b.name}`}
                   </a>
                   {!b.allOnSlip && legs.length > 1 && b.legLinks?.some(Boolean) && (
@@ -161,7 +161,7 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
           </label>
         )}
         {data?.spread > 0.02 && <p className="shopsheet__note">The best book pays {(data.spread * 100).toFixed(0)}% more than the worst on this exact slip. That’s line shopping.</p>}
-        <p className="shopsheet__fine">21+. Sports betting is legal only in some states. Propify doesn’t take bets and isn’t paid by these books. If gambling stops being fun, call <a href="tel:18006973738">1-800-MY-RESET</a>.</p>
+        <p className="shopsheet__fine">21+. Sports betting is legal only in some states. PropPickz doesn’t take bets and isn’t paid by these books. If gambling stops being fun, call <a href="tel:18006973738">1-800-MY-RESET</a>.</p>
       </div>
     </Dialog>
   )
