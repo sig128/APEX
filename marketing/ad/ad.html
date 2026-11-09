@@ -6,9 +6,12 @@
 <style>
 /*
   "Read the line." A 30 s vertical spot, 1080x1920, rendered frame by frame.
-  Spine: one gold line across the frame (the prop line). OVER lives above it, UNDER below.
-  Palette (the site's own): night #050a14, stand #0a1220, seat #1c2b45, chalk #e8edf5,
-  chalk-2 #aab5c7, chalk-3 #75839a, gold #fcd800, turf #2fd47a, flag #ff5a5a.
+  Spine: one lime line across the frame (the prop line). OVER lives above it, UNDER below.
+  Palette (PropPickz, the site's own): night #030605, stand #090e0c, stand-2 #0e1512,
+  seat #1e2a25, seat-2 #2c3b34, chalk #eef3ec, chalk-2 #a9b5ae, chalk-3 #77847d,
+  lime #b8ff1f (lime-hi #e9ff9a), turf #2fd47a, flag #ff5a5a. Glows are lime:
+  rgba(140,245,22,a), or rgba(184,255,31,a) where the lime itself is laid down.
+  Logo: the PropPickz lockup (P mark, PROP, PICKZ) from wordmark.json, drawn as the site draws it.
   Type: Big Shoulders Display for numbers and headlines, Barlow for labels.
 */
 @font-face { font-family: 'BigShoulders'; src: url('fonts/bigshoulders-var.woff') format('woff'); font-weight: 100 900; }
@@ -17,7 +20,7 @@
 @font-face { font-family: 'Barlow'; src: url('fonts/barlow-700.woff') format('woff'); font-weight: 700; }
 @font-face { font-family: 'Barlow'; src: url('fonts/barlow-800.woff') format('woff'); font-weight: 800; }
 @font-face { font-family: 'Barlow'; src: url('fonts/barlow-900.woff') format('woff'); font-weight: 900; }
-html, body { margin: 0; background: #050a14; }
+html, body { margin: 0; background: #030605; }
 canvas { display: block; }
 </style>
 </head>
@@ -26,7 +29,7 @@ canvas { display: block; }
 <script>
 'use strict'
 const W = 1080, H = 1920, CX = 540, LY = 960
-const C = { night: '#050a14', stand: '#0a1220', stand2: '#0f1a2d', seat: '#1c2b45', seat2: '#2a3c5c', chalk: '#e8edf5', chalk2: '#aab5c7', chalk3: '#75839a', gold: '#fcd800', goldHi: '#fff3a6', turf: '#2fd47a', flag: '#ff5a5a' }
+const C = { night: '#030605', stand: '#090e0c', stand2: '#0e1512', seat: '#1e2a25', seat2: '#2c3b34', chalk: '#eef3ec', chalk2: '#a9b5ae', chalk3: '#77847d', lime: '#b8ff1f', limeHi: '#e9ff9a', turf: '#2fd47a', flag: '#ff5a5a' }
 const BIG = 'BigShoulders', UI = 'Barlow'
 
 const main = document.getElementById('c')
@@ -90,29 +93,29 @@ function txt(c, s, x, y, o = {}) {
 }
 function measure(c, s, f, ls = 0) { c.save(); c.font = f; c.letterSpacing = `${ls}px`; const m = c.measureText(s); c.restore(); return m }
 function rr(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r) }
-function goldLine(c, x0, x1, y, a = 1, glow = 1) {
+function limeLine(c, x0, x1, y, a = 1, glow = 1) {
   if (a <= 0 || x1 <= x0) return
   c.save()
   c.lineCap = 'round'
   c.globalAlpha = a
-  c.strokeStyle = C.gold; c.shadowColor = C.gold
+  c.strokeStyle = C.lime; c.shadowColor = 'rgb(140,245,22)'
   c.shadowBlur = 60 * glow; c.lineWidth = 6; c.beginPath(); c.moveTo(x0, y); c.lineTo(x1, y); c.stroke()
-  c.shadowBlur = 18 * glow; c.lineWidth = 5; c.stroke()
-  c.shadowBlur = 0; c.strokeStyle = '#fff7c9'; c.lineWidth = 2.5; c.stroke()
+  c.shadowColor = C.lime; c.shadowBlur = 18 * glow; c.lineWidth = 5; c.stroke()
+  c.shadowBlur = 0; c.strokeStyle = '#f3ffd0'; c.lineWidth = 2.5; c.stroke()
   c.restore()
 }
 function spark(c, x, y, r, a) {
   if (a <= 0) return
   c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = a
   const g = c.createRadialGradient(x, y, 0, x, y, r)
-  g.addColorStop(0, 'rgba(255,250,220,1)'); g.addColorStop(0.15, 'rgba(255,226,80,0.8)'); g.addColorStop(1, 'rgba(252,216,0,0)')
+  g.addColorStop(0, 'rgba(246,255,226,1)'); g.addColorStop(0.15, 'rgba(205,255,80,0.8)'); g.addColorStop(1, 'rgba(184,255,31,0)')
   c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2)
   c.restore()
 }
 function flare(c, x, y, a, len = 900) { // a thin horizontal lens streak
   if (a <= 0.003) return
   c.save(); c.globalCompositeOperation = 'lighter'; c.translate(x, y)
-  for (const [sy, col, k] of [[0.011, '255,244,205', 0.95], [0.05, '120,175,255', 0.3]]) {
+  for (const [sy, col, k] of [[0.011, '242,255,214', 0.95], [0.05, '140,245,22', 0.22]]) {
     c.save(); c.scale(1, sy)
     const g = c.createRadialGradient(0, 0, 0, 0, 0, len)
     g.addColorStop(0, `rgba(${col},${Math.min(1, k * a)})`); g.addColorStop(0.3, `rgba(${col},${Math.min(1, k * a * 0.35)})`); g.addColorStop(1, `rgba(${col},0)`)
@@ -125,7 +128,7 @@ function star(c, x, y, r, a) {
   c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = a; c.translate(x, y)
   for (const [sx, sy] of [[1, 0.06], [0.06, 1]]) {
     const g = c.createRadialGradient(0, 0, 0, 0, 0, r)
-    g.addColorStop(0, 'rgba(255,252,235,1)'); g.addColorStop(1, 'rgba(255,230,120,0)')
+    g.addColorStop(0, 'rgba(248,255,236,1)'); g.addColorStop(1, 'rgba(200,255,100,0)')
     c.save(); c.scale(sx, sy); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill(); c.restore()
   }
   spark(c, 0, 0, r * 0.35, 1)
@@ -150,12 +153,12 @@ const DUST = (() => { const r = rng(11); return Array.from({ length: 70 }, () =>
 
 function backdrop(c, t, o = {}) {
   const g = c.createLinearGradient(0, 0, 0, H)
-  g.addColorStop(0, '#08142a'); g.addColorStop(0.5, C.night); g.addColorStop(1, '#02050b')
+  g.addColorStop(0, '#0a120e'); g.addColorStop(0.5, C.night); g.addColorStop(1, '#010302')
   c.fillStyle = g; c.fillRect(0, 0, W, H)
   if (o.glow) {
     const y = o.glowY ?? LY
     const r = c.createRadialGradient(CX, y, 0, CX, y, o.glowR || 900)
-    r.addColorStop(0, `rgba(252,216,0,${0.13 * o.glow})`); r.addColorStop(0.45, `rgba(252,216,0,${0.04 * o.glow})`); r.addColorStop(1, 'rgba(252,216,0,0)')
+    r.addColorStop(0, `rgba(140,245,22,${0.13 * o.glow})`); r.addColorStop(0.45, `rgba(140,245,22,${0.04 * o.glow})`); r.addColorStop(1, 'rgba(140,245,22,0)')
     c.fillStyle = r; c.fillRect(0, 0, W, H)
   }
   if (o.beams) beams(c, t, o.beams)
@@ -169,7 +172,7 @@ function beams(c, t, a) {
     c.save(); c.translate(ox, -220); c.rotate(-ang)
     for (const [spread, alpha] of [[120, 0.05], [230, 0.035], [380, 0.022], [560, 0.012]]) {
       const g = c.createLinearGradient(0, 0, 0, 2700)
-      g.addColorStop(0, `rgba(255,244,205,${alpha * a * 2.2})`); g.addColorStop(0.55, `rgba(255,236,170,${alpha * a})`); g.addColorStop(1, 'rgba(255,236,170,0)')
+      g.addColorStop(0, `rgba(238,255,214,${alpha * a * 2.2})`); g.addColorStop(0.55, `rgba(214,255,160,${alpha * a})`); g.addColorStop(1, 'rgba(214,255,160,0)')
       c.fillStyle = g
       c.beginPath(); c.moveTo(-18, 0); c.lineTo(18, 0); c.lineTo(spread, 2700); c.lineTo(-spread, 2700); c.closePath(); c.fill()
     }
@@ -183,7 +186,7 @@ function dust(c, t, a) {
     const y = ((d.y - t * d.v) % H + H) % H
     const x = d.x + Math.sin(t * 0.7 + d.ph) * 14
     c.globalAlpha = a * d.a * (0.6 + 0.4 * Math.sin(t * 2 + d.ph))
-    c.fillStyle = '#ffe9a0'; c.beginPath(); c.arc(x, y, d.s, 0, Math.PI * 2); c.fill()
+    c.fillStyle = '#dfffa0'; c.beginPath(); c.arc(x, y, d.s, 0, Math.PI * 2); c.fill()
   }
   c.restore()
 }
@@ -195,7 +198,7 @@ function floor(c, t, a, horizon = LY) {
   for (let i = -14; i <= 14; i++) {
     const x = CX + i * 260
     const g = c.createLinearGradient(0, horizon, 0, H)
-    g.addColorStop(0, 'rgba(170,181,199,0)'); g.addColorStop(0.35, `rgba(170,181,199,${0.07 * a})`); g.addColorStop(1, `rgba(170,181,199,${0.12 * a})`)
+    g.addColorStop(0, 'rgba(169,181,174,0)'); g.addColorStop(0.35, `rgba(169,181,174,${0.07 * a})`); g.addColorStop(1, `rgba(169,181,174,${0.12 * a})`)
     c.strokeStyle = g
     c.beginPath(); c.moveTo(CX + i * 6, horizon); c.lineTo(CX + (x - CX) * 3.2, H + 200); c.stroke()
   }
@@ -203,7 +206,7 @@ function floor(c, t, a, horizon = LY) {
   for (let j = 0; j < 14; j++) {
     const z = (j + off) / 14
     const y = horizon + (H - horizon) * z ** 2.2
-    c.strokeStyle = `rgba(170,181,199,${0.1 * a * z})`
+    c.strokeStyle = `rgba(169,181,174,${0.1 * a * z})`
     c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke()
   }
   c.restore()
@@ -215,7 +218,7 @@ function rays(c, x, y, a, t) { // light rays behind the logo
     const ang = (i / 28) * Math.PI * 2, w = 0.028 + 0.02 * hash(i * 3.1)
     const len = 1300 + 500 * hash(i * 7.7)
     const g = c.createRadialGradient(0, 0, 60, 0, 0, len)
-    g.addColorStop(0, `rgba(255,232,120,${0.11 * a * (0.5 + hash(i))})`); g.addColorStop(1, 'rgba(255,232,120,0)')
+    g.addColorStop(0, `rgba(200,255,130,${0.075 * a * (0.5 + hash(i))})`); g.addColorStop(1, 'rgba(200,255,130,0)')
     c.fillStyle = g
     c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, len, ang - w, ang + w); c.closePath(); c.fill()
   }
@@ -226,7 +229,7 @@ function bars(c, t, a) { // crowd lights: soft bokeh low in the frame
   const r = rng(5)
   c.save(); c.globalCompositeOperation = 'lighter'
   for (let i = 0; i < 26; i++) {
-    const x = r() * W, y = 1500 + r() * 520, rad = 30 + r() * 90, hue = r() < 0.7 ? '255,226,140' : '140,180,255'
+    const x = r() * W, y = 1500 + r() * 520, rad = 30 + r() * 90, hue = r() < 0.7 ? '200,255,120' : '220,240,225'
     const tw = 0.5 + 0.5 * Math.sin(t * (1 + r() * 2) + i)
     const g = c.createRadialGradient(x, y, 0, x, y, rad)
     g.addColorStop(0, `rgba(${hue},${0.09 * a * tw})`); g.addColorStop(1, `rgba(${hue},0)`)
@@ -236,7 +239,7 @@ function bars(c, t, a) { // crowd lights: soft bokeh low in the frame
 }
 
 // =====================================================================================
-// 1. THE LINE (0 to 4 s): a gold line, a number, the question every bettor asks
+// 1. THE LINE (0 to 4 s): a lime line, a number, the question every bettor asks
 // =====================================================================================
 const FLIPS = [[2.0, 'O'], [2.5, 'U'], [3.0, 'O'], [3.25, 'U'], [3.5, 'O'], [3.625, 'U']]
 function scene1(c, t) {
@@ -255,8 +258,8 @@ function scene1Content(c, t) {
   const numF = font(BIG, 900, 430)
   const nm = measure(c, '24.5', numF)
   const gap = E.outExpo(nIn) * (nm.width / 2 + 46)
-  goldLine(c, CX - half, CX - gap, LY, 1, 1 + kick(t, 1.0, 6))
-  goldLine(c, CX + gap, CX + half, LY, 1, 1 + kick(t, 1.0, 6))
+  limeLine(c, CX - half, CX - gap, LY, 1, 1 + kick(t, 1.0, 6))
+  limeLine(c, CX + gap, CX + half, LY, 1, 1 + kick(t, 1.0, 6))
   spark(c, CX - half, LY, 120, (1 - draw) * 1.2 + 0.0)
   spark(c, CX + half, LY, 120, (1 - draw) * 1.2)
   flare(c, CX, LY, 1.1 * kick(t, 1.0, 2.6), 1000)
@@ -266,13 +269,13 @@ function scene1Content(c, t) {
     const asc = nm.actualBoundingBoxAscent, desc = nm.actualBoundingBoxDescent
     c.save(); c.translate(CX, LY); c.scale(sc, sc)
     const g = c.createLinearGradient(0, -asc / 2, 0, asc / 2)
-    g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#c9d3e3')
+    g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#c9d4c6')
     txt(c, '24.5', 0, (asc - desc) / 2, { font: numF, color: g, alpha: seg(t, 1.0, 1.08), chroma: kick(t, 1.0, 7) * 1.2 })
     c.restore()
   }
   // eyebrow and label
   const eb = E.outCubic(seg(t, 1.2, 1.6))
-  txt(c, 'TONIGHT’S LINE', CX, LY - 560 + (1 - eb) * 24, { font: font(UI, 800, 36), color: C.gold, ls: 12, alpha: eb })
+  txt(c, 'TONIGHT’S LINE', CX, LY - 560 + (1 - eb) * 24, { font: font(UI, 800, 36), color: C.lime, ls: 12, alpha: eb })
   const pl = E.outQuart(seg(t, 1.45, 2.0))
   txt(c, 'POINTS', CX, LY + 230, { font: font(UI, 800, 50), color: C.chalk2, ls: lerp(70, 26, pl), alpha: pl })
   // OVER above the line, UNDER below, faster and faster
@@ -287,9 +290,9 @@ function scene1Content(c, t) {
     const over = side === 'O'
     const y = over ? LY - 330 : LY + 470
     c.save(); c.translate(CX, y); c.scale(pop, pop)
-    txt(c, over ? 'OVER' : 'UNDER', 0, 0, { font: font(BIG, 900, 170), color: over ? C.gold : C.chalk, ls: 10, alpha: a, glow: over ? 'rgba(252,216,0,0.55)' : null, glowBlur: 40 })
+    txt(c, over ? 'OVER' : 'UNDER', 0, 0, { font: font(BIG, 900, 170), color: over ? C.lime : C.chalk, ls: 10, alpha: a, glow: over ? 'rgba(140,245,22,0.55)' : null, glowBlur: 40 })
     // a chevron pointing away from the line
-    c.globalAlpha = a; c.fillStyle = over ? C.gold : C.chalk
+    c.globalAlpha = a; c.fillStyle = over ? C.lime : C.chalk
     c.beginPath()
     if (over) { c.moveTo(-34, -150); c.lineTo(0, -190); c.lineTo(34, -150) } else { c.moveTo(-34, 38); c.lineTo(0, 78); c.lineTo(34, 38) }
     c.lineWidth = 10; c.strokeStyle = c.fillStyle; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke()
@@ -334,24 +337,24 @@ function scene2(c, t) {
     const fadeEdge = (1 - (d / 1000) ** 2) * top
     const hero = i === HERO && frozen
     let a = clamp(fadeEdge) * (frozen && !hero ? 0.25 : 1)
-    const color = near > 0.02 || hero ? mixGold(near) : C.chalk3
+    const color = near > 0.02 || hero ? mixLime(near) : C.chalk3
     for (let k = 0; k < n; k++) {
       const y = y0 + (span * k) / n + 33
-      txt(c, rowText(i), CX, y, { font: rowFont(rowText(i)), color, ls: 3, alpha: (a * (n > 1 ? 1.5 : 1)) / n, glow: hero ? 'rgba(252,216,0,0.7)' : null, glowBlur: 40 })
+      txt(c, rowText(i), CX, y, { font: rowFont(rowText(i)), color, ls: 3, alpha: (a * (n > 1 ? 1.5 : 1)) / n, glow: hero ? 'rgba(140,245,22,0.7)' : null, glowBlur: 40 })
     }
   }
-  goldLine(c, 0, W, LY - 70, 0.9, 0.7)
-  goldLine(c, 0, W, LY + 70, 0.9, 0.7)
+  limeLine(c, 0, W, LY - 70, 0.9, 0.7)
+  limeLine(c, 0, W, LY + 70, 0.9, 0.7)
   // copy over the reel
   const band = c.createLinearGradient(0, 0, 0, 860)
-  band.addColorStop(0, 'rgba(5,10,20,0.98)'); band.addColorStop(0.7, 'rgba(5,10,20,0.9)'); band.addColorStop(1, 'rgba(5,10,20,0)')
+  band.addColorStop(0, 'rgba(3,6,5,0.98)'); band.addColorStop(0.7, 'rgba(3,6,5,0.9)'); band.addColorStop(1, 'rgba(3,6,5,0)')
   c.fillStyle = band; c.fillRect(0, 0, W, 860)
   const h1 = seg(t, 4.25, 4.33), h2 = seg(t, 4.75, 4.83), out1 = E.inCubic(seg(t, 5.7, 5.92))
   txt(c, 'THOUSANDS', CX, 450 - out1 * 120, { font: font(BIG, 900, 190), color: C.chalk, ls: 4, alpha: h1 * (1 - out1), chroma: kick(t, 4.25, 8) })
   txt(c, 'OF LINES.', CX, 640 - out1 * 120, { font: font(BIG, 900, 190), color: C.chalk, ls: 4, alpha: h2 * (1 - out1), chroma: kick(t, 4.75, 8) })
   const e1 = seg(t, 6.0, 6.08), e2 = E.inCubic(seg(t, 7.2, 7.42))
   c.save(); c.translate(CX, 560); const sc = lerp(1.25, 1, E.outExpo(seg(t, 6.0, 6.35))); c.scale(sc, sc)
-  txt(c, 'EVERY NIGHT.', 0, 0, { font: font(BIG, 900, 172), color: C.gold, ls: 4, alpha: e1 * (1 - e2), glow: 'rgba(252,216,0,0.5)', glowBlur: 50, chroma: kick(t, 6.0, 8) })
+  txt(c, 'EVERY NIGHT.', 0, 0, { font: font(BIG, 900, 172), color: C.lime, ls: 4, alpha: e1 * (1 - e2), glow: 'rgba(140,245,22,0.5)', glowBlur: 50, chroma: kick(t, 6.0, 8) })
   c.restore()
   if (frozen) {
     const g = seg(t, 7.5, 7.56)
@@ -359,8 +362,8 @@ function scene2(c, t) {
     txt(c, 'GUESS.', CX, 640, { font: font(BIG, 900, 150), color: C.flag, ls: 4, alpha: g, chroma: kick(t, 7.5, 9) })
   }
 }
-function mixGold(k) {
-  const a = [117, 131, 154], b = [252, 216, 0]
+function mixLime(k) { // chalk-3 to lime
+  const a = [119, 132, 125], b = [184, 255, 31]
   return `rgb(${Math.round(lerp(a[0], b[0], k))},${Math.round(lerp(a[1], b[1], k))},${Math.round(lerp(a[2], b[2], k))})`
 }
 
@@ -381,9 +384,9 @@ function panel(c, cy, a = 1) {
   c.save(); c.globalAlpha = a
   rr(c, 40, cy - 880, 1000, 1760, 48)
   const g = c.createLinearGradient(0, cy - 880, 0, cy + 880)
-  g.addColorStop(0, 'rgba(18,30,52,0.82)'); g.addColorStop(1, 'rgba(8,14,26,0.82)')
+  g.addColorStop(0, 'rgba(17,26,22,0.82)'); g.addColorStop(1, 'rgba(7,11,9,0.82)')
   c.fillStyle = g; c.fill()
-  c.lineWidth = 2; c.strokeStyle = 'rgba(70,96,140,0.55)'; c.stroke()
+  c.lineWidth = 2; c.strokeStyle = 'rgba(70,94,83,0.55)'; c.stroke()
   c.restore()
 }
 function pill(c, x, y, label, o = {}) {
@@ -404,7 +407,7 @@ function cardChart(c, P, cy, s, hero) {
   const h = s.header
   txt(c, P.name, 100, top + 236, { font: font(UI, 800, 60), color: C.chalk, align: 'left', ls: 2, alpha: h })
   txt(c, `TONIGHT  ${P.stat}`, 100, top + 292, { font: font(UI, 700, 32), color: C.chalk3, align: 'left', ls: 6, alpha: h })
-  pill(c, 980, top + 250, P.pick, { align: 'right', fill: C.gold, color: C.night, size: 40, alpha: h })
+  pill(c, 980, top + 250, P.pick, { align: 'right', fill: C.lime, color: C.night, size: 40, alpha: h })
   // the big number
   const hits = P.games.filter((v) => (P.side === 'o' ? v > P.line : v < P.line)).length
   const st = s.stat
@@ -415,7 +418,7 @@ function cardChart(c, P, cy, s, hero) {
     const fA = font(BIG, 900, 330), fB = font(BIG, 900, 170)
     const wA = measure(c, String(roll), fA).width, wB = measure(c, '/10', fB).width
     const x0 = -(wA + wB + 12) / 2
-    txt(c, String(roll), x0 + wA / 2, 0, { font: fA, color: C.gold, alpha: clamp(st * 6), glow: 'rgba(252,216,0,0.45)', glowBlur: 50, chroma: hero ? kick(T, 9.5, 8) : 0 })
+    txt(c, String(roll), x0 + wA / 2, 0, { font: fA, color: C.lime, alpha: clamp(st * 6), glow: 'rgba(140,245,22,0.45)', glowBlur: 50, chroma: hero ? kick(T, 9.5, 8) : 0 })
     txt(c, '/10', x0 + wA + 12 + wB / 2, 0, { font: fB, color: C.chalk, alpha: clamp(st * 6) })
     c.restore()
     txt(c, `HIT IN ${hits} OF HIS LAST 10`, 540, top + 690, { font: font(UI, 800, 36), color: C.chalk2, ls: 8, alpha: clamp(st * 3) })
@@ -440,18 +443,18 @@ function cardChart(c, P, cy, s, hero) {
     c.fill(); c.restore()
     txt(c, String(v), x + bw / 2, base - hgt - 18, { font: font(BIG, 800, 44), color: hit ? C.turf : C.flag, alpha: seg(k, 0.6, 1) })
   }
-  c.save(); c.strokeStyle = 'rgba(117,131,154,0.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(80, base + 2); c.lineTo(1000, base + 2); c.stroke(); c.restore()
+  c.save(); c.strokeStyle = 'rgba(119,132,125,0.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(80, base + 2); c.lineTo(1000, base + 2); c.stroke(); c.restore()
   txt(c, 'LAST 10 GAMES', 100, base + 66, { font: font(UI, 800, 30), color: C.chalk3, align: 'left', ls: 8, alpha: s.header })
   // the line, labeled
-  goldLine(c, 70, 1010, lineY, hero ? 1 : 0.9, 0.8)
-  pill(c, 112, lineY, String(P.line), { fill: C.gold, color: C.night, size: 30, ls: 1, alpha: s.header })
+  limeLine(c, 70, 1010, lineY, hero ? 1 : 0.9, 0.8)
+  pill(c, 112, lineY, String(P.line), { fill: C.lime, color: C.night, size: 30, ls: 1, alpha: s.header })
   // projection
   if (s.proj > 0) {
     const py = base - P.proj * unit
     const k = E.outCubic(s.proj)
-    c.save(); c.setLineDash([18, 14]); c.lineWidth = 4; c.strokeStyle = 'rgba(232,237,245,0.8)'
+    c.save(); c.setLineDash([18, 14]); c.lineWidth = 4; c.strokeStyle = 'rgba(238,243,236,0.8)'
     c.beginPath(); c.moveTo(70, py); c.lineTo(lerp(70, 1010, k), py); c.stroke(); c.restore()
-    pill(c, 1000, py - 42, `PROJ ${P.proj}`, { align: 'right', fill: 'rgba(232,237,245,0.95)', color: C.night, size: 30, alpha: seg(s.proj, 0.5, 1) })
+    pill(c, 1000, py - 42, `PROJ ${P.proj}`, { align: 'right', fill: 'rgba(238,243,236,0.95)', color: C.night, size: 30, alpha: seg(s.proj, 0.5, 1) })
   }
 }
 
@@ -459,13 +462,13 @@ function cardRing(c, P, cy, s) {
   const top = cy - 960
   txt(c, 'PROPPICKZ PROBABILITY', 540, top + 300, { font: font(UI, 800, 40), color: C.chalk2, ls: 12, alpha: s.ring > 0 ? 1 : 0 })
   const ry = top + 900, R = 300
-  c.save(); c.lineWidth = 52; c.strokeStyle = 'rgba(42,60,92,0.7)'; c.beginPath(); c.arc(540, ry, R, 0, Math.PI * 2); c.stroke(); c.restore()
+  c.save(); c.lineWidth = 52; c.strokeStyle = 'rgba(44,59,52,0.7)'; c.beginPath(); c.arc(540, ry, R, 0, Math.PI * 2); c.stroke(); c.restore()
   const k = E.outCubic(s.ring)
   if (k > 0) {
     const a1 = -Math.PI / 2, a2 = a1 + (Math.PI * 2 * P.prob * k) / 100
     const g = c.createLinearGradient(240, ry - R, 840, ry + R)
-    g.addColorStop(0, '#fff1a1'); g.addColorStop(1, C.gold)
-    c.save(); c.lineCap = 'round'; c.lineWidth = 52; c.strokeStyle = g; c.shadowColor = 'rgba(252,216,0,0.7)'; c.shadowBlur = 50
+    g.addColorStop(0, C.limeHi); g.addColorStop(1, C.lime)
+    c.save(); c.lineCap = 'round'; c.lineWidth = 52; c.strokeStyle = g; c.shadowColor = 'rgba(140,245,22,0.7)'; c.shadowBlur = 50
     c.beginPath(); c.arc(540, ry, R, a1, a2); c.stroke(); c.restore()
     spark(c, 540 + R * Math.cos(a2), ry + R * Math.sin(a2), 90, 0.9 * (1 - seg(s.ring, 0.9, 1)) + 0.25)
   }
@@ -474,7 +477,7 @@ function cardRing(c, P, cy, s) {
   const wN = measure(c, String(num), fN).width
   txt(c, String(num), 540 - 40, ry + 100, { font: fN, color: C.chalk, alpha: s.ring > 0 ? 1 : 0 })
   txt(c, '%', 540 - 40 + wN / 2 + 52, ry + 100, { font: fP, color: C.chalk2, alpha: s.ring > 0 ? 1 : 0 })
-  txt(c, P.pick, 540, ry + 170, { font: font(UI, 900, 40), color: C.gold, ls: 6, alpha: s.ring > 0 ? 1 : 0 })
+  txt(c, P.pick, 540, ry + 170, { font: font(UI, 900, 40), color: C.lime, ls: 6, alpha: s.ring > 0 ? 1 : 0 })
   const cap = E.outCubic(s.ringCap)
   txt(c, `PROJECTED ${P.proj}  ·  LINE ${P.line}`, 540, top + 1400 + (1 - cap) * 30, { font: font(UI, 800, 38), color: C.chalk2, ls: 6, alpha: cap })
   txt(c, 'Built from his game logs, minutes,', 540, top + 1490 + (1 - cap) * 30, { font: font(UI, 600, 40), color: C.chalk3, alpha: cap })
@@ -493,12 +496,12 @@ function cardPrice(c, P, cy, s) {
     const best = i === P.best
     const b = best ? E.outCubic(s.best) : 0
     c.save(); c.globalAlpha = clamp(k * 3)
-    rr(c, x, yy, tw, th, 30); c.fillStyle = best ? `rgba(252,216,0,${0.1 * b})` : 'rgba(28,43,69,0.85)'; c.fill()
-    c.lineWidth = 3 + 2 * b; c.strokeStyle = best && b > 0 ? `rgba(252,216,0,${b})` : 'rgba(70,96,140,0.5)'
-    if (best && b > 0) { c.shadowColor = 'rgba(252,216,0,0.6)'; c.shadowBlur = 40 * b }
+    rr(c, x, yy, tw, th, 30); c.fillStyle = best ? `rgba(184,255,31,${0.1 * b})` : 'rgba(30,42,37,0.85)'; c.fill()
+    c.lineWidth = 3 + 2 * b; c.strokeStyle = best && b > 0 ? `rgba(184,255,31,${b})` : 'rgba(70,94,83,0.5)'
+    if (best && b > 0) { c.shadowColor = 'rgba(140,245,22,0.6)'; c.shadowBlur = 40 * b }
     c.stroke(); c.restore()
-    txt(c, P.prices[i], x + tw / 2, yy + 138, { font: font(BIG, 800, 118), color: best && b > 0.5 ? C.gold : C.chalk, alpha: clamp(k * 3) })
-    if (best && b > 0) pill(c, x + tw / 2, yy - 6, 'BEST', { fill: C.gold, color: C.night, size: 30, alpha: b })
+    txt(c, P.prices[i], x + tw / 2, yy + 138, { font: font(BIG, 800, 118), color: best && b > 0.5 ? C.lime : C.chalk, alpha: clamp(k * 3) })
+    if (best && b > 0) pill(c, x + tw / 2, yy - 6, 'BEST', { fill: C.lime, color: C.night, size: 30, alpha: b })
   }
   const e = s.edge
   if (e > 0) {
@@ -512,15 +515,17 @@ function cardPrice(c, P, cy, s) {
   }
   const m = E.outCubic(s.cmp)
   if (m > 0) {
-    const rows = [['BOOK', P.book, 'rgba(117,131,154,0.9)'], ['PROPPICKZ', P.prob, C.gold]]
+    const rows = [['BOOK', P.book, 'rgba(119,132,125,0.9)'], ['PROPPICKZ', P.prob, C.lime]]
+    // the bars start a clear gap after the longest label and end before the percentages
+    const lf = font(UI, 900, 34), bx = 100 + Math.max(...rows.map(([l]) => measure(c, l, lf, 6).width)) + 34, bw = 890 - bx
     rows.forEach(([label, v, col], i) => {
       const y = top + 1330 + i * 130
-      txt(c, label, 100, y + 14, { font: font(UI, 900, 34), color: i ? C.gold : C.chalk3, align: 'left', ls: 6, alpha: m })
-      c.save(); rr(c, 330, y - 22, 560, 44, 22); c.fillStyle = 'rgba(28,43,69,0.9)'; c.fill(); c.restore()
-      c.save(); rr(c, 330, y - 22, Math.max(44, 560 * (v / 100) * m), 44, 22); c.fillStyle = col
-      if (i) { c.shadowColor = 'rgba(252,216,0,0.6)'; c.shadowBlur = 30 }
+      txt(c, label, 100, y + 14, { font: lf, color: i ? C.lime : C.chalk3, align: 'left', ls: 6, alpha: m })
+      c.save(); rr(c, bx, y - 22, bw, 44, 22); c.fillStyle = 'rgba(30,42,37,0.9)'; c.fill(); c.restore()
+      c.save(); rr(c, bx, y - 22, Math.max(44, bw * (v / 100) * m), 44, 22); c.fillStyle = col
+      if (i) { c.shadowColor = 'rgba(140,245,22,0.6)'; c.shadowBlur = 30 }
       c.fill(); c.restore()
-      txt(c, `${Math.round(v * m)}%`, 1000, y + 16, { font: font(BIG, 800, 54), color: i ? C.gold : C.chalk2, align: 'right', alpha: m })
+      txt(c, `${Math.round(v * m)}%`, 1000, y + 16, { font: font(BIG, 800, 54), color: i ? C.lime : C.chalk2, align: 'right', alpha: m })
     })
   }
 }
@@ -539,21 +544,21 @@ function cardRead(c, P, cy, s) {
   if (v > 0) {
     const sc = lerp(1.35, 1, E.outExpo(v))
     c.save(); c.translate(540, top + 760); c.scale(sc, sc)
-    txt(c, P.verdict, 0, 0, { font: font(BIG, 900, 300), color: C.gold, ls: 6, alpha: clamp(v * 5), glow: 'rgba(252,216,0,0.55)', glowBlur: 60, chroma: kick(T, 15.45, 8) })
+    txt(c, P.verdict, 0, 0, { font: font(BIG, 900, 300), color: C.lime, ls: 6, alpha: clamp(v * 5), glow: 'rgba(140,245,22,0.55)', glowBlur: 60, chroma: kick(T, 15.45, 8) })
     c.restore()
   }
   txt(c, `${P.pick} ${P.stat}`, 540, top + 860, { font: font(UI, 800, 46), color: C.chalk, ls: 4, alpha: s.pick })
-  c.save(); c.globalAlpha = s.pick * 0.6; c.strokeStyle = 'rgba(117,131,154,0.6)'; c.lineWidth = 2; c.beginPath(); c.moveTo(120, top + 940); c.lineTo(960, top + 940); c.stroke(); c.restore()
+  c.save(); c.globalAlpha = s.pick * 0.6; c.strokeStyle = 'rgba(119,132,125,0.6)'; c.lineWidth = 2; c.beginPath(); c.moveTo(120, top + 940); c.lineTo(960, top + 940); c.stroke(); c.restore()
   P.why.forEach((line, i) => {
     const k = s.type[i]
     if (k <= 0) return
     const shown = line.slice(0, Math.round(line.length * k))
     const y = top + 1060 + i * 112
-    c.save(); c.fillStyle = C.gold; c.beginPath(); c.arc(130, y - 15, 9, 0, Math.PI * 2); c.fill(); c.restore()
+    c.save(); c.fillStyle = C.lime; c.beginPath(); c.arc(130, y - 15, 9, 0, Math.PI * 2); c.fill(); c.restore()
     txt(c, shown, 168, y, { font: font(UI, 600, 48), color: C.chalk, align: 'left' })
     if (k < 1 && Math.floor(T * 8) % 2 === 0) {
       const w = measure(c, shown, font(UI, 600, 48)).width
-      c.save(); c.fillStyle = C.gold; c.fillRect(176 + w, y - 40, 5, 48); c.restore()
+      c.save(); c.fillStyle = C.lime; c.fillRect(176 + w, y - 40, 5, 48); c.restore()
     }
   })
   const st = s.stake
@@ -564,7 +569,7 @@ function cardRead(c, P, cy, s) {
     let x = 540 - (cw.reduce((a, b) => a + b, 0) + gap * 2) / 2
     chips.forEach((l, i) => {
       const k = E.outBack(seg(st, i * 0.2, i * 0.2 + 0.55), 1.6)
-      if (k > 0) { c.save(); c.translate(x + cw[i] / 2, top + 1530); c.scale(k, k); pill(c, 0, 0, l, { stroke: 'rgba(170,181,199,0.55)', color: C.chalk2, size: 30, ls: 4, alpha: clamp(k) }); c.restore() }
+      if (k > 0) { c.save(); c.translate(x + cw[i] / 2, top + 1530); c.scale(k, k); pill(c, 0, 0, l, { stroke: 'rgba(169,181,174,0.55)', color: C.chalk2, size: 30, ls: 4, alpha: clamp(k) }); c.restore() }
       x += cw[i] + gap
     })
   }
@@ -624,14 +629,14 @@ function scene3(c, t) {
   // the hero line carried over from the reel, fading into the card
   if (t < 8.35) {
     const k = seg(t, 8.0, 8.35)
-    goldLine(c, lerp(0, 70, k), lerp(W, 1010, k), LY, 1, 1.4 - k * 0.6)
+    limeLine(c, lerp(0, 70, k), lerp(W, 1010, k), LY, 1, 1.4 - k * 0.6)
   }
   // the pull-out caption, over the blur
   const cap = E.outCubic(seg(t, 17.55, 17.8))
   if (cap > 0) {
     c = ov
     const g = c.createLinearGradient(0, 640, 0, 1320)
-    g.addColorStop(0, 'rgba(5,10,20,0)'); g.addColorStop(0.5, `rgba(5,10,20,${0.86 * cap})`); g.addColorStop(1, 'rgba(5,10,20,0)')
+    g.addColorStop(0, 'rgba(3,6,5,0)'); g.addColorStop(0.5, `rgba(3,6,5,${0.86 * cap})`); g.addColorStop(1, 'rgba(3,6,5,0)')
     c.fillStyle = g; c.fillRect(0, 640, W, 680)
     c.save(); c.translate(CX, LY + 20); const sc = lerp(1.12, 1, E.outExpo(seg(t, 17.55, 17.9))); c.scale(sc, sc)
     const cf = { font: font(BIG, 900, 180), color: C.chalk, ls: 3, alpha: cap, glow: 'rgba(0,0,0,0.6)', glowBlur: 30 }
@@ -660,7 +665,7 @@ function scene4(c, t) {
     const k = E.inOutExpo(seg(t, 23.25, 24.0))
     const sx = CX + (MARK_X - CX) * punch, sy = 1150 + (TRACK.y - LIVE_UP - 1150) * punch
     const y = lerp(sy, LY, k), half = lerp(4, W / 2 + 40, k), x = lerp(sx, CX, k)
-    goldLine(c, x - half, x + half, y, 1, 1 + k)
+    limeLine(c, x - half, x + half, y, 1, 1 + k)
   }
 }
 const LIVE_UP = 60, TRACK = { x0: 110, x1: 970, y: 1370, max: 30 }
@@ -690,7 +695,7 @@ function scene4Content(c, t, tension) {
   odo.setTransform(1, 0, 0, 1, 0, 0); odo.globalAlpha = 1; odo.globalCompositeOperation = 'source-over'; odo.clearRect(0, 0, W, 695)
   odo.save(); odo.translate(CX, 605)
   if (roll < 1 && t > 18.2) txt(odo, String(prev), 0, -roll * 520, { font: fC, color: C.chalk, alpha: a * (1 - roll) })
-  txt(odo, String(cur), 0, (1 - roll) * 520 * (t > 18.2 ? 1 : 0), { font: fC, color: cashed ? C.gold : C.chalk, alpha: a, glow: cashed ? 'rgba(252,216,0,0.6)' : null, glowBlur: 70, chroma: kick(t, 22.0, 7) * 1.2 })
+  txt(odo, String(cur), 0, (1 - roll) * 520 * (t > 18.2 ? 1 : 0), { font: fC, color: cashed ? C.lime : C.chalk, alpha: a, glow: cashed ? 'rgba(140,245,22,0.6)' : null, glowBlur: 70, chroma: kick(t, 22.0, 7) * 1.2 })
   odo.restore()
   odo.save(); odo.globalCompositeOperation = 'destination-in'
   const fm = odo.createLinearGradient(0, 0, 0, 695)
@@ -706,13 +711,13 @@ function scene4Content(c, t, tension) {
   const { x0: tx0, x1: tx1, y: ty, max } = TRACK
   const shown = lerp(prev, cur, roll)
   const mx = tx0 + ((tx1 - tx0) * 24.5) / max
-  c.save(); c.globalAlpha = a; rr(c, tx0, ty - 14, tx1 - tx0, 28, 14); c.fillStyle = 'rgba(28,43,69,0.95)'; c.fill()
-  rr(c, tx0, ty - 14, ((tx1 - tx0) * shown) / max, 28, 14); c.fillStyle = cashed ? C.gold : C.turf; c.shadowColor = cashed ? 'rgba(252,216,0,0.8)' : 'rgba(47,212,122,0.6)'; c.shadowBlur = 30; c.fill(); c.restore()
+  c.save(); c.globalAlpha = a; rr(c, tx0, ty - 14, tx1 - tx0, 28, 14); c.fillStyle = 'rgba(30,42,37,0.95)'; c.fill()
+  rr(c, tx0, ty - 14, ((tx1 - tx0) * shown) / max, 28, 14); c.fillStyle = cashed ? C.lime : C.turf; c.shadowColor = cashed ? 'rgba(140,245,22,0.8)' : 'rgba(47,212,122,0.6)'; c.shadowBlur = 30; c.fill(); c.restore()
   // the line marker on the track
   const mf = 1 + 2 * kick(t, 22.0, 5)
-  c.save(); c.globalAlpha = a; c.strokeStyle = cashed ? '#fff7c9' : C.gold; c.shadowColor = C.gold; c.shadowBlur = 30 * mf; c.lineWidth = 6; c.lineCap = 'round'
+  c.save(); c.globalAlpha = a; c.strokeStyle = cashed ? '#f3ffd0' : C.lime; c.shadowColor = 'rgb(140,245,22)'; c.shadowBlur = 30 * mf; c.lineWidth = 6; c.lineCap = 'round'
   c.beginPath(); c.moveTo(mx, ty - 46); c.lineTo(mx, ty + 46); c.stroke(); c.restore()
-  txt(c, 'LINE 24.5', mx, ty - 70, { font: font(UI, 900, 32), color: C.gold, ls: 4, alpha: a })
+  txt(c, 'LINE 24.5', mx, ty - 70, { font: font(UI, 900, 32), color: C.lime, ls: 4, alpha: a })
   // burst when it crosses
   if (cashed && t < 23.6) {
     const dt = t - 22.0
@@ -722,7 +727,7 @@ function scene4Content(c, t, tension) {
       const d = p.v * dt * (1 - dt / (p.life * 2)), x = mx + Math.cos(p.a) * d, y = ty + Math.sin(p.a) * d + 220 * dt * dt
       const tail = p.v * 0.03
       c.globalAlpha = (1 - dt / p.life) * a
-      c.strokeStyle = '#ffe680'; c.lineWidth = p.w; c.lineCap = 'round'
+      c.strokeStyle = '#dcff7a'; c.lineWidth = p.w; c.lineCap = 'round'
       c.beginPath(); c.moveTo(x, y); c.lineTo(x - Math.cos(p.a) * tail, y - Math.sin(p.a) * tail); c.stroke()
     }
     c.restore()
@@ -731,7 +736,7 @@ function scene4Content(c, t, tension) {
     // shockwave
     const wk = seg(t, 22.0, 22.7)
     if (wk < 1) {
-      c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = `rgba(255,236,150,${0.7 * (1 - wk)})`; c.lineWidth = 14 * (1 - wk) + 2
+      c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = `rgba(220,255,150,${0.7 * (1 - wk)})`; c.lineWidth = 14 * (1 - wk) + 2
       c.beginPath(); c.arc(mx, ty, 40 + E.outCubic(wk) * 900, 0, Math.PI * 2); c.stroke(); c.restore()
     }
   }
@@ -741,10 +746,10 @@ function scene4Content(c, t, tension) {
     const sc = lerp(2.4, 1, E.outBack(k, 1.2))
     c.save(); c.translate(CX, 1620); c.rotate(-0.07); c.scale(sc, sc); c.globalAlpha = clamp(k * 4) * a
     const f = font(BIG, 900, 190), m = measure(c, 'CASHED', f, 10)
-    rr(c, -m.width / 2 - 46, -170, m.width + 92, 210, 26); c.lineWidth = 10; c.strokeStyle = C.gold; c.shadowColor = 'rgba(252,216,0,0.8)'; c.shadowBlur = 50; c.stroke()
+    rr(c, -m.width / 2 - 46, -170, m.width + 92, 210, 26); c.lineWidth = 10; c.strokeStyle = C.lime; c.shadowColor = 'rgba(140,245,22,0.8)'; c.shadowBlur = 50; c.stroke()
     c.restore()
     c.save(); c.translate(CX, 1620); c.rotate(-0.07); c.scale(sc, sc)
-    txt(c, 'CASHED', 0, 0, { font: font(BIG, 900, 190), color: C.gold, ls: 10, alpha: clamp(k * 4) * a, glow: 'rgba(252,216,0,0.7)', glowBlur: 50, chroma: kick(t, 22.0, 7) })
+    txt(c, 'CASHED', 0, 0, { font: font(BIG, 900, 190), color: C.lime, ls: 10, alpha: clamp(k * 4) * a, glow: 'rgba(140,245,22,0.7)', glowBlur: 50, chroma: kick(t, 22.0, 7) })
     c.restore()
   }
   const cap = E.outCubic(seg(t, 22.55, 22.9)) * (1 - outK)
@@ -754,58 +759,103 @@ function scene4Content(c, t, tension) {
 // =====================================================================================
 // 5. THE BRAND (24 to 30 s): the logo comes out of the line
 // =====================================================================================
-let WORD = null
-const BRAND_Y = 800
-const GOLDDUST = (() => { const r = rng(9); return Array.from({ length: 90 }, () => ({ x: r() * W, y: 300 + r() * 1500, s: 0.8 + r() * 2.6, v: 20 + r() * 60, ph: r() * 6.28 })) })()
+// The PropPickz lockup, drawn the way the site draws it (frontend/src/brand/Logo.jsx, and
+// drawLockup in frontend/src/intro/intro.js): the P mark in a lime gradient from its bottom left
+// to its top right, PROP in white, PICKZ in a lime gradient of its own. BRAND is wordmark.json,
+// a copy of scripts/brand/brand.json: y-down boxes, the word 100 tall, the mark 160 tall and
+// centred on it, the word starting at lockup.word.x.
+let BRAND = null, LOGO = null
+function logoPaths(B) {
+  const L = B.lockup
+  const mark = new Path2D(B.mark.p + B.mark.lines.join('')), prop = new Path2D(B.word.prop), pickz = new Path2D(B.word.pickz)
+  const all = new Path2D() // the whole lockup in lockup units, to clip the light sweep to
+  all.addPath(mark, new DOMMatrix([L.mark.s, 0, 0, L.mark.s, L.mark.x, L.mark.y - L.top]))
+  for (const p of [prop, pickz]) all.addPath(p, new DOMMatrix([1, 0, 0, 1, L.word.x, L.word.y - L.top]))
+  return { mark, prop, pickz, all }
+}
+/** Draw the lockup with c in lockup units (x 0 to lockup.w, y 0 to lockup.h); fill(c, part, path). */
+function drawLockup(c, fill) {
+  const L = BRAND.lockup
+  c.save(); c.translate(L.mark.x, L.mark.y - L.top); c.scale(L.mark.s, L.mark.s); fill(c, 'mark', LOGO.mark); c.restore()
+  c.save(); c.translate(L.word.x, L.word.y - L.top); fill(c, 'prop', LOGO.prop); fill(c, 'pickz', LOGO.pickz); c.restore()
+}
+function markGradient(c) {
+  const M = BRAND.mark, K = BRAND.colors, g = c.createLinearGradient(0, M.h, M.w, 0)
+  g.addColorStop(0, K.markFrom); g.addColorStop(0.55, K.markMid); g.addColorStop(1, K.markTo)
+  return g
+}
+function pickzGradient(c) {
+  const Wd = BRAND.word, K = BRAND.colors, g = c.createLinearGradient(Wd.pickzX, Wd.h, Wd.w, 0)
+  g.addColorStop(0, K.pickzFrom); g.addColorStop(1, K.pickzTo)
+  return g
+}
+const logoFill = (c, part) => (part === 'mark' ? markGradient(c) : part === 'pickz' ? pickzGradient(c) : BRAND.colors.white)
+
+const BRAND_Y = 800, LOGO_W = 940 // where the logo's centre comes to rest, and its width
+const LIMEDUST = (() => { const r = rng(9); return Array.from({ length: 90 }, () => ({ x: r() * W, y: 300 + r() * 1500, s: 0.8 + r() * 2.6, v: 20 + r() * 60, ph: r() * 6.28 })) })()
 function scene5(c, t) {
   const fadeOut = seg(t, 29.25, 30.0)
   backdrop(c, t, { glow: 0.55 + 1.1 * kick(t, 24.0, 2.4), glowY: 820, glowR: 1050, beams: 0.45, dust: 0 })
   floor(c, t, 0.7 * (1 - fadeOut), 1000)
   rays(c, CX, lerp(LY, BRAND_Y, E.inOutCubic(seg(t, 24.95, 25.5))), E.outCubic(seg(t, 24.05, 24.9)) * (1 - fadeOut) * (1 + kick(t, 24.0, 3)), t)
-  // rising gold dust
+  // rising lime dust
   c.save(); c.globalCompositeOperation = 'lighter'
-  for (const d of GOLDDUST) {
+  for (const d of LIMEDUST) {
     const life = t - 24
     if (life < 0) continue
     const y = d.y - life * d.v, x = d.x + Math.sin(life * 1.2 + d.ph) * 18
     c.globalAlpha = 0.5 * clamp(life * 2) * (0.5 + 0.5 * Math.sin(t * 3 + d.ph)) * (1 - fadeOut)
-    c.fillStyle = '#ffe27a'; c.beginPath(); c.arc(x, y, d.s, 0, Math.PI * 2); c.fill()
+    c.fillStyle = '#d2ff6e'; c.beginPath(); c.arc(x, y, d.s, 0, Math.PI * 2); c.fill()
   }
   c.restore()
   const rise = E.inOutCubic(seg(t, 24.95, 25.5))
   const cy = lerp(LY, BRAND_Y, rise)
-  const ww = 900, sc = ww / WORD.w, wh = WORD.h * sc
+  const L = BRAND.lockup, ls = LOGO_W / L.w, lh = L.h * ls // px per lockup unit; the logo's height
+  const lx = CX - LOGO_W / 2, ly = cy - lh / 2 // its top left corner
   const rev = E.outExpo(seg(t, 24.0, 24.5))
-  // the line: full width, then it tightens under the word
+  const pulse = kick(t, 24.0, 3)
+  // lime glow behind the mark, as on the banner
+  if (rev > 0) {
+    const gx = lx + (L.mark.x + L.mark.w / 2) * ls, gr = lh * 2.4
+    const g = c.createRadialGradient(gx, cy, 0, gx, cy, gr)
+    const ga = rev * (1 - fadeOut) * (0.8 + 0.6 * pulse)
+    g.addColorStop(0, `rgba(140,245,22,${0.36 * ga})`); g.addColorStop(0.4, `rgba(140,245,22,${0.13 * ga})`); g.addColorStop(1, 'rgba(140,245,22,0)')
+    c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = g; c.fillRect(gx - gr, cy - gr, gr * 2, gr * 2); c.restore()
+  }
+  // the line: full width, then it tightens under the logo
   const tight = E.inOutExpo(seg(t, 24.35, 24.95))
-  const lineY = lerp(cy, cy + wh / 2 + 40, tight)
-  const half = lerp(W / 2 + 40, ww / 2, tight)
-  goldLine(c, CX - half, CX + half, lineY, 1 - fadeOut, 1.2 + kick(t, 24.0, 4) * 2)
-  // the word, unfolding from the line
+  const lineY = lerp(cy, cy + lh / 2 + 40, tight)
+  const half = lerp(W / 2 + 40, LOGO_W / 2, tight)
+  limeLine(c, CX - half, CX + half, lineY, 1 - fadeOut, 1.2 + kick(t, 24.0, 4) * 2)
+  // the logo, unfolding from the line
   if (rev > 0) {
     c.save()
-    c.beginPath(); c.rect(0, cy - (wh / 2) * rev - 2, W, wh * rev + 4); c.clip()
-    c.translate(CX - ww / 2, cy - wh / 2); c.scale(sc, sc)
-    const g = c.createLinearGradient(0, 0, 0, WORD.h)
-    g.addColorStop(0, '#ffe94d'); g.addColorStop(0.55, C.gold); g.addColorStop(1, '#efc200')
-    c.fillStyle = g; c.shadowColor = 'rgba(252,216,0,0.55)'; c.shadowBlur = 70 / sc * (1 + kick(t, 24.0, 3))
+    c.beginPath(); c.rect(0, cy - (lh / 2) * rev - 2, W, lh * rev + 4); c.clip()
+    c.translate(lx, ly); c.scale(ls, ls)
     c.globalAlpha = 1 - fadeOut
-    c.fill(WORD.path)
-    // light sweep across the letters
+    drawLockup(c, (x, part, path) => {
+      x.fillStyle = logoFill(x, part)
+      x.shadowColor = part === 'prop' ? 'rgba(140,245,22,0.18)' : 'rgba(140,245,22,0.55)'
+      x.shadowBlur = (part === 'mark' ? 44 : 32) * (1 + pulse)
+      x.fill(path)
+    })
+    // light sweep across the logo
     const sw = seg(t, 24.55, 25.2)
     if (sw > 0 && sw < 1) {
-      c.save(); c.clip(WORD.path); c.globalCompositeOperation = 'lighter'; c.shadowBlur = 0
-      const x = lerp(-260, WORD.w + 260, E.inOutCubic(sw))
-      const lg = c.createLinearGradient(x - 90, 0, x + 90, 0)
-      lg.addColorStop(0, 'rgba(255,255,255,0)'); lg.addColorStop(0.5, 'rgba(255,255,240,0.95)'); lg.addColorStop(1, 'rgba(255,255,255,0)')
-      c.fillStyle = lg; c.setTransform(c.getTransform().multiply(new DOMMatrix().skewXSelf(-18))); c.fillRect(-400, -20, WORD.w + 800, WORD.h + 40)
+      c.save(); c.clip(LOGO.all); c.globalCompositeOperation = 'lighter'; c.shadowBlur = 0
+      const x = lerp(-350 / ls, L.w + 350 / ls, E.inOutCubic(sw)), bh = 120 / ls
+      const lg = c.createLinearGradient(x - bh, 0, x + bh, 0)
+      lg.addColorStop(0, 'rgba(250,255,238,0)'); lg.addColorStop(0.5, 'rgba(250,255,238,0.95)'); lg.addColorStop(1, 'rgba(250,255,238,0)')
+      c.fillStyle = lg; c.setTransform(c.getTransform().multiply(new DOMMatrix().skewXSelf(-18))); c.fillRect(-700, -40, L.w + 1400, L.h + 80)
       c.restore()
     }
     c.restore()
   }
+  // the glint lands on the end of the word, the top right corner of the Z
+  const zx = lx + (L.word.x + BRAND.word.w) * ls - 16, zy = ly + (L.word.y - L.top) * ls + 4
   flare(c, CX, cy, 1.25 * kick(t, 24.0, 1.8), 1100)
-  flare(c, CX + ww / 2 - 40, cy - wh / 2 + 6, 0.7 * kick(t, 25.15, 3) * (t > 25.15 ? 1 : 0), 700)
-  star(c, CX + ww / 2 - 40, cy - wh / 2 + 6, 150, kick(t, 25.15, 3) * (t > 25.15 ? 1 : 0) * (1 - fadeOut))
+  flare(c, zx, zy, 0.7 * kick(t, 25.15, 3) * (t > 25.15 ? 1 : 0), 700)
+  star(c, zx, zy, 150, kick(t, 25.15, 3) * (t > 25.15 ? 1 : 0) * (1 - fadeOut))
   // the tagline, one word a beat
   const words = [['READ', 25.25], ['THE', 25.5], ['LINE.', 25.75]]
   const tf = font(BIG, 900, 132)
@@ -816,7 +866,7 @@ function scene5(c, t) {
     const k = seg(t, ti, ti + 0.06)
     const pop = lerp(1.25, 1, E.outExpo(seg(t, ti, ti + 0.3)))
     c.save(); c.translate(x + ws[i] / 2, 1050); c.scale(pop, pop)
-    txt(c, w, 0, 0, { font: tf, color: i === 2 ? C.gold : C.chalk, ls: 6, alpha: k * (1 - fadeOut), chroma: kick(t, ti, 10) * 0.8 })
+    txt(c, w, 0, 0, { font: tf, color: i === 2 ? C.lime : C.chalk, ls: 6, alpha: k * (1 - fadeOut), chroma: kick(t, ti, 10) * 0.8 })
     c.restore()
     x += ws[i] + 40
   })
@@ -826,7 +876,7 @@ function scene5(c, t) {
   const cta = E.outBack(seg(t, 27.6, 28.0), 1.4)
   if (cta > 0) {
     c.save(); c.translate(CX, 1340); c.scale(cta, cta)
-    pill(c, 0, 0, 'TRY IT FREE', { stroke: C.gold, color: C.gold, size: 46, ls: 10, alpha: clamp(cta) * (1 - fadeOut) })
+    pill(c, 0, 0, 'TRY IT FREE', { stroke: C.lime, color: C.lime, size: 46, ls: 10, alpha: clamp(cta) * (1 - fadeOut) })
     c.restore()
   }
   const legal = E.outCubic(seg(t, 27.9, 28.35)) * (1 - fadeOut)
@@ -892,10 +942,10 @@ function moment(t, dt) {
   o.save(); o.translate(CX + sx, LY + sy); o.rotate(sr); o.scale(over, over); o.translate(-CX, -LY); o.drawImage(ovCv, 0, 0); o.restore()
   // flashes
   const fl = FLASHES.reduce((a, [ti, s]) => (t >= ti ? a + s * Math.exp(-(t - ti) * 13) : a), 0)
-  if (fl > 0.003) { o.save(); o.globalCompositeOperation = 'lighter'; o.fillStyle = `rgba(255,248,225,${Math.min(0.8, fl)})`; o.fillRect(0, 0, W, H); o.restore() }
+  if (fl > 0.003) { o.save(); o.globalCompositeOperation = 'lighter'; o.fillStyle = `rgba(246,255,232,${Math.min(0.8, fl)})`; o.fillRect(0, 0, W, H); o.restore() }
   // fade from and to night
   const black = Math.max(1 - seg(t, 0, 0.15), seg(t, 29.6, 30.0))
-  if (black > 0) { o.fillStyle = `rgba(5,10,20,${black})`; o.fillRect(0, 0, W, H) }
+  if (black > 0) { o.fillStyle = `rgba(3,6,5,${black})`; o.fillRect(0, 0, W, H) }
 }
 
 /** The finished frame on the visible canvas: glitch, vignette and grain, once per frame. */
@@ -946,8 +996,8 @@ function frameAt(f, S = 4, shutter = 0.5) {
 
 // ---------- boot ----------
 window.ready = (async () => {
-  const wm = await (await fetch('wordmark.json')).json()
-  WORD = { ...wm, path: new Path2D(wm.d) }
+  BRAND = await (await fetch('wordmark.json')).json()
+  LOGO = logoPaths(BRAND)
   await Promise.all([font(BIG, 900, 100), font(BIG, 800, 100), font(UI, 600, 40), font(UI, 700, 40), font(UI, 800, 40), font(UI, 900, 40)].map((f) => document.fonts.load(f)))
   await document.fonts.ready
   frameAt(0, 1)
