@@ -60,19 +60,52 @@ export function useShop(legs, { enabled = true } = {}) {
   return st
 }
 
-/** The books people ask for first, always shown in this order; the best price joins them. */
-export const FEATURED_BOOKS = ['fanduel', 'draftkings', 'bet365', 'espnbet']
-/** A thin bar of each book's color on its tile, so the row reads at a glance. */
-const BOOK_COLOR = { fanduel: '#1493ff', draftkings: '#53d337', bet365: '#ffdf1b', espnbet: '#f2f4f8', betmgm: '#c8a96a', williamhill_us: '#b9975b', fanatics: '#e0303e', betrivers: '#3d7bff' }
+/** The books on the slip's grid, in this order; the best price leads. */
+export const FEATURED_BOOKS = ['fanduel', 'draftkings', 'betmgm', 'bet365', 'fanatics', 'betrivers', 'espnbet']
+/** Each book's color, behind its initial when its icon can't load. */
+const BOOK_COLOR = { fanduel: '#1493ff', draftkings: '#53d337', bet365: '#127b4f', espnbet: '#2756e8', betmgm: '#b8955a', williamhill_us: '#0f4d3a', fanatics: '#1d1d1f', betrivers: '#f2a43a' }
 /** Shorter names where a tile is narrow. */
 const TILE_NAME = { espnbet: 'theScore', williamhill_us: 'Caesars' }
-const BOOK_HOME = { fanduel: 'https://sportsbook.fanduel.com/', draftkings: 'https://sportsbook.draftkings.com/', bet365: 'https://www.bet365.com/', espnbet: 'https://thescore.bet/' }
+const BOOK_HOME = {
+  fanduel: 'https://sportsbook.fanduel.com/',
+  draftkings: 'https://sportsbook.draftkings.com/',
+  betmgm: 'https://www.betmgm.com/',
+  bet365: 'https://www.bet365.com/',
+  fanatics: 'https://sportsbook.fanatics.com/',
+  betrivers: 'https://www.betrivers.com/',
+  espnbet: 'https://thescore.bet/',
+}
+/** Where each book's own site icon lives (served by the icon service, never redrawn here). */
+const ICON_SITE = {
+  fanduel: 'fanduel.com',
+  draftkings: 'sportsbook.draftkings.com',
+  betmgm: 'betmgm.com',
+  bet365: 'bet365.com',
+  fanatics: 'fanatics.com',
+  betrivers: 'betrivers.com',
+  espnbet: 'thescore.bet',
+  williamhill_us: 'sportsbook.caesars.com',
+}
+
+/** The book's own app icon, so people know it at a glance; its initial if the icon won't load. */
+export function BookLogo({ book, size = 20 }) {
+  const [failed, setFailed] = useState(false)
+  const site = ICON_SITE[book]
+  if (!site || failed) {
+    return (
+      <span className="booklogo booklogo--initial" style={{ width: size, height: size, fontSize: Math.round(size * 0.55), '--book': BOOK_COLOR[book] || 'var(--seat-2)' }} aria-hidden="true">
+        {(TILE_NAME[book] || bookName(book) || '?').slice(0, 1).toUpperCase()}
+      </span>
+    )
+  }
+  return <img className="booklogo" src={`https://www.google.com/s2/favicons?domain=${site}&sz=64`} width={size} height={size} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+}
 
 /**
- * The slip's sportsbooks as a row of tiles: each book's live price for the whole slip (or how
- * many of its legs the book has posted), the best price marked. A tap opens the book's app,
- * with every leg on its bet slip where the book's links allow (FanDuel), otherwise the first
- * leg or the book. onMore opens SendToBook for every book and one tap per leg.
+ * The slip's sportsbooks on one small grid, no scrolling: each book's icon, its live price for
+ * the whole slip (or how many legs it has posted), the best price first and marked. A tap opens
+ * the book's app, with every leg on its bet slip where the book's links allow (FanDuel),
+ * otherwise the first leg or the book. onMore opens SendToBook: every book, and each leg.
  */
 export function BookRail({ legs, parlay = true, onMore = null, copied = false }) {
   const { data, error } = useShop(legs)
@@ -82,20 +115,22 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
   const whole = parlay || n === 1
   const byKey = new Map((data?.books || []).map((b) => [b.book, b]))
   const best = whole && data?.best ? data.best : null
-  // a best price at another book leads the row, where a narrow screen still shows it
-  const order = best && !FEATURED_BOOKS.includes(best) ? [best, ...FEATURED_BOOKS] : [...FEATURED_BOOKS]
+  const order = best ? [best, ...FEATURED_BOOKS.filter((k) => k !== best)] : [...FEATURED_BOOKS]
   const live = Boolean(data?.books?.some((b) => b.priced))
   return (
     <section className="bookrail" aria-labelledby="bookrail-h">
       <div className="bookrail__head">
         <h3 className="bookrail__title" id="bookrail-h">
-          {copied ? 'Copied. Now open it in your book' : 'Bet it at'}
+          {copied ? 'Copied. Open it in your book' : 'Bet it at'}
+          <span className={`bookrail__state${live ? ' is-live' : ''}`}>{!data && !error ? 'Getting odds…' : live ? 'Live odds' : 'No odds yet'}</span>
         </h3>
-        <span className={`bookrail__state${live ? ' is-live' : ''}`}>{!data && !error ? 'Getting live odds…' : live ? 'Live odds' : 'No live odds yet'}</span>
+        {onMore && (
+          <button type="button" className="linkish bookrail__more" onClick={onMore}>
+            All books
+          </button>
+        )}
       </div>
-      {/* keyed by the order: when a best price arrives in front, the row starts over at it
-          (the browser would otherwise keep the old first tile in view) */}
-      <ul className="bookrail__list" key={order.join()}>
+      <ul className="bookrail__grid">
         {order.map((k) => {
           const b = byKey.get(k)
           const name = TILE_NAME[k] || b?.name || bookName(k)
@@ -109,51 +144,51 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
           if (b) {
             if (b.noFeed) {
               main = 'Open'
-              sub = 'No live odds feed'
+              sub = 'No odds feed'
             } else if (whole && b.complete) {
               main = odds(b.american)
-              sub = b.allOnSlip ? (n > 1 ? `All ${n} legs added` : 'Bet added') : n > 1 ? `${n} of ${n} legs` : 'Opens the bet'
+              sub = b.allOnSlip ? (n > 1 ? `Adds all ${n}` : 'Adds the bet') : n > 1 ? `${n} of ${n} legs` : 'Opens the bet'
             } else if (alt) {
               main = odds(b.altAmerican)
-              sub = n === 1 ? `${legs[0].side === 'u' ? 'Under' : 'Over'} ${b.lines[0]}` : 'At its own lines'
+              sub = n === 1 ? `${legs[0].side === 'u' ? 'Under' : 'Over'} ${b.lines[0]}` : 'Its own lines'
             } else if (has) {
               main = `${has}/${n}`
-              sub = parlay ? 'legs posted' : `leg${has === 1 ? '' : 's'} posted`
+              sub = 'legs posted'
             } else {
               main = '—'
-              sub = error ? 'Opens the app' : 'Not posted yet'
+              sub = error ? 'Opens the app' : 'Not posted'
             }
           }
-          const label = `Open ${name}${b && whole && b.complete ? `, ${n > 1 ? 'parlay' : 'price'} ${odds(b.american)}` : alt ? `, ${odds(b.altAmerican)} at its own ${n > 1 ? 'lines' : 'line'}` : ''}${isBest ? ', best price' : ''}`
+          const label = `Open ${b?.name || name}${b && whole && b.complete ? `, ${n > 1 ? 'parlay' : 'price'} ${odds(b.american)}` : alt ? `, ${odds(b.altAmerican)} at its own ${n > 1 ? 'lines' : 'line'}` : ''}${isBest ? ', best price' : ''}`
+          const cls = `booktile${isBest ? ' is-best' : ''}${alt ? ' is-alt' : b && !b.complete && !b.noFeed ? ' is-short' : ''}`
+          const inner = (
+            <>
+              <span className="booktile__top">
+                <BookLogo book={k} size={20} />
+                <span className={`booktile__price num${main.length > 5 ? ' is-long' : ''}`}>{main}</span>
+              </span>
+              <span className="booktile__name">{name}</span>
+              <span className="booktile__sub">{sub}</span>
+            </>
+          )
           return (
             <li key={k}>
               {isBest && (
                 <span className="booktile__best" aria-hidden="true">
-                  Best price
+                  Best
                 </span>
               )}
               {href ? (
-                <a className={`booktile${isBest ? ' is-best' : ''}${alt ? ' is-alt' : b && !b.complete && !b.noFeed ? ' is-short' : ''}`} style={{ '--book': BOOK_COLOR[k] || 'var(--seat-2)' }} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} onClick={() => write('apex_book', k)}>
-                  <span className="booktile__name">{name}</span>
-                  <span className="booktile__price num">{main}</span>
-                  <span className="booktile__sub">{sub}</span>
+                <a className={cls} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} onClick={() => write('apex_book', k)}>
+                  {inner}
                 </a>
               ) : (
-                <span className="booktile is-short" style={{ '--book': BOOK_COLOR[k] || 'var(--seat-2)' }}>
-                  <span className="booktile__name">{name}</span>
-                  <span className="booktile__price num">{main}</span>
-                  <span className="booktile__sub">{sub}</span>
-                </span>
+                <span className={`${cls} is-short`}>{inner}</span>
               )}
             </li>
           )
         })}
       </ul>
-      {onMore && (
-        <button type="button" className="linkish bookrail__more" onClick={onMore}>
-          Every book, and each leg one tap at a time
-        </button>
-      )}
     </section>
   )
 }
@@ -166,23 +201,25 @@ function evText(p, american) {
 }
 
 /**
- * The slip at every sportsbook, best price first, and a button that opens the book: with the
- * legs on its bet slip where the book's links allow it, otherwise one tap per leg.
+ * The slip at every sportsbook, best price first: one compact row per book (its icon, its price,
+ * a button that opens its app with the legs on its bet slip where the book's links allow), so the
+ * whole list fits on a phone. "Legs" opens a book's leg-by-leg links and its own lines.
  */
 export function SendToBook({ open, onClose, legs, p = null, title = 'Send to sportsbook', copied = false }) {
   const { data, error } = useShop(legs, { enabled: open })
   const anyPrice = data?.books?.some((b) => b.priced)
   const [state, setState] = useState(() => read('apex_state', 'NJ'))
+  const [unfolded, setUnfolded] = useState(null)
   const mine = read('apex_book', '')
   const needsState = data?.books?.some((b) => [b.link, ...(b.legLinks || [])].some((u) => u && u.includes('{state}')))
   const go = (book) => write('apex_book', book)
+  const n = legs.length
 
   return (
     <Dialog open={open} onClose={onClose} title={title}>
       <div className="shopsheet">
-        {copied && <p className="shopsheet__copied">Your slip is copied. Paste it anywhere, or open a book below: the button opens its app, with the legs on its bet slip where the book allows.</p>}
-        <p className="shopsheet__intro">
-          {legs.length === 1 ? 'This bet' : `Your ${legs.length}-leg parlay`} at every sportsbook, best price first. The button opens the book’s app if you have it installed.
+        <p className={copied ? 'shopsheet__copied' : 'shopsheet__intro'}>
+          {copied ? 'Copied. Pick a book: the button opens its app.' : `${n === 1 ? 'This bet' : `Your ${n}-leg parlay`} at every sportsbook, best price first.`}
         </p>
         {error && <p className="ask__err">{error.message}</p>}
         {!data && !error && <p className="muted">Checking every book…</p>}
@@ -198,45 +235,57 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
             {data.books.map((b) => {
               const e = b.american != null ? evText(p, b.american) : null
               const isBest = data.best === b.book
+              const has = b.priced + (b.near || 0)
+              const legList = n > 1 && has > 0 && ((!b.allOnSlip && b.legLinks?.some(Boolean)) || b.near > 0 || !b.complete)
+              const isOpen = unfolded === b.book
+              let price = null
+              let meta = null
+              if (b.complete) {
+                price = odds(b.american)
+                meta = (
+                  <>
+                    <span className="num">{pct(impliedOf(b.american), 1)}</span>
+                    {e && <span className={`shop__ev ${e.ev >= 0 ? 'is-pos' : 'is-neg'}`}>{e.text}</span>}
+                  </>
+                )
+              } else if (b.noFeed) {
+                meta = 'No price feed'
+              } else if (b.covered) {
+                price = odds(b.altAmerican)
+                meta = n === 1 ? `${sideWord(legs[0])} ${b.lines[0]}, its line` : `At ${owner(b.name)} lines`
+              } else if (has) {
+                meta = `Has ${has} of ${n} legs`
+              } else {
+                meta = 'Not posted yet'
+              }
               return (
-                <li key={b.book} className={`shop${isBest ? ' is-best' : ''}`}>
+                <li key={b.book} className={`shop${isBest ? ' is-best' : ''}${b.covered && !b.complete ? ' is-alt' : ''}`}>
+                  <BookLogo book={b.book} size={28} />
                   <div className="shop__who">
-                    <span className="shop__name">{b.name}</span>
-                    {isBest && <span className="shop__tag">Best price</span>}
-                    {b.book === mine && !isBest && <span className="shop__tag shop__tag--mine">Your book</span>}
+                    <span className="shop__name">
+                      {b.name}
+                      {isBest && <span className="shop__tag">Best</span>}
+                      {b.book === mine && !isBest && <span className="shop__tag shop__tag--mine">Yours</span>}
+                    </span>
+                    <span className="shop__meta">
+                      {meta}
+                      {legList && (
+                        <button type="button" className="linkish shop__unfold" aria-expanded={isOpen} onClick={() => setUnfolded(isOpen ? null : b.book)}>
+                          {isOpen ? 'Hide legs' : 'Legs'}
+                        </button>
+                      )}
+                    </span>
                   </div>
-                  <div className="shop__price">
-                    {b.complete ? (
-                      <>
-                        <b className="num">{odds(b.american)}</b>
-                        <span className="num muted">{pct(impliedOf(b.american), 1)}</span>
-                        {e && <span className={`shop__ev ${e.ev >= 0 ? 'is-pos' : 'is-neg'}`}>{e.text}</span>}
-                      </>
-                    ) : b.noFeed ? (
-                      <span className="muted">No price feed</span>
-                    ) : b.covered ? (
-                      <>
-                        <b className="num">{odds(b.altAmerican)}</b>
-                        <span className="muted">{legs.length === 1 ? `at ${sideWord(legs[0])} ${b.lines[0]}, its line` : `at ${owner(b.name)} lines`}</span>
-                      </>
-                    ) : b.priced + (b.near || 0) ? (
-                      <span className="muted">
-                        Has {b.priced + (b.near || 0)} of {legs.length} legs
-                      </span>
-                    ) : (
-                      <span className="muted">Not posted yet</span>
-                    )}
-                  </div>
-                  <a className={`btn ${isBest ? 'btn--lime' : 'btn--quiet'} shop__go`} href={withState(b.link, state)} target="_blank" rel="noopener noreferrer" onClick={() => go(b.book)}>
-                    {b.allOnSlip ? `Open ${b.name} with ${legs.length > 1 ? 'all legs' : 'the bet'}` : `Open ${b.name}`}
+                  <b className="shop__price num">{price ?? '—'}</b>
+                  <a className={`btn btn--s ${isBest ? 'btn--lime' : 'btn--quiet'} shop__go`} href={withState(b.link, state)} target="_blank" rel="noopener noreferrer" aria-label={b.allOnSlip ? `Open ${b.name} with ${n > 1 ? 'all legs' : 'the bet'}` : `Open ${b.name}`} onClick={() => go(b.book)}>
+                    {b.allOnSlip ? (n > 1 ? 'Add all' : 'Add bet') : 'Open'}
                   </a>
-                  {legs.length > 1 && b.priced + (b.near || 0) > 0 && ((!b.allOnSlip && b.legLinks?.some(Boolean)) || b.near > 0 || !b.complete) && (
+                  {legList && isOpen && (
                     <div className="shop__legs">
-                      <span className="muted">{b.allOnSlip ? `On your ${b.name} slip:` : b.legLinks?.some(Boolean) ? `Tap each leg to add it to your ${b.name} slip:` : `Each leg at ${b.name}:`}</span>
                       {legs.map((leg, i) => {
                         const own = b.lines?.[i] != null
-                        const price = b.prices[i] ?? b.linePrices?.[i] ?? null
-                        if (price == null) {
+                        const q = b.prices[i] ?? b.linePrices?.[i] ?? null
+                        if (q == null) {
                           return (
                             <span key={i} className="shop__leg is-off">
                               Leg {i + 1}: not posted
@@ -247,12 +296,12 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
                           <>
                             Leg {i + 1}
                             {own && <span className="shop__line"> {sideWord(leg)} {b.lines[i]}</span>}
-                            <span className="num"> {odds(price)}</span>
+                            <span className="num"> {odds(q)}</span>
                           </>
                         )
                         const u = b.legLinks?.[i]
                         return u && !b.allOnSlip ? (
-                          <a key={i} href={withState(u, state)} target="_blank" rel="noopener noreferrer" className={`shop__leg${own ? ' is-alt' : ''}`} onClick={() => go(b.book)}>
+                          <a key={i} href={withState(u, state)} target="_blank" rel="noopener noreferrer" className={`shop__leg${own ? ' is-alt' : ''}`} aria-label={`Add leg ${i + 1} to your ${b.name} slip`} onClick={() => go(b.book)}>
                             {text}
                           </a>
                         ) : (
@@ -268,9 +317,10 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
             })}
           </ol>
         )}
+        {data?.books?.some((b) => b.near) && <p className="shopsheet__note">Grey prices are at the book’s own line, like 224.5 where your slip has 225.5.</p>}
         {needsState && (
           <label className="shopsheet__state">
-            <span>Your state (some books’ links need it)</span>
+            <span>Your state</span>
             <select
               value={state}
               onChange={(e) => {
@@ -284,8 +334,6 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
             </select>
           </label>
         )}
-        {data?.spread > 0.02 && <p className="shopsheet__note">The best book pays {(data.spread * 100).toFixed(0)}% more than the worst on this exact slip. That’s line shopping.</p>}
-        {data?.books?.some((b) => b.near) && <p className="shopsheet__note">Books often hang their own number, like 224.5 passing yards where your slip has 225.5. Those legs show the book’s line and price; the button adds the bet at that line.</p>}
         <p className="shopsheet__fine">21+. Sports betting is legal only in some states. PropPickz doesn’t take bets and isn’t paid by these books. If gambling stops being fun, call <a href="tel:18006973738">1-800-MY-RESET</a>.</p>
       </div>
     </Dialog>
@@ -318,7 +366,10 @@ export function LineShop({ row }) {
             const name = data.books.find((x) => x.book === b.book)?.name || b.book
             return (
               <li key={b.book} className={i === 0 ? 'is-best' : ''}>
-                <span className="lineshop__book">{name}</span>
+                <span className="lineshop__book">
+                  <BookLogo book={b.book} size={20} />
+                  {name}
+                </span>
                 <b className="num">{odds(b.price)}</b>
                 <span className="num muted">{pct(impliedOf(b.price), 1)}</span>
                 {e && <span className={`shop__ev ${e.ev >= 0 ? 'is-pos' : 'is-neg'}`}>{e.text}</span>}
@@ -328,7 +379,10 @@ export function LineShop({ row }) {
           })}
           {others.map((b) => (
             <li key={b.book} className="is-alt">
-              <span className="lineshop__book">{data.books.find((x) => x.book === b.book)?.name || b.book}</span>
+              <span className="lineshop__book">
+                <BookLogo book={b.book} size={20} />
+                {data.books.find((x) => x.book === b.book)?.name || b.book}
+              </span>
               <b className="num">{odds(b.price)}</b>
               <span className="num lineshop__line">
                 {sideWord(row)} {b.line}, its line

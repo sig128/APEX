@@ -5013,18 +5013,22 @@ code {
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
+/* one compact row per book: icon, name over what it has, price, button; its legs fold out */
 .shop {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: 'who go' 'price go' 'legs legs';
-  gap: 4px 12px;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  grid-template-areas: 'logo who price go' 'legs legs legs legs';
+  gap: 0 10px;
   align-items: center;
-  padding: 12px 14px;
+  padding: 8px 10px;
   border-radius: var(--r-m);
   background: var(--stand);
   border: 1px solid var(--seat);
+}
+.shop > .booklogo {
+  grid-area: logo;
 }
 .shop.is-best {
   border-color: var(--lime);
@@ -5032,13 +5036,29 @@ code {
 }
 .shop__who {
   grid-area: who;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 .shop__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   font-weight: 800;
+  font-size: var(--t-s);
+  white-space: nowrap;
+}
+.shop__meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+.shop__unfold {
+  font-size: var(--t-xs);
 }
 .shop__tag {
   padding: 2px 8px;
@@ -5054,13 +5074,14 @@ code {
 }
 .shop__price {
   grid-area: price;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
+  font-size: 20px;
+  white-space: nowrap;
 }
-.shop__price b {
-  font-size: 22px;
+.shop.is-best .shop__price {
+  color: var(--lime);
+}
+.shop.is-alt .shop__price {
+  color: var(--chalk-2);
 }
 .shop__ev {
   font-size: var(--t-xs);
@@ -5071,6 +5092,7 @@ code {
 .shop__go {
   grid-area: go;
   white-space: nowrap;
+  min-width: 64px;
 }
 .shop__legs {
   grid-area: legs;
@@ -5078,7 +5100,7 @@ code {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: var(--t-xs);
 }
 .shop__leg {
@@ -5095,15 +5117,7 @@ code {
   color: var(--chalk-3);
   font-weight: 500;
 }
-@media (max-width: 520px) {
-  .shop {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'who' 'price' 'go' 'legs';
-  }
-  .shop__go {
-    width: 100%;
-  }
-}
+
 .lineshop {
   margin: 18px 0;
   padding: 18px 20px;
@@ -5143,6 +5157,10 @@ code {
   color: var(--lime);
 }
 .lineshop__book {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-weight: 700;
 }
 .lineshop > p {
