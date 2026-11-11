@@ -20,6 +20,10 @@ const write = (k, v) => {
   }
 }
 
+const sideWord = (leg) => (leg?.side === 'u' ? 'Under' : 'Over')
+/** "BetMGM’s", "BetRivers’" */
+const owner = (name) => (/s$/i.test(name) ? `${name}’` : `${name}’s`)
+
 /** Some books' links carry the state in the address. */
 const withState = (url, st) => (url && url.includes('{state}') ? url.replaceAll('{state}', st.toLowerCase()) : url)
 
@@ -99,6 +103,9 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
           const href = withState(b?.link || BOOK_HOME[k] || null, state)
           let main = '…'
           let sub = 'Checking'
+          const has = b ? b.priced + (b.near || 0) : 0
+          // the slip at this book's own numbers (224.5 where the slip says 225.5)
+          const alt = Boolean(b && whole && !b.complete && b.covered)
           if (b) {
             if (b.noFeed) {
               main = 'Open'
@@ -106,15 +113,18 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
             } else if (whole && b.complete) {
               main = odds(b.american)
               sub = b.allOnSlip ? (n > 1 ? `All ${n} legs added` : 'Bet added') : n > 1 ? `${n} of ${n} legs` : 'Opens the bet'
-            } else if (b.priced) {
-              main = `${b.priced}/${n}`
-              sub = parlay ? 'legs posted' : `leg${b.priced === 1 ? '' : 's'} posted`
+            } else if (alt) {
+              main = odds(b.altAmerican)
+              sub = n === 1 ? `${legs[0].side === 'u' ? 'Under' : 'Over'} ${b.lines[0]}` : 'At its own lines'
+            } else if (has) {
+              main = `${has}/${n}`
+              sub = parlay ? 'legs posted' : `leg${has === 1 ? '' : 's'} posted`
             } else {
               main = '—'
               sub = error ? 'Opens the app' : 'Not posted yet'
             }
           }
-          const label = `Open ${name}${b && whole && b.complete ? `, ${n > 1 ? 'parlay' : 'price'} ${odds(b.american)}` : ''}${isBest ? ', best price' : ''}`
+          const label = `Open ${name}${b && whole && b.complete ? `, ${n > 1 ? 'parlay' : 'price'} ${odds(b.american)}` : alt ? `, ${odds(b.altAmerican)} at its own ${n > 1 ? 'lines' : 'line'}` : ''}${isBest ? ', best price' : ''}`
           return (
             <li key={k}>
               {isBest && (
@@ -123,7 +133,7 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
                 </span>
               )}
               {href ? (
-                <a className={`booktile${isBest ? ' is-best' : ''}${b && !b.complete && !b.noFeed ? ' is-short' : ''}`} style={{ '--book': BOOK_COLOR[k] || 'var(--seat-2)' }} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} onClick={() => write('apex_book', k)}>
+                <a className={`booktile${isBest ? ' is-best' : ''}${alt ? ' is-alt' : b && !b.complete && !b.noFeed ? ' is-short' : ''}`} style={{ '--book': BOOK_COLOR[k] || 'var(--seat-2)' }} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} onClick={() => write('apex_book', k)}>
                   <span className="booktile__name">{name}</span>
                   <span className="booktile__price num">{main}</span>
                   <span className="booktile__sub">{sub}</span>
@@ -204,32 +214,53 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
                       </>
                     ) : b.noFeed ? (
                       <span className="muted">No price feed</span>
-                    ) : b.priced ? (
+                    ) : b.covered ? (
+                      <>
+                        <b className="num">{odds(b.altAmerican)}</b>
+                        <span className="muted">{legs.length === 1 ? `at ${sideWord(legs[0])} ${b.lines[0]}, its line` : `at ${owner(b.name)} lines`}</span>
+                      </>
+                    ) : b.priced + (b.near || 0) ? (
                       <span className="muted">
-                        Has {b.priced} of {legs.length} legs
+                        Has {b.priced + (b.near || 0)} of {legs.length} legs
                       </span>
                     ) : (
-                      <span className="muted">No price posted</span>
+                      <span className="muted">Not posted yet</span>
                     )}
                   </div>
                   <a className={`btn ${isBest ? 'btn--lime' : 'btn--quiet'} shop__go`} href={withState(b.link, state)} target="_blank" rel="noopener noreferrer" onClick={() => go(b.book)}>
                     {b.allOnSlip ? `Open ${b.name} with ${legs.length > 1 ? 'all legs' : 'the bet'}` : `Open ${b.name}`}
                   </a>
-                  {!b.allOnSlip && legs.length > 1 && b.legLinks?.some(Boolean) && (
+                  {legs.length > 1 && b.priced + (b.near || 0) > 0 && ((!b.allOnSlip && b.legLinks?.some(Boolean)) || b.near > 0 || !b.complete) && (
                     <div className="shop__legs">
-                      <span className="muted">Tap each leg to add it to your {b.name} slip:</span>
-                      {b.legLinks.map((u, i) =>
-                        u ? (
-                          <a key={i} href={withState(u, state)} target="_blank" rel="noopener noreferrer" className="shop__leg" onClick={() => go(b.book)}>
+                      <span className="muted">{b.allOnSlip ? `On your ${b.name} slip:` : b.legLinks?.some(Boolean) ? `Tap each leg to add it to your ${b.name} slip:` : `Each leg at ${b.name}:`}</span>
+                      {legs.map((leg, i) => {
+                        const own = b.lines?.[i] != null
+                        const price = b.prices[i] ?? b.linePrices?.[i] ?? null
+                        if (price == null) {
+                          return (
+                            <span key={i} className="shop__leg is-off">
+                              Leg {i + 1}: not posted
+                            </span>
+                          )
+                        }
+                        const text = (
+                          <>
                             Leg {i + 1}
-                            {b.prices[i] != null && <span className="num"> {odds(b.prices[i])}</span>}
+                            {own && <span className="shop__line"> {sideWord(leg)} {b.lines[i]}</span>}
+                            <span className="num"> {odds(price)}</span>
+                          </>
+                        )
+                        const u = b.legLinks?.[i]
+                        return u && !b.allOnSlip ? (
+                          <a key={i} href={withState(u, state)} target="_blank" rel="noopener noreferrer" className={`shop__leg${own ? ' is-alt' : ''}`} onClick={() => go(b.book)}>
+                            {text}
                           </a>
                         ) : (
-                          <span key={i} className="shop__leg is-off">
-                            Leg {i + 1}: not posted
+                          <span key={i} className={`shop__leg is-plain${own ? ' is-alt' : ''}`}>
+                            {text}
                           </span>
-                        ),
-                      )}
+                        )
+                      })}
                     </div>
                   )}
                 </li>
@@ -254,6 +285,7 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
           </label>
         )}
         {data?.spread > 0.02 && <p className="shopsheet__note">The best book pays {(data.spread * 100).toFixed(0)}% more than the worst on this exact slip. That’s line shopping.</p>}
+        {data?.books?.some((b) => b.near) && <p className="shopsheet__note">Books often hang their own number, like 224.5 passing yards where your slip has 225.5. Those legs show the book’s line and price; the button adds the bet at that line.</p>}
         <p className="shopsheet__fine">21+. Sports betting is legal only in some states. PropPickz doesn’t take bets and isn’t paid by these books. If gambling stops being fun, call <a href="tel:18006973738">1-800-MY-RESET</a>.</p>
       </div>
     </Dialog>
@@ -265,6 +297,8 @@ export function LineShop({ row }) {
   const { data } = useShop([row])
   const leg = data?.legs?.[0]
   const books = (leg?.books || []).slice(0, 8)
+  // books on another number: their own line and price, after the ones at this line
+  const others = (leg?.other || []).slice(0, Math.max(0, 8 - books.length))
   const [open, setOpen] = useState(false)
   if (!data) return null
   return (
@@ -277,7 +311,7 @@ export function LineShop({ row }) {
           Send to sportsbook
         </button>
       </div>
-      {books.length ? (
+      {books.length || others.length ? (
         <ul className="lineshop__list">
           {books.map((b, i) => {
             const e = evText(row.prob, b.price)
@@ -292,6 +326,15 @@ export function LineShop({ row }) {
               </li>
             )
           })}
+          {others.map((b) => (
+            <li key={b.book} className="is-alt">
+              <span className="lineshop__book">{data.books.find((x) => x.book === b.book)?.name || b.book}</span>
+              <b className="num">{odds(b.price)}</b>
+              <span className="num lineshop__line">
+                {sideWord(row)} {b.line}, its line
+              </span>
+            </li>
+          ))}
         </ul>
       ) : (
         <p className="muted">{data.oddsFeed ? `No book has posted a price on ${row.label} yet.` : 'No sportsbook price on this line yet. You can still open any book from the button above.'}</p>

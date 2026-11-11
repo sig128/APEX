@@ -18,6 +18,60 @@ export const SHOP_ORDER = ['fanduel', 'draftkings', 'bet365', 'espnbet', 'betmgm
 
 export const sideKey = (row) => (row.oneSided ? 'yes' : row.side === 'u' ? 'under' : 'over')
 
+const subjectOf = (row) => (row.kind === 'team' ? `t${row.teamId}` : row.playerId)
+
+const indexes = new WeakMap()
+/**
+ * The price map's lines per player (or team) and market, `${subject}:${market}` -> [[line,
+ * entry]], built once per version of the map.
+ */
+export function linesIndex(priceMap) {
+  if (!priceMap) return new Map()
+  let idx = indexes.get(priceMap)
+  if (idx) return idx
+  idx = new Map()
+  for (const [k, v] of priceMap) {
+    const i = String(k).lastIndexOf(':')
+    const line = Number(String(k).slice(i + 1))
+    if (i < 0 || !Number.isFinite(line)) continue
+    const head = String(k).slice(0, i)
+    if (!idx.has(head)) idx.set(head, [])
+    idx.get(head).push([line, v])
+  }
+  indexes.set(priceMap, idx)
+  return idx
+}
+
+/**
+ * The books that hang another number on this leg (224.5 passing yards where the slip has 225.5):
+ * each one's price at its own line closest to the slip's, same side. A tie goes to the line
+ * kinder to the bettor (lower for an over, higher for an under). `skip`: books that have the
+ * exact line. One-sided markets (anytime TD) sit at one line, so they have no other.
+ */
+export function otherLineQuotes(row, index, skip = new Set()) {
+  const side = sideKey(row)
+  if (side === 'yes' || !index) return []
+  const want = Number(row.line)
+  const kinder = (a, b) => (side === 'over' ? a < b : a > b)
+  const pick = new Map()
+  for (const [line, entry] of index.get(`${subjectOf(row)}:${row.market}`) || []) {
+    if (line === want) continue
+    for (const [book, b] of Object.entries(entry?.books || {})) {
+      if (skip.has(book)) continue
+      const price = b?.[side]
+      if (!Number.isFinite(price) || Math.abs(price) < 100) continue
+      const cur = pick.get(book)
+      const d = Math.abs(line - want)
+      if (cur) {
+        const dc = Math.abs(cur.line - want)
+        if (dc < d || (dc === d && !kinder(line, cur.line))) continue
+      }
+      pick.set(book, { book, price, line, link: b.links?.[side] || null, deep: Boolean(b.deep?.[side]) })
+    }
+  }
+  return [...pick.values()]
+}
+
 /** Every book's price for the side this leg bets, best first. */
 export function legQuotes(row) {
   const side = sideKey(row)
@@ -47,33 +101,53 @@ export function parlayLink(book, quotes) {
   return null
 }
 
-/** The slip at every book: price where all legs are posted, links either way. */
-export function shop(rows) {
+/**
+ * The slip at every book: the price where all legs are posted at the slip's lines, links either
+ * way. `lines(row)` gives the price map's lines for a leg's player and market (see linesIndex):
+ * with it, a book that hangs another number on a leg shows its own line and price there, and a
+ * book with every leg at some line gets a parlay price "at its lines". Those never count as the
+ * best price, which compares the same bet everywhere.
+ */
+export function shop(rows, { lines = null } = {}) {
   const quotes = rows.map(legQuotes)
-  const legs = rows.map((r, i) => ({ id: r.id, name: r.name, short: r.short, label: r.label, side: r.side, prob: r.prob, books: quotes[i] }))
+  const others = rows.map((r, i) => (lines ? otherLineQuotes(r, lines(r), new Set(quotes[i].map((q) => q.book))) : []))
+  const legs = rows.map((r, i) => ({ id: r.id, name: r.name, short: r.short, label: r.label, side: r.side, line: r.line, prob: r.prob, books: quotes[i], other: others[i] }))
   const books = SHOP_ORDER.map((book) => {
     const info = BOOK_INFO[book]
     const q = quotes.map((list) => list.find((x) => x.book === book) || null)
+    const o = others.map((list, i) => (q[i] ? null : list.find((x) => x.book === book) || null))
     const priced = q.filter(Boolean).length
+    const near = o.filter(Boolean).length
     const complete = priced === rows.length && rows.length > 0
+    // every leg at some line, at least one of them the book's own
+    const covered = !complete && near > 0 && priced + near === rows.length
     const decimal = complete ? q.reduce((d, x) => d * americanToDecimal(x.price), 1) : null
-    const combined = complete ? parlayLink(book, q) : null
+    const either = q.map((x, i) => x || o[i])
+    const altDecimal = covered ? either.reduce((d, x) => d * americanToDecimal(x.price), 1) : null
+    const combined = complete ? parlayLink(book, q) : covered ? parlayLink(book, either) : null
     return {
       book,
       name: info.name,
       noFeed: Boolean(info.noFeed),
       priced,
+      near,
       complete,
+      covered,
       decimal: decimal ? round(decimal, 4) : null,
       american: decimal ? decimalToAmerican(decimal) : null,
+      altDecimal: altDecimal ? round(altDecimal, 4) : null,
+      altAmerican: altDecimal ? decimalToAmerican(altDecimal) : null,
       prices: q.map((x) => x?.price ?? null),
-      legLinks: q.map((x) => (x?.deep ? x.link : null)),
-      link: combined || q.find((x) => x?.link)?.link || info.home,
+      // where the book hangs another number: its line and its price there
+      lines: o.map((x) => x?.line ?? null),
+      linePrices: o.map((x) => x?.price ?? null),
+      legLinks: either.map((x) => (x?.deep ? x.link : null)),
+      link: combined || either.find((x) => x?.link)?.link || info.home,
       allOnSlip: Boolean(combined),
     }
   })
-  const rank = (b) => (b.complete ? 3 : b.priced ? 2 : b.noFeed ? 0 : 1)
-  books.sort((a, b) => rank(b) - rank(a) || (b.decimal ?? 0) - (a.decimal ?? 0) || b.priced - a.priced)
+  const rank = (b) => (b.complete ? 4 : b.covered ? 3 : b.priced + b.near ? 2 : b.noFeed ? 0 : 1)
+  books.sort((a, b) => rank(b) - rank(a) || (b.decimal ?? b.altDecimal ?? 0) - (a.decimal ?? a.altDecimal ?? 0) || b.priced + b.near - (a.priced + a.near))
   const best = books.find((b) => b.complete) || null
   const worst = [...books].reverse().find((b) => b.complete) || null
   return { legs, books, best: best ? best.book : null, spread: best && worst && best !== worst ? round(best.decimal / worst.decimal - 1, 4) : null }

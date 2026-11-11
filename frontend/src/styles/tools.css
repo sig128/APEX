@@ -640,3 +640,28 @@ a.booktile:active {
     transition: none;
   }
 }
+
+/* a book on another number (224.5 where the slip says 225.5): its own line and price, set
+   apart from prices on the slip's line */
+.booktile.is-alt .booktile__price,
+.booktile.is-alt .booktile__sub {
+  color: var(--chalk-2);
+}
+.shop__line {
+  font-weight: 600;
+  color: var(--chalk-2);
+}
+.shop__leg.is-alt {
+  box-shadow: inset 0 0 0 1px var(--seat-2);
+}
+.shop__leg.is-plain {
+  cursor: default;
+}
+.lineshop__list li.is-alt b {
+  color: var(--chalk-2);
+}
+.lineshop__line {
+  grid-column: 3 / -1;
+  color: var(--chalk-2);
+  font-size: var(--t-xs);
+}

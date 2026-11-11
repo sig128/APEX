@@ -5,7 +5,7 @@ import { ROUTE_TIER, TOPIC_RE, topicAllowed } from './gate.js'
 import { streamPropInsight, readKey, createReadCache } from './ai.js'
 import { createIntel } from './intel.js'
 import { createLedger } from './ledger.js'
-import { shop } from './shop.js'
+import { shop, linesIndex } from './shop.js'
 import { extractLegs, matchLegs, streamParlayCheck, cleanImage, MAX_TEXT } from './parlay.js'
 import { atLeast } from '../billing/service.js'
 import { billingConfig } from '../billing/config.js'
@@ -322,7 +322,17 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
     // "oddsFeed": the many-book feed is on for every league on the slip (without it, the prices
     // are the one book ESPN carries)
     const feed = [...games.keys()].every((k) => Boolean(engineFor(k)?.status().odds?.enabled))
-    return { ...shop(raw), oddsFeed: feed, priced, at: engine.wh.at.odds || null }
+    // each leg's other lines, from its own league's prices
+    const lineIdx = new Map()
+    const linesOf = (k) => {
+      if (!lineIdx.has(k)) {
+        const w = engineFor(k)?.wh
+        lineIdx.set(k, linesIndex(w?.priceMap ? w.priceMap() : w?.prices))
+      }
+      return lineIdx.get(k)
+    }
+    const legLeague = new Map(raw.map((row, i) => [row, leagueOf(ids[i])]))
+    return { ...shop(raw, { lines: (row) => linesOf(legLeague.get(row)) }), oddsFeed: feed, priced, at: engine.wh.at.odds || null }
   })
 
   // ---- the 3-Leg Lock ---------------------------------------------------------------------------
