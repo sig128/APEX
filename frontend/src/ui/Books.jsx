@@ -74,9 +74,12 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
   const { data, error } = useShop(legs)
   const [state] = useState(() => read('apex_state', 'NJ'))
   const n = legs.length
+  // one price for the whole slip: a parlay, or a single bet
+  const whole = parlay || n === 1
   const byKey = new Map((data?.books || []).map((b) => [b.book, b]))
-  const order = [...FEATURED_BOOKS]
-  if (data?.best && !order.includes(data.best)) order.push(data.best)
+  const best = whole && data?.best ? data.best : null
+  // a best price at another book leads the row, where a narrow screen still shows it
+  const order = best && !FEATURED_BOOKS.includes(best) ? [best, ...FEATURED_BOOKS] : [...FEATURED_BOOKS]
   const live = Boolean(data?.books?.some((b) => b.priced))
   return (
     <section className="bookrail" aria-labelledby="bookrail-h">
@@ -86,11 +89,13 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
         </h3>
         <span className={`bookrail__state${live ? ' is-live' : ''}`}>{!data && !error ? 'Getting live odds…' : live ? 'Live odds' : 'No live odds yet'}</span>
       </div>
-      <ul className="bookrail__list">
+      {/* keyed by the order: when a best price arrives in front, the row starts over at it
+          (the browser would otherwise keep the old first tile in view) */}
+      <ul className="bookrail__list" key={order.join()}>
         {order.map((k) => {
           const b = byKey.get(k)
           const name = TILE_NAME[k] || b?.name || bookName(k)
-          const isBest = Boolean(data?.best) && data.best === k && parlay && n > 1
+          const isBest = best === k
           const href = withState(b?.link || BOOK_HOME[k] || null, state)
           let main = '…'
           let sub = 'Checking'
@@ -98,7 +103,7 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
             if (b.noFeed) {
               main = 'Open'
               sub = 'No live odds feed'
-            } else if (parlay && b.complete) {
+            } else if (whole && b.complete) {
               main = odds(b.american)
               sub = b.allOnSlip ? (n > 1 ? `All ${n} legs added` : 'Bet added') : n > 1 ? `${n} of ${n} legs` : 'Opens the bet'
             } else if (b.priced) {
@@ -109,7 +114,7 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
               sub = error ? 'Opens the app' : 'Not posted yet'
             }
           }
-          const label = `Open ${name}${b && parlay && b.complete ? `, ${n > 1 ? 'parlay' : 'price'} ${odds(b.american)}` : ''}${isBest ? ', best price' : ''}`
+          const label = `Open ${name}${b && whole && b.complete ? `, ${n > 1 ? 'parlay' : 'price'} ${odds(b.american)}` : ''}${isBest ? ', best price' : ''}`
           return (
             <li key={k}>
               {isBest && (
