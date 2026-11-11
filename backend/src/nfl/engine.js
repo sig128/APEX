@@ -258,6 +258,23 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     wh.at.odds = now()
   }
 
+  /**
+   * Prices for a slip's games right now (the background refresh only buys games within 30
+   * hours). Games that haven't started, at most four, out of the same daily budget. True when
+   * new prices came in.
+   */
+  async function priceNow(gameIds) {
+    if (!odds) return false
+    const want = new Set((gameIds || []).map(String))
+    const list = games().filter((g) => want.has(String(g.id)) && g.status.state === 'pre')
+    if (!list.length) return false
+    const prices = await odds.priceGames({ games: list, players: wh.players })
+    if (!prices) return false
+    wh.prices = prices
+    wh.bump('core')
+    return true
+  }
+
   // ---- persistence -------------------------------------------------------------------------
   let livePersistAt = 0
   async function persist(force = false) {
@@ -470,6 +487,7 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     logsLeft: () => logsTodo().length,
     runTask,
     logsTask,
+    priceNow,
     persist,
     onSubscribersChanged,
     stop() {

@@ -289,19 +289,40 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
     }
   })
 
-  /** Line shopping for a slip: every book's price per leg and for the parlay, with links. Free. */
-  r.post('/shop', { tier: t('shop') }, (ctx) => {
+  /**
+   * Line shopping for a slip: every book's price per leg and for the parlay, with links. Free.
+   * The feed only buys games within 30 hours of kickoff by itself, but the books post props
+   * days ahead, so the slip's own games are priced here first (a bounded wait; a slower fetch
+   * still lands for the next look). That costs credits, so one visitor can't do it often.
+   */
+  const shopPriceLimiter = createLimiter({ burst: 8, perSec: 1 / 15 })
+  const leagueOf = (x) => (String(x).includes(':') ? String(x).split(':')[0] : home)
+  r.post('/shop', { tier: t('shop') }, async (ctx) => {
     ctx.cache = null
     const body = ctx.req.body || {}
     const ids = Array.isArray(body.legs) ? [...new Set(body.legs.map(String))] : []
     if (!ids.length || ids.length > 12) throw new ApiError(400, 'bad_legs', 'Shop 1 to 12 legs.')
-    const { raw, missing } = legRows(ids)
+    let { raw, missing } = legRows(ids)
     if (missing.length) throw new ApiError(404, 'no_prop', 'One of those legs isn’t on the board anymore.', { legs: missing })
+    const games = new Map()
+    ids.forEach((x, i) => {
+      const k = leagueOf(x)
+      if (!games.has(k)) games.set(k, new Set())
+      games.get(k).add(raw[i].gameId)
+    })
+    let priced = false
+    if (body.fresh !== false && shopPriceLimiter.take(clientIp(ctx.req)).ok) {
+      const work = Promise.all([...games].map(([k, set]) => engineFor(k)?.priceNow?.([...set]).catch(() => false)))
+      const got = await Promise.race([work, new Promise((res) => setTimeout(() => res(null), 6000).unref?.())])
+      if (Array.isArray(got) && got.some(Boolean)) {
+        priced = true
+        ;({ raw } = legRows(ids))
+      }
+    }
     // "oddsFeed": the many-book feed is on for every league on the slip (without it, the prices
     // are the one book ESPN carries)
-    const keys = [...new Set(ids.map((x) => (String(x).includes(':') ? String(x).split(':')[0] : home)))]
-    const feed = keys.every((k) => Boolean(engineFor(k)?.status().odds?.enabled))
-    return { ...shop(raw), oddsFeed: feed, at: engine.wh.at.odds || null }
+    const feed = [...games.keys()].every((k) => Boolean(engineFor(k)?.status().odds?.enabled))
+    return { ...shop(raw), oddsFeed: feed, priced, at: engine.wh.at.odds || null }
   })
 
   // ---- the 3-Leg Lock ---------------------------------------------------------------------------

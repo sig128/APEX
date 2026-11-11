@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
-import { odds, pct, impliedOf, decimalOf } from '../lib/format.js'
+import { odds, pct, impliedOf, decimalOf, bookName } from '../lib/format.js'
 import { Dialog } from './Dialog.jsx'
 import { useSport, apiOf, legRef, legsSport } from '../lib/sport.js'
 
@@ -56,6 +56,93 @@ export function useShop(legs, { enabled = true } = {}) {
   return st
 }
 
+/** The books people ask for first, always shown in this order; the best price joins them. */
+export const FEATURED_BOOKS = ['fanduel', 'draftkings', 'bet365', 'espnbet']
+/** A thin bar of each book's color on its tile, so the row reads at a glance. */
+const BOOK_COLOR = { fanduel: '#1493ff', draftkings: '#53d337', bet365: '#ffdf1b', espnbet: '#f2f4f8', betmgm: '#c8a96a', williamhill_us: '#b9975b', fanatics: '#e0303e', betrivers: '#3d7bff' }
+/** Shorter names where a tile is narrow. */
+const TILE_NAME = { espnbet: 'theScore', williamhill_us: 'Caesars' }
+const BOOK_HOME = { fanduel: 'https://sportsbook.fanduel.com/', draftkings: 'https://sportsbook.draftkings.com/', bet365: 'https://www.bet365.com/', espnbet: 'https://thescore.bet/' }
+
+/**
+ * The slip's sportsbooks as a row of tiles: each book's live price for the whole slip (or how
+ * many of its legs the book has posted), the best price marked. A tap opens the book's app,
+ * with every leg on its bet slip where the book's links allow (FanDuel), otherwise the first
+ * leg or the book. onMore opens SendToBook for every book and one tap per leg.
+ */
+export function BookRail({ legs, parlay = true, onMore = null, copied = false }) {
+  const { data, error } = useShop(legs)
+  const [state] = useState(() => read('apex_state', 'NJ'))
+  const n = legs.length
+  const byKey = new Map((data?.books || []).map((b) => [b.book, b]))
+  const order = [...FEATURED_BOOKS]
+  if (data?.best && !order.includes(data.best)) order.push(data.best)
+  const live = Boolean(data?.books?.some((b) => b.priced))
+  return (
+    <section className="bookrail" aria-labelledby="bookrail-h">
+      <div className="bookrail__head">
+        <h3 className="bookrail__title" id="bookrail-h">
+          {copied ? 'Copied. Now open it in your book' : 'Bet it at'}
+        </h3>
+        <span className={`bookrail__state${live ? ' is-live' : ''}`}>{!data && !error ? 'Getting live odds…' : live ? 'Live odds' : 'No live odds yet'}</span>
+      </div>
+      <ul className="bookrail__list">
+        {order.map((k) => {
+          const b = byKey.get(k)
+          const name = TILE_NAME[k] || b?.name || bookName(k)
+          const isBest = Boolean(data?.best) && data.best === k && parlay && n > 1
+          const href = withState(b?.link || BOOK_HOME[k] || null, state)
+          let main = '…'
+          let sub = 'Checking'
+          if (b) {
+            if (b.noFeed) {
+              main = 'Open'
+              sub = 'No live odds feed'
+            } else if (parlay && b.complete) {
+              main = odds(b.american)
+              sub = b.allOnSlip ? (n > 1 ? `All ${n} legs added` : 'Bet added') : n > 1 ? `${n} of ${n} legs` : 'Opens the bet'
+            } else if (b.priced) {
+              main = `${b.priced}/${n}`
+              sub = parlay ? 'legs posted' : `leg${b.priced === 1 ? '' : 's'} posted`
+            } else {
+              main = '—'
+              sub = error ? 'Opens the app' : 'Not posted yet'
+            }
+          }
+          const label = `Open ${name}${b && parlay && b.complete ? `, ${n > 1 ? 'parlay' : 'price'} ${odds(b.american)}` : ''}${isBest ? ', best price' : ''}`
+          return (
+            <li key={k}>
+              {isBest && (
+                <span className="booktile__best" aria-hidden="true">
+                  Best price
+                </span>
+              )}
+              {href ? (
+                <a className={`booktile${isBest ? ' is-best' : ''}${b && !b.complete && !b.noFeed ? ' is-short' : ''}`} style={{ '--book': BOOK_COLOR[k] || 'var(--seat-2)' }} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} onClick={() => write('apex_book', k)}>
+                  <span className="booktile__name">{name}</span>
+                  <span className="booktile__price num">{main}</span>
+                  <span className="booktile__sub">{sub}</span>
+                </a>
+              ) : (
+                <span className="booktile is-short" style={{ '--book': BOOK_COLOR[k] || 'var(--seat-2)' }}>
+                  <span className="booktile__name">{name}</span>
+                  <span className="booktile__price num">{main}</span>
+                  <span className="booktile__sub">{sub}</span>
+                </span>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      {onMore && (
+        <button type="button" className="linkish bookrail__more" onClick={onMore}>
+          Every book, and each leg one tap at a time
+        </button>
+      )}
+    </section>
+  )
+}
+
 function evText(p, american) {
   const d = decimalOf(american)
   if (!(p > 0) || !d) return null
@@ -67,7 +154,7 @@ function evText(p, american) {
  * The slip at every sportsbook, best price first, and a button that opens the book: with the
  * legs on its bet slip where the book's links allow it, otherwise one tap per leg.
  */
-export function SendToBook({ open, onClose, legs, p = null, title = 'Send to sportsbook' }) {
+export function SendToBook({ open, onClose, legs, p = null, title = 'Send to sportsbook', copied = false }) {
   const { data, error } = useShop(legs, { enabled: open })
   const anyPrice = data?.books?.some((b) => b.priced)
   const [state, setState] = useState(() => read('apex_state', 'NJ'))
@@ -78,6 +165,7 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
   return (
     <Dialog open={open} onClose={onClose} title={title}>
       <div className="shopsheet">
+        {copied && <p className="shopsheet__copied">Your slip is copied. Paste it anywhere, or open a book below: the button opens its app, with the legs on its bet slip where the book allows.</p>}
         <p className="shopsheet__intro">
           {legs.length === 1 ? 'This bet' : `Your ${legs.length}-leg parlay`} at every sportsbook, best price first. The button opens the book’s app if you have it installed.
         </p>

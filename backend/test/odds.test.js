@@ -161,3 +161,50 @@ test('every league: NBA and NHL props map to PropPickz markets, each league spen
   assert.equal(nhl.status().spentToday, 6, 'the NHL budget is its own')
   assert.equal(nba.status().spentToday, 11)
 })
+
+test('a slip prices its own games on demand, out of the same budget, and not twice in 15 minutes', async () => {
+  const now = clock()
+  const engine = createEngine({ mode: 'lazy', http: createHttp({ transport: createFixtureTransport(fixtures()) }), store: createStore({ driver: 'memory' }), now })
+  await loadAll(engine)
+  const g = engine.wh.games.get('401873020')
+  const goff = [...engine.wh.players.values()].find((p) => p.name === 'Jared Goff')
+  const goffLine = (engine.wh.lines.get(g.id).props.find((l) => l.athleteId === goff.id && l.market === 'passYds') || {}).line
+  const outcomes = {
+    draftkings: [
+      { name: 'Over', description: 'Jared Goff', price: -125, point: goffLine },
+      { name: 'Under', description: 'Jared Goff', price: 105, point: goffLine },
+    ],
+    fanduel: [{ name: 'Over', description: 'Jared Goff', price: -118, point: goffLine, link: 'https://sportsbook.fanduel.com/addToBetslip?marketId=42.1&selectionId=7' }],
+    td: [],
+  }
+  let calls = 0
+  const base = createFixtureTransport({ ...fixtures(), ...oddsFixtures({ game: g, home: g.home.name, away: g.away.name, outcomes }) })
+  const http = createHttp({
+    transport: async (req) => {
+      if (String(req.url || req).includes('/odds?')) calls++
+      return base(req)
+    },
+  })
+  const store = createStore({ driver: 'memory' })
+  const odds = createOddsApi({ http, store, apiKey: KEY, now, dailyCredits: 30 })
+  // far from kickoff: the background refresh would skip it, the slip asks anyway
+  const prices = await odds.priceGames({ games: [g], players: engine.wh.players })
+  assert.equal(prices.get(`${goff.id}:passYds:${goffLine}`).books.fanduel.over, -118)
+  assert.equal(calls, 1)
+  assert.equal(odds.status().spentToday, 11)
+  assert.equal(await odds.priceGames({ games: [g], players: engine.wh.players }), null, 'fresh prices are reused')
+  assert.equal(calls, 1)
+  // another serverless instance, asked for the same slip: it shows what the first one paid for
+  const other = createOddsApi({ http, store, apiKey: KEY, now, dailyCredits: 30 })
+  const seen = await other.priceGames({ games: [g], players: engine.wh.players })
+  assert.equal(seen?.get(`${goff.id}:passYds:${goffLine}`)?.books.fanduel.over, -118, 'the saved prices reach the other instance')
+  assert.equal(calls, 1, 'without buying them again')
+  assert.equal(await other.priceGames({ games: [g], players: engine.wh.players }), null)
+  now.add(16 * 60_000)
+  assert.ok(await odds.priceGames({ games: [g], players: engine.wh.players }), 'priced again after 15 minutes')
+  assert.equal(odds.status().spentToday, 22)
+  now.add(16 * 60_000)
+  assert.equal(await odds.priceGames({ games: [g], players: engine.wh.players }), null, 'not past the daily budget')
+  assert.equal(odds.status().spentToday, 22)
+  engine.stop()
+})

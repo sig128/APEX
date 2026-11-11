@@ -103,6 +103,10 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
   let events = null
   let eventsAt = 0
   const snapshots = new Map() // espnGameId -> { at, rows }
+  // bumped whenever the snapshots change; `shown` is the version last handed out as prices, so a
+  // game another instance just paid for still reaches this instance's board
+  let version = 0
+  let shown = -1
   const state = { spentToday: 0, lastError: null, lastRefresh: 0 }
   // a game's prices are dropped this long after they were last fetched (its game is long over)
   const KEEP_MS = 3 * 86400e3
@@ -117,20 +121,41 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
       const saved = await store.get('oddsprops', SNAP)
       for (const [id, s] of saved || []) {
         const cur = snapshots.get(id)
-        if (s && (!cur || (s.at || 0) > (cur.at || 0))) snapshots.set(id, s)
+        if (s && (!cur || (s.at || 0) > (cur.at || 0))) {
+          snapshots.set(id, s)
+          version++
+        }
       }
     } catch (e) {
       log.warn('odds snapshot load failed', { sport, err: errText(e) })
     }
-    for (const [id, s] of snapshots) if (now() - (s?.at || 0) > KEEP_MS) snapshots.delete(id)
+    for (const [id, s] of snapshots) {
+      if (now() - (s?.at || 0) > KEEP_MS) {
+        snapshots.delete(id)
+        version++
+      }
+    }
   }
 
-  /** Reserve credits in the shared counter. Returns false when today's budget is spent. */
+  /**
+   * Reserve credits in the shared counter. Returns false when today's budget is spent. Several
+   * instances can bump the counter at once; a clash is retried once, then this round is skipped
+   * rather than failing the whole refresh.
+   */
   async function spend(cost) {
     if (!store) return true
-    const { ok, used } = await takeOddsCredits(store, cost, { pool: sport, daily: dailyCredits, now })
-    state.spentToday = used
-    return ok
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const { ok, used } = await takeOddsCredits(store, cost, { pool: sport, daily: dailyCredits, now })
+        state.spentToday = used
+        return ok
+      } catch (e) {
+        state.lastError = errText(e)
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 150 + Math.random() * 350))
+      }
+    }
+    log.warn('odds budget busy', { sport, err: state.lastError })
+    return false
   }
 
   async function listEvents() {
@@ -173,6 +198,12 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
     return rows
   }
 
+  /** Prices for the board, noting which version of the snapshots they show. */
+  function prices() {
+    shown = version
+    return snapshots.size ? toPrices() : null
+  }
+
   function toPrices() {
     const out = new Map()
     for (const s of snapshots.values()) {
@@ -212,12 +243,45 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
     return out
   }
 
+  /** One game's prices from the API, paid for first. false: today's budget is spent. */
+  async function fetchGame(g, players) {
+    const ev = matchEvent(g)
+    if (!ev) return null
+    if (!(await spend(Object.keys(MARKETS).length))) return false
+    return fetchPaid(g, ev, players)
+  }
+
+  /** The API call itself, once its credits are reserved. */
+  async function fetchPaid(g, ev, players) {
+    const markets = Object.keys(MARKETS)
+    try {
+      const url = (k) => `${BASE}/events/${ev.id}/odds?apiKey=${encodeURIComponent(k)}&oddsFormat=american&markets=${markets.join(',')}&bookmakers=${BOOKS.join(',')}&includeLinks=true`
+      const json = await keys.run((k) => http.getJson(url(k), { priority: 'background', retries: 0 }))
+      snapshots.set(g.id, { at: now(), rows: parse(g, json, players) })
+      version++
+      return true
+    } catch (e) {
+      state.lastError = errText(e)
+      log.warn('odds prices failed', { sport, game: g.id, err: state.lastError, code: e.upstreamCode || undefined })
+      return null
+    }
+  }
+
+  async function save() {
+    if (!store) return
+    try {
+      await store.set('oddsprops', SNAP, [...snapshots])
+    } catch (e) {
+      log.warn('odds snapshot save failed', { err: errText(e) })
+    }
+  }
+
   return {
     status: () => ({ enabled: true, sport, ...state, games: snapshots.size, budget: dailyCredits, keys: keys.status() }),
     /** The saved prices only, no API calls: what a fresh instance shows before its own refresh. */
     async cached() {
       await loadSnapshots()
-      return snapshots.size ? toPrices() : null
+      return prices()
     },
     async refresh({ games, players }) {
       await loadSnapshots()
@@ -226,36 +290,47 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
       } catch (e) {
         state.lastError = errText(e)
         log.warn('odds events failed', { sport, err: state.lastError, code: e.upstreamCode || undefined })
-        return snapshots.size ? toPrices() : null
+        return prices()
       }
       let changed = false
       for (const g of games) {
         const prev = snapshots.get(g.id)
         if (prev && now() - prev.at < perGameEveryMs) continue
-        const ev = matchEvent(g)
-        if (!ev) continue
-        const markets = Object.keys(MARKETS)
-        const cost = markets.length
-        if (!(await spend(cost))) break
-        try {
-          const url = (k) => `${BASE}/events/${ev.id}/odds?apiKey=${encodeURIComponent(k)}&oddsFormat=american&markets=${markets.join(',')}&bookmakers=${BOOKS.join(',')}&includeLinks=true`
-          const json = await keys.run((k) => http.getJson(url(k), { priority: 'background', retries: 0 }))
-          snapshots.set(g.id, { at: now(), rows: parse(g, json, players) })
-          changed = true
-        } catch (e) {
-          state.lastError = errText(e)
-          log.warn('odds prices failed', { sport, game: g.id, err: state.lastError, code: e.upstreamCode || undefined })
-        }
+        const got = await fetchGame(g, players)
+        if (got === false) break
+        if (got) changed = true
       }
       state.lastRefresh = now()
-      if (changed && store) {
-        try {
-          await store.set('oddsprops', SNAP, [...snapshots])
-        } catch (e) {
-          log.warn('odds snapshot save failed', { err: errText(e) })
-        }
+      if (changed) await save()
+      return prices()
+    },
+    /**
+     * Prices for these games now, whenever they are, for a slip someone is about to bet: games
+     * with no prices, or older than maxAgeMs, are fetched (at most `max`, all at once) out of the
+     * same daily budget. Returns the new prices, or null when nothing changed. Prices another
+     * instance saved since this one last showed any count as new.
+     */
+    async priceGames({ games, players, maxAgeMs = 15 * 60e3, max = 4 }) {
+      await loadSnapshots()
+      const news = () => (version !== shown ? prices() : null)
+      const due = games.filter((g) => !(snapshots.get(g.id) && now() - snapshots.get(g.id).at < maxAgeMs)).slice(0, max)
+      if (!due.length) return news()
+      try {
+        await listEvents()
+      } catch (e) {
+        state.lastError = errText(e)
+        log.warn('odds events failed', { sport, err: state.lastError, code: e.upstreamCode || undefined })
+        return news()
       }
-      return snapshots.size ? toPrices() : null
+      // one reservation for the batch (fewer if the day's budget is nearly spent), then the calls at once
+      const todo = due.map((g) => [g, matchEvent(g)]).filter(([, ev]) => ev)
+      const cost = Object.keys(MARKETS).length
+      let n = todo.length
+      while (n > 0 && !(await spend(cost * n))) n--
+      if (!n) return news()
+      const got = await Promise.all(todo.slice(0, n).map(([g, ev]) => fetchPaid(g, ev, players)))
+      if (got.some(Boolean)) await save()
+      return news()
     },
   }
 }

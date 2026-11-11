@@ -7,7 +7,7 @@ import { trackLegs } from '../lib/track.js'
 import { pct, odds, parseOdds, decimalOf, bookName } from '../lib/format.js'
 import { kellyFraction } from '../lib/kelly.js'
 import { RULES } from '../lib/rules.js'
-import { SendToBook } from './Books.jsx'
+import { SendToBook, BookRail } from './Books.jsx'
 import { useCopy } from '../lib/hooks.js'
 import { api } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -69,6 +69,7 @@ export function SlipPanel({ open, onClose }) {
   const [frac, setFrac] = useState(0.25)
   const [posting, setPosting] = useState(false)
   const [sending, setSending] = useState(false)
+  const [sentCopy, setSentCopy] = useState(false)
   const [live, setLive] = useState({})
   const math = useMemo(() => parlayMath(legs, slip.parlayPrice), [legs, slip.parlayPrice])
   // a slip across leagues tags each leg with its league
@@ -156,6 +157,7 @@ export function SlipPanel({ open, onClose }) {
           </div>
         ) : (
           <>
+            <BookRail legs={legs} parlay={mode === 'parlay' && legs.length > 1} onMore={() => setSending(true)} />
             <ul className="slip__legs">
               {legs.map((l) => {
                 const lv = live[legRef(l)]
@@ -269,13 +271,16 @@ export function SlipPanel({ open, onClose }) {
               </div>
             )}
 
-            <button type="button" className="btn btn--lime btn--block slip__send" onClick={() => setSending(true)}>
-              Send to sportsbook
-              <span className="slip__send-sub">{legs.length > 1 ? 'Compare the parlay price at every book' : 'Compare the price at every book'}</span>
-            </button>
-
             <div className="slip__actions">
-              <button type="button" className="btn btn--quiet" onClick={() => copy(slipText(legs, slip.parlayPrice))}>
+              <button
+                type="button"
+                className="btn btn--lime"
+                onClick={() => {
+                  copy(slipText(legs, slip.parlayPrice))
+                  setSentCopy(true)
+                  setSending(true)
+                }}
+              >
                 {copied ? 'Copied' : 'Copy slip'}
               </button>
               <button type="button" className="btn btn--quiet" onClick={share}>
@@ -306,7 +311,17 @@ export function SlipPanel({ open, onClose }) {
         )}
       </aside>
       <PostPick open={posting} onClose={() => setPosting(false)} legs={legs} mode={mode} />
-      <SendToBook open={sending} onClose={() => setSending(false)} legs={mode === 'parlay' ? legs : legs.slice(0, 1)} p={mode === 'parlay' ? math?.prob : legs[0]?.prob} title={mode === 'parlay' && legs.length > 1 ? 'Send the parlay to a sportsbook' : 'Send to sportsbook'} />
+      <SendToBook
+        open={sending}
+        onClose={() => {
+          setSending(false)
+          setSentCopy(false)
+        }}
+        legs={mode === 'parlay' ? legs : legs.slice(0, 1)}
+        p={mode === 'parlay' ? math?.prob : legs[0]?.prob}
+        copied={sentCopy}
+        title={sentCopy ? 'Slip copied' : mode === 'parlay' && legs.length > 1 ? 'Send the parlay to a sportsbook' : 'Send to sportsbook'}
+      />
     </>
   )
 }

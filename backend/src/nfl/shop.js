@@ -14,7 +14,7 @@ export const BOOK_INFO = {
   espnbet: { name: 'theScore Bet', home: 'https://thescore.bet/' },
   williamhill_us: { name: 'Caesars', home: 'https://sportsbook.caesars.com/' },
 }
-export const SHOP_ORDER = ['fanduel', 'draftkings', 'betmgm', 'bet365', 'fanatics', 'betrivers', 'espnbet', 'williamhill_us']
+export const SHOP_ORDER = ['fanduel', 'draftkings', 'bet365', 'espnbet', 'betmgm', 'williamhill_us', 'fanatics', 'betrivers']
 
 export const sideKey = (row) => (row.oneSided ? 'yes' : row.side === 'u' ? 'under' : 'over')
 
