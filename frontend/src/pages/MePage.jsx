@@ -8,6 +8,7 @@ import { useBilling } from '../context/BillingContext.jsx'
 import { Avatar } from '../ui/PickCard.jsx'
 import { Skeleton, EliteBadge } from '../ui/Bits.jsx'
 import { AlertsCard, CoachCard, LimitsCard, SubscribersCard } from '../ui/MeTools.jsx'
+import { TrackingCard } from '../ui/Tracking.jsx'
 
 /** Make or edit your picks page. Handles are yours once claimed; socials show with Elite. */
 export function MePage() {
@@ -67,6 +68,7 @@ export function MePage() {
           </div>
         </div>
       )}
+      {p && <TrackingCard />}
       <form className="stack" onSubmit={save}>
         <label className="field">
           <span>Handle</span>

@@ -3163,3 +3163,244 @@ a.tick__link:focus-visible {
     margin-left: 0;
   }
 }
+
+/* ---- Tracking: the P&L line, the record, the trends ------------------------------------------ */
+.track {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.track__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.track__head .tool-card__title {
+  margin: 0;
+}
+.track__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+@media (min-width: 640px) {
+  .track__tiles {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+.track__tiles div {
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+}
+.track__tiles dt {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--chalk-3);
+}
+.track__tiles dd {
+  margin: 4px 0 0;
+  font: 800 24px/1 var(--font-num);
+  color: var(--chalk);
+}
+.track .is-plus {
+  color: var(--turf) !important;
+}
+.track .is-minus {
+  color: var(--flag) !important;
+}
+.pnl {
+  position: relative;
+}
+.pnl__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+.pnl__grid {
+  stroke: var(--seat);
+  stroke-width: 1;
+}
+.pnl__zero {
+  stroke: var(--chalk-3);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.pnl__tick {
+  fill: var(--chalk-3);
+  font: 600 11px var(--font-ui);
+}
+.pnl__line {
+  fill: none;
+  stroke: var(--lime);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.pnl__cross {
+  stroke: var(--chalk-3);
+  stroke-width: 1;
+}
+.pnl__dot {
+  fill: var(--lime);
+  stroke: var(--stand);
+  stroke-width: 2;
+}
+.pnl__tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-s);
+  background: var(--stand-2);
+  font-size: 12px;
+  color: var(--chalk-2);
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.pnl__tip b {
+  color: var(--chalk);
+}
+.track__last {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--t-s);
+  color: var(--chalk-3);
+}
+.track__dot {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 800;
+}
+.track__dot.is-win {
+  background: var(--turf-dim);
+  color: var(--turf);
+}
+.track__dot.is-loss {
+  background: var(--flag-dim);
+  color: #ffb3b3;
+}
+.track__trends {
+  display: grid;
+  gap: 14px;
+}
+.trend__h {
+  margin: 0 0 6px;
+  font-size: var(--t-s);
+  font-weight: 700;
+  color: var(--chalk);
+}
+.trend__t {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-s);
+}
+.trend__t th,
+.trend__t td {
+  padding: 7px 8px 7px 0;
+  border-bottom: 1px solid var(--seat);
+  text-align: right;
+  color: var(--chalk-2);
+}
+.trend__t th:first-child {
+  text-align: left;
+  color: var(--chalk);
+  font-weight: 600;
+}
+.trend__t thead th {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--chalk-3) !important;
+}
+.trend__t tr.is-small td,
+.trend__t tr.is-small th {
+  opacity: 0.7;
+}
+.trend__small {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--chalk-3);
+}
+.track__locked {
+  position: relative;
+  min-height: 180px;
+  border-radius: var(--r-m);
+  overflow: hidden;
+}
+.track__ghost {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(184, 255, 31, 0.08)), repeating-linear-gradient(0deg, var(--seat) 0 1px, transparent 1px 44px);
+  filter: blur(1px);
+}
+.track__ghost::after {
+  content: '';
+  position: absolute;
+  inset: 30% 6% 22% 6%;
+  border-top: 2px solid var(--lime);
+  border-radius: 40% 60% 0 0;
+  transform: skewY(-6deg);
+  opacity: 0.5;
+  filter: blur(2px);
+}
+.track__unlock {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  align-content: center;
+  min-height: 180px;
+  padding: 16px;
+  text-align: center;
+}
+.track__unlock p {
+  margin: 0;
+  max-width: 40ch;
+  color: var(--chalk-2);
+}
+.track__table summary {
+  cursor: pointer;
+  font-size: var(--t-s);
+  color: var(--chalk-2);
+}
+
+/* the header between tablet and full desktop: everything fits on one line (the search gives
+   way first, then the gaps) */
+@media (min-width: 960px) and (max-width: 1199px) {
+  .header__inner {
+    gap: 12px;
+  }
+  .header__link {
+    padding: 8px 8px;
+  }
+  .header__link.is-on::after {
+    left: 8px;
+    right: 8px;
+  }
+  .header__tools {
+    min-width: 0;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+  .header__search {
+    width: auto;
+    flex: 0 1 220px;
+    min-width: 110px;
+  }
+}

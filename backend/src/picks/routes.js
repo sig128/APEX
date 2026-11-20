@@ -124,6 +124,16 @@ export function picksRoutes({ picks, access, billing = null }) {
   // ---- the signed-in person's own tools ------------------------------------------------------
   r.get('/me/alerts', wrap(async (req) => picks.alertsFor(await signedIn(req))))
   r.post('/me/alerts/seen', wrap(async (req) => picks.seenAlerts(await signedIn(req))))
+  // tracking: your P&L line, record and trends. The line and trends are for members; anyone
+  // signed in sees their own record.
+  r.get('/me/tracking', wrap(async (req) => {
+    const u = await signedIn(req)
+    throttle(readLimit, u.uid, 4)
+    const range = ['30d', '90d', 'all'].includes(String(req.query.range)) ? String(req.query.range) : '30d'
+    const out = await picks.trackingFor(u, range)
+    if (await isMember(req)) return { ...out, locked: false }
+    return { range: out.range, from: out.from, to: out.to, record: out.record, streak: out.streak, locked: true }
+  }))
   r.get('/me/coach', wrap(async (req) => {
     const u = await signedIn(req)
     throttle(readLimit, u.uid, 4)

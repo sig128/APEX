@@ -11,6 +11,7 @@ import { log, errText } from '../lib/log.js'
 import { round, envInt } from '../lib/util.js'
 import { closeSnap, sameClose, legClv, pickClv } from './clv.js'
 import { coach as coachOf } from './coach.js'
+import { tracking as trackingOf } from './tracking.js'
 import { cleanLimits, nextLimits, effectiveLimits, pauseError, pausedUntil, checkLimits, tiltCheck, netWeek, COOL_DAYS, EXCLUDE_MONTHS } from './rg.js'
 import { liveChance, slipChance } from './live.js'
 
@@ -1061,6 +1062,15 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     return all
   }
 
+  /** Your P&L line, record and trends over a range (30d, 90d, all). */
+  async function trackingFor(user, range = '30d') {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    return cached(`track:${user.uid}:${range}`, 60_000, async () => {
+      const tz = billingConfig().usageTz
+      return trackingOf(await allPicksOf(user.uid), { now: now(), range, dayOf: (t) => dayKey(t, tz) })
+    })
+  }
+
   async function coachFor(user) {
     if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
     return cached(`coach:${user.uid}`, 60_000, async () => {
@@ -1168,5 +1178,5 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     return { picks: out, at: at || null, refreshMs: 20_000, now: t }
   }
 
-  return { me, saveProfile, post, check, remove, tail, page, feed, leaderboard, gradeOpen, watchOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, pickFor, subscribers, setSubscriber, alertsFor, seenAlerts, coachFor, rgGet, rgLimits, rgPause, pauseOf, liveFor, _atLeast: atLeast }
+  return { me, saveProfile, post, check, remove, tail, page, feed, leaderboard, gradeOpen, watchOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, pickFor, subscribers, setSubscriber, alertsFor, seenAlerts, coachFor, trackingFor, rgGet, rgLimits, rgPause, pauseOf, liveFor, _atLeast: atLeast }
 }
