@@ -80,6 +80,7 @@ export function App() {
               <Route path="/tools/check" element={<CheckPage />} />
               <Route path="/calibration" element={<CalibrationPage />} />
               <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/consent" element={<LegalPage doc="consent" />} />
               <Route path="/terms" element={<LegalPage doc="terms" />} />
               <Route path="/privacy" element={<LegalPage doc="privacy" />} />
               <Route path="/account" element={<AccountPage />} />

@@ -5,12 +5,12 @@ import { useTitle } from '../lib/hooks.js'
 import { units as fmtUnits, pct } from '../lib/format.js'
 import { PickCard, Avatar, clvText } from '../ui/PickCard.jsx'
 import { Tabs, Skeleton, Empty, EliteBadge } from '../ui/Bits.jsx'
+import { Leaderboard } from '../ui/Leaderboard.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 /** The picks showcase: Elite cappers' live feed and the leaderboard of graded records. */
 export function PicksPage() {
   const [tab, setTab] = useState('feed')
-  const [range, setRange] = useState('30d')
   useTitle('Picks')
   const { user } = useAuth()
   return (
@@ -33,7 +33,7 @@ export function PicksPage() {
         onChange={setTab}
         label="Picks"
       />
-      {tab === 'feed' ? <Feed /> : <Board range={range} setRange={setRange} />}
+      {tab === 'feed' ? <Feed /> : <Leaderboard />}
     </div>
   )
 }
@@ -48,68 +48,5 @@ function Feed() {
         <PickCard key={p.id} pick={p} showProfile />
       ))}
     </div>
-  )
-}
-
-function Board({ range, setRange }) {
-  const { data, loading } = useApi(`/api/picks/leaderboard?range=${range}`, { maxAgeMs: 60_000 })
-  return (
-    <>
-      <div className="seg seg--inline" role="group" aria-label="Range">
-        <button type="button" className={range === '30d' ? 'is-on' : ''} aria-pressed={range === '30d'} onClick={() => setRange('30d')}>
-          Last 30 days
-        </button>
-        <button type="button" className={range === 'all' ? 'is-on' : ''} aria-pressed={range === 'all'} onClick={() => setRange('all')}>
-          All time
-        </button>
-      </div>
-      {loading ? (
-        <Skeleton rows={8} />
-      ) : !data?.rows?.length ? (
-        <Empty title="Nobody has qualified yet">It takes {data?.min || 20} graded picks to show up here.</Empty>
-      ) : (
-        <div className="table-wrap">
-          <table className="log board">
-            <thead>
-              <tr>
-                <th scope="col">#</th>
-                <th scope="col">Capper</th>
-                <th scope="col" className="num-col">ROI</th>
-                <th scope="col" className="num-col" title="Closing line value: prices taken against the last price before each game">CLV</th>
-                <th scope="col" className="num-col">Units</th>
-                <th scope="col" className="num-col">Record</th>
-                <th scope="col" className="num-col board__minor">Hit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((r, i) => (
-                <tr key={r.profile.handle}>
-                  <td className="num">{i + 1}</td>
-                  <td>
-                    <Link to={`/u/${r.profile.handle}`} className="board__who">
-                      <Avatar profile={r.profile} size={28} />
-                      <span>
-                        <b>{r.profile.name}</b> <span className="muted">@{r.profile.handle}</span>
-                      </span>
-                      {r.profile.elite && <EliteBadge small />}
-                    </Link>
-                  </td>
-                  <td className={`num-col num ${r.record.roi > 0 ? 'is-plus' : r.record.roi < 0 ? 'is-minus' : ''}`}>{r.record.roi == null ? '–' : `${(r.record.roi * 100).toFixed(1)}%`}</td>
-                  <td className="num-col num">{r.record.clvN ? clvText(r.record.clv) : '–'}</td>
-                  <td className={`num-col num ${r.record.units >= 0 ? 'is-plus' : 'is-minus'}`}>{fmtUnits(r.record.units)}</td>
-                  <td className="num-col num">
-                    {r.record.wins}-{r.record.losses}
-                  </td>
-                  <td className="num-col num board__minor">{pct(r.record.hitRate)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="muted small board__note">
-            Ranked by ROI, then CLV. Every record here is verified: picks are posted before kickoff at a sportsbook’s posted price, can’t be edited, and are graded from the box score. {data.min} graded picks to qualify.
-          </p>
-        </div>
-      )}
-    </>
   )
 }

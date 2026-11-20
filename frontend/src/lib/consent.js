@@ -7,6 +7,8 @@ export const CONSENT_VERSION = '2026-11-20'
 /* global __APP_VERSION__ */
 export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 const KEY = 'apex_consent'
+// agreed during this visit (the popup comes back on the next one)
+const VISIT = 'apex_consent_visit'
 const DEVICE = 'apex_device'
 
 const store = () => {
@@ -40,21 +42,36 @@ export function deviceId() {
   return id
 }
 
+/** Asked on every visit: agreed in this browser session to the current text. */
 export function hasConsented() {
   try {
-    const v = JSON.parse(store()?.getItem(KEY) || 'null')
-    return v?.version === CONSENT_VERSION
+    return sessionStorage.getItem(VISIT) === CONSENT_VERSION
   } catch {
     return false
   }
 }
 
-/** Record the acceptance here at once and on the server (signed in, with the account too). */
+/** Whether this browser's acceptance of the current text is already on the server. */
+function recorded() {
+  try {
+    return JSON.parse(store()?.getItem(KEY) || 'null')?.version === CONSENT_VERSION
+  } catch {
+    return false
+  }
+}
+
+/** Agree for this visit; the first time on this browser (per text version) it's recorded on the server too. */
 export async function giveConsent() {
+  try {
+    sessionStorage.setItem(VISIT, CONSENT_VERSION)
+  } catch {
+    /* blocked: asked again next time */
+  }
+  if (recorded()) return null
   try {
     store()?.setItem(KEY, JSON.stringify({ version: CONSENT_VERSION, at: Date.now() }))
   } catch {
-    /* blocked: asked again next visit */
+    /* blocked */
   }
   return sendConsent()
 }

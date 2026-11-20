@@ -13,12 +13,12 @@ export const CONSENT_POINTS = [
   'Past results don’t guarantee future ones.',
   'I know where to get help (1-800-MY-RESET in the US, ConnexOntario at 1-866-531-2600 in Ontario), and that I can set limits or take a break in my account at any time.',
 ]
-// the Terms and Privacy pages stay readable before agreeing
-const OPEN_PATHS = new Set(['/terms', '/privacy'])
+// the consent, Terms and Privacy pages stay readable before agreeing
+const OPEN_PATHS = new Set(['/consent', '/terms', '/privacy'])
 
 /**
- * The first screen anyone sees: the consent statements, one box to tick, and nothing else
- * works until it's ticked. Asked again whenever the text's version changes.
+ * The first thing on every visit: one box to tick, and nothing else works until it's ticked.
+ * The statements themselves live on the Consent page (linked here and from every page's footer).
  */
 export function ConsentGate({ onAccepted }) {
   const loc = useLocation()
@@ -63,28 +63,24 @@ export function ConsentGate({ onAccepted }) {
     onAccepted?.()
   }
   return (
-    <div className="consent" role="dialog" aria-modal="true" aria-labelledby="consent-h" aria-describedby="consent-d">
+    <div className="consent" role="dialog" aria-modal="true" aria-labelledby="consent-h">
       <div className="consent__card">
-        <Logo height={30} className="consent__logo" />
+        <Logo height={28} className="consent__logo" />
         <h2 id="consent-h" className="consent__title">
-          Before you start
+          Welcome
         </h2>
-        <p id="consent-d" className="consent__lead">
-          By continuing, I confirm that:
-        </p>
-        <ul className="consent__list">
-          {CONSENT_POINTS.map((p) => (
-            <li key={p}>{p}</li>
-          ))}
-        </ul>
         <label className="consent__agree">
           <input ref={box} type="checkbox" checked={tick} onChange={(e) => setTick(e.target.checked)} />
           <span>
-            I agree to all of the above, the{' '}
+            I’m of legal betting age where I live, I’m not under the influence, and I agree to the{' '}
+            <Link to="/consent" target="_blank" rel="noopener">
+              consent terms
+            </Link>
+            ,{' '}
             <Link to="/terms" target="_blank" rel="noopener">
-              Terms of Service
+              Terms
             </Link>{' '}
-            and the{' '}
+            and{' '}
             <Link to="/privacy" target="_blank" rel="noopener">
               Privacy Policy
             </Link>
@@ -92,9 +88,8 @@ export function ConsentGate({ onAccepted }) {
           </span>
         </label>
         <button type="button" className="btn btn--lime consent__go" disabled={!tick || busy} onClick={accept}>
-          {busy ? 'One moment…' : 'Agree and continue'}
+          {busy ? 'One moment…' : 'Enter PropPickz'}
         </button>
-        <p className="consent__fine">If you don’t agree, close this page. You can review these terms any time from the bottom of every page.</p>
       </div>
     </div>
   )

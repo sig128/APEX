@@ -37,6 +37,26 @@ function Terms() {
   )
 }
 
+function Consent() {
+  return (
+    <>
+      <p className="legal__lead">When you enter PropPickz you tick one box. This is what it confirms.</p>
+      <h2>By continuing, I confirm that</h2>
+      <ul className="legal__checks">
+        {CONSENT_POINTS.map((p) => (
+          <li key={p}>{p}</li>
+        ))}
+      </ul>
+      <h2>Getting help</h2>
+      <p>
+        If gambling stops being fun, help is free and confidential: 1-800-MY-RESET in the US (<a href="https://www.ncpgambling.org/help-treatment/" target="_blank" rel="noopener noreferrer">ncpgambling.org</a>), ConnexOntario at 1-866-531-2600 in Ontario. In your account you can set limits on your picks, take a break or exclude yourself (<Link to="/me#limits">Limits and breaks</Link>).
+      </p>
+      <h2>How it’s kept</h2>
+      <p>We keep a record that this browser agreed to this version of the text, when, and the app version; signed in, it’s kept with your account too. When the text changes, everyone is asked again. More in the <Link to="/privacy">Privacy Policy</Link> and the <Link to="/terms">Terms of Service</Link>.</p>
+    </>
+  )
+}
+
 function Privacy() {
   return (
     <>
@@ -84,16 +104,24 @@ function Privacy() {
   )
 }
 
+const DOCS = {
+  consent: { title: 'Consent', Body: Consent },
+  terms: { title: 'Terms of Service', Body: Terms },
+  privacy: { title: 'Privacy Policy', Body: Privacy },
+}
+
 export function LegalPage({ doc }) {
-  const terms = doc === 'terms'
-  useTitle(terms ? 'Terms of Service' : 'Privacy Policy')
+  const { title, Body } = DOCS[doc] || DOCS.terms
+  useTitle(title)
   return (
     <div className="page legal">
       <header className="page-head">
-        <h1 className="page-title">{terms ? 'Terms of Service' : 'Privacy Policy'}</h1>
+        <h1 className="page-title">{title}</h1>
         <p className="page-sub">Last updated {UPDATED}</p>
       </header>
-      <article className="legal__body">{terms ? <Terms /> : <Privacy />}</article>
+      <article className="legal__body">
+        <Body />
+      </article>
     </div>
   )
 }

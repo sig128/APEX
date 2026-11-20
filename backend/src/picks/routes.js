@@ -4,6 +4,8 @@ import express from 'express'
 import { ApiError, clientIp } from '../lib/router.js'
 import { createLimiter } from '../security/rateLimit.js'
 import { log, errText } from '../lib/log.js'
+import { billingConfig } from '../billing/config.js'
+import { atLeast } from '../billing/service.js'
 
 export function picksRoutes({ picks, access }) {
   const r = express.Router()
@@ -53,10 +55,19 @@ export function picksRoutes({ picks, access }) {
     return picks.feed({ before: req.query.before })
   }, 'public, max-age=10, s-maxage=20, stale-while-revalidate=60'))
 
-  r.get('/leaderboard', wrap(async (req) => {
+  // The full leaderboard is for members; a free visitor gets the podium and how many are behind
+  // it. Decided here on the server, so the rest of the board never reaches a free browser.
+  r.get('/leaderboard', wrap(async (req, res) => {
     throttle(readLimit, clientIp(req))
-    return picks.leaderboard({ range: req.query.range === 'all' ? 'all' : '30d' })
-  }, 'public, max-age=30, s-maxage=60, stale-while-revalidate=180'))
+    const q = req.query
+    const out = await picks.leaderboard({ range: String(q.range || '30d'), sport: String(q.sport || 'all'), legs: String(q.legs || 'all'), sort: String(q.sort || 'roi') })
+    const a = await access.resolve(req).catch(() => null)
+    const paid = !billingConfig().paywall || atLeast(a?.tier || 'free', 'pro')
+    res.set('Vary', 'Authorization')
+    // anyone signed in gets their own answer; the anonymous one is the same for everybody
+    res.set('Cache-Control', req.get('authorization') ? 'private, max-age=30' : 'public, max-age=30, s-maxage=60, stale-while-revalidate=180')
+    return paid ? { ...out, locked: false, total: out.rows.length } : { ...out, rows: out.rows.slice(0, 3), total: out.rows.length, locked: true }
+  }))
 
   r.get('/u/:handle', wrap(async (req, res) => {
     throttle(readLimit, clientIp(req), pageCost(req))

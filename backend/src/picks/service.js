@@ -137,8 +137,18 @@ export function recordOf(picks) {
 
 // Running totals kept on the profile, updated in the same transaction that grades a pick, so
 // a record never misses or double-counts a pick however many picks someone has posted.
-const bucket = () => ({ wins: 0, losses: 0, pushes: 0, voids: 0, units: 0, risked: 0, clvSum: 0, clvN: 0 })
-const KEEP_DAYS = 40
+const bucket = () => ({ wins: 0, losses: 0, pushes: 0, voids: 0, units: 0, risked: 0, clvSum: 0, clvN: 0, decSum: 0, decN: 0 })
+// day buckets cover the leaderboard's longest window (90 days) with room to spare
+const KEEP_DAYS = 100
+const STATS_V = 2
+const decOf = (a) => (a > 0 ? 1 + a / 100 : a < 0 ? 1 + 100 / -a : null)
+/** The cut a pick counts in for the leaderboard's filters: its league ("mixed" across leagues) and leg count. */
+export function cutOf(pick) {
+  const sports = new Set((pick.legs || []).map((l) => l.sport || 'nfl'))
+  const sport = sports.size === 1 ? [...sports][0] : 'mixed'
+  const n = (pick.legs || []).length
+  return `${sport}|${n >= 4 ? '4+' : String(Math.max(1, n))}`
+}
 
 function addPick(b, pick) {
   const x = { ...bucket(), ...(b || {}) }
@@ -152,18 +162,36 @@ function addPick(b, pick) {
     x.clvSum = round((x.clvSum || 0) + pick.clv, 4)
     x.clvN = (x.clvN || 0) + 1
   }
+  const dec = decOf(pick.price)
+  if (dec && (pick.result === 'win' || pick.result === 'loss')) {
+    x.decSum = round((x.decSum || 0) + dec, 4)
+    x.decN = (x.decN || 0) + 1
+  }
+  return x
+}
+const sumBuckets = (a, b) => {
+  const x = { ...bucket(), ...(a || {}) }
+  for (const [k, v] of Object.entries(b || {})) x[k] = round((x[k] || 0) + (v || 0), 4)
   return x
 }
 
 /** stats + one newly graded pick (graded on local day `day`, YYYY-MM-DD). */
 export function applyGraded(stats, pick, day) {
-  const cur = stats || { all: bucket(), days: {}, recent: [] }
+  const cur = stats || { all: bucket(), days: {}, recent: [], v: STATS_V, cuts: {}, cutsAll: {} }
   const days = { ...(cur.days || {}) }
   days[day] = addPick(days[day], pick)
   const keys = Object.keys(days).sort()
   while (keys.length > KEEP_DAYS) delete days[keys.shift()]
+  // the same pick by league and leg count, by day and all time, for the leaderboard's filters
+  const cut = cutOf(pick)
+  const cuts = { ...(cur.cuts || {}) }
+  cuts[day] = { ...(cuts[day] || {}), [cut]: addPick(cuts[day]?.[cut], pick) }
+  for (const k of Object.keys(cuts)) if (!days[k]) delete cuts[k]
+  const cutsAll = { ...(cur.cutsAll || {}), [cut]: addPick(cur.cutsAll?.[cut], pick) }
   const recent = pick.result === 'win' || pick.result === 'loss' ? [pick.result === 'win' ? 'W' : 'L', ...(cur.recent || [])].slice(0, 20) : cur.recent || []
-  return { all: addPick(cur.all, pick), days, recent }
+  // a record made before the cuts existed stays v1 until it's rebuilt from its picks
+  const v = !stats || stats.v === STATS_V ? STATS_V : stats.v || 1
+  return { all: addPick(cur.all, pick), days, recent, v, cuts, cutsAll }
 }
 
 function recordView(b, recent) {
@@ -175,7 +203,57 @@ function recordView(b, recent) {
     else if (streak[0] === c) streak += c
     else break
   }
-  return { wins: x.wins, losses: x.losses, pushes: x.pushes, voids: x.voids, units: round(x.units, 2), graded, roi: x.risked ? round(x.units / x.risked, 4) : null, hitRate: graded ? round(x.wins / graded, 4) : null, clv: x.clvN ? round(x.clvSum / x.clvN, 4) : null, clvN: x.clvN || 0, streak: streak ? `${streak[0]}${streak.length}` : null, last10: recent.slice(0, 10) }
+  const avgDec = x.decN ? x.decSum / x.decN : null
+  const avgOdds = avgDec ? (avgDec >= 2 ? Math.round((avgDec - 1) * 100) : Math.round(-100 / (avgDec - 1))) : null
+  return { wins: x.wins, losses: x.losses, pushes: x.pushes, voids: x.voids, units: round(x.units, 2), graded, roi: x.risked ? round(x.units / x.risked, 4) : null, hitRate: graded ? round(x.wins / graded, 4) : null, clv: x.clvN ? round(x.clvSum / x.clvN, 4) : null, clvN: x.clvN || 0, avgOdds, streak: streak ? `${streak[0]}${streak.length}` : null, last10: recent.slice(0, 10) }
+}
+
+export const BOARD_RANGES = { '30d': 30, '90d': 90, all: null }
+/** One person's record over a window, all picks or one league and leg count ('all' for any). */
+export function recordFor(stats, t, tz, { range = '30d', sport = 'all', legs = 'all' } = {}) {
+  if (!stats) return null
+  const daysBack = BOARD_RANGES[range] ?? 30
+  const any = sport === 'all' && legs === 'all'
+  const fits = (key) => {
+    const [s, l] = key.split('|')
+    return (sport === 'all' || s === sport) && (legs === 'all' || l === legs)
+  }
+  let b = bucket()
+  if (range === 'all') {
+    if (any) b = stats.all
+    else for (const [k, v] of Object.entries(stats.cutsAll || {})) if (fits(k)) b = sumBuckets(b, v)
+  } else {
+    const from = dayKey(t - (daysBack - 1) * DAY_MS, tz)
+    for (const [day, v] of Object.entries(any ? stats.days || {} : stats.cuts || {})) {
+      if (day < from) continue
+      if (any) b = sumBuckets(b, v)
+      else for (const [k, c] of Object.entries(v)) if (fits(k)) b = sumBuckets(b, c)
+    }
+  }
+  return recordView(b, stats.recent || [])
+}
+
+/**
+ * Tiers, Tapology style, from the last 90 days of graded picks: volume and results together,
+ * so a lucky week can't make a Legend. Each tier needs its number of graded picks and its ROI
+ * (Legend also beats the closing line on average).
+ */
+export const TIERS = [
+  { key: 'legend', name: 'Legend', min: 100, roi: 0.15, clv: 0 },
+  { key: 'diamond', name: 'Diamond', min: 75, roi: 0.1 },
+  { key: 'platinum', name: 'Platinum', min: 50, roi: 0.06 },
+  { key: 'gold', name: 'Gold', min: 35, roi: 0.03 },
+  { key: 'silver', name: 'Silver', min: 20, roi: 0 },
+  { key: 'bronze', name: 'Bronze', min: 10, roi: -Infinity },
+]
+export function tierOf(rec) {
+  if (!rec || !rec.graded) return null
+  for (const t of TIERS) {
+    if (rec.graded < t.min || (rec.roi ?? -Infinity) < t.roi) continue
+    if (t.clv != null && !(rec.clvN >= 20 && rec.clv >= t.clv)) continue
+    return t.key
+  }
+  return null
 }
 
 /** The public record (all time and the last 30 days) from the running totals. */
@@ -244,15 +322,24 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
   // never stored, so switching payments on later doesn't leave free Elite pages behind.
   const showcaseForAll = () => !billingConfig().paywall
   const isElite = (p, t = now()) => Boolean(p) && (showcaseForAll() || (p.eliteUntil || 0) > t)
+  /** Any paid plan (Pro or Elite, grace days included): who can be on the leaderboard. */
+  function paidUntilFor(user, ent) {
+    if (user?.admin || ent.status === 'admin') return LIFETIME
+    if ((ent.plan === 'pro' || ent.plan === 'elite') && (ent.status === 'active' || ent.status === 'grace')) return ent.lifetime ? LIFETIME : ent.graceUntil || 0
+    return 0
+  }
+  const isPaid = (p, t = now()) => Boolean(p) && (showcaseForAll() || isElite(p, t) || (p.paidUntil || 0) > t)
 
   /** Bring the stored showcase date in line with the plan the user holds. */
   async function refreshElite(user, p) {
     if (!p) return p
-    const eliteUntil = eliteUntilFor(user, await billing.heldPlan(user))
-    if (eliteUntil === (p.eliteUntil || 0)) return p
-    await d.merge('profiles', user.uid, { eliteUntil, updatedAt: now() })
+    const ent = await billing.heldPlan(user)
+    const eliteUntil = eliteUntilFor(user, ent)
+    const paidUntil = paidUntilFor(user, ent)
+    if (eliteUntil === (p.eliteUntil || 0) && paidUntil === (p.paidUntil || 0)) return p
+    await d.merge('profiles', user.uid, { eliteUntil, paidUntil, updatedAt: now() })
     bust()
-    return { ...p, eliteUntil }
+    return { ...p, eliteUntil, paidUntil }
   }
 
   function publicProfile(p, t = now()) {
@@ -646,21 +733,45 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     })
   }
 
-  async function leaderboard({ range = '30d' } = {}) {
-    const key = range === 'all' ? 'all' : 'd30'
+  const SORTS = {
+    roi: (a, b) => (b.record.roi ?? -9) - (a.record.roi ?? -9) || (b.record.clv ?? -9) - (a.record.clv ?? -9) || b.record.graded - a.record.graded,
+    units: (a, b) => b.record.units - a.record.units || (b.record.roi ?? -9) - (a.record.roi ?? -9),
+    hit: (a, b) => (b.record.hitRate ?? -1) - (a.record.hitRate ?? -1) || b.record.graded - a.record.graded,
+    clv: (a, b) => (b.record.clv ?? -9) - (a.record.clv ?? -9) || (b.record.roi ?? -9) - (a.record.roi ?? -9),
+  }
+  const rebuilding = new Set()
+  /**
+   * The leaderboard: paid members' pages with enough graded picks in the window, by ROI (or units, hit
+   * rate, CLV), filtered by league and leg count, each with their tier from the last 90 days.
+   */
+  async function leaderboard({ range = '30d', sport = 'all', legs = 'all', sort = 'roi' } = {}) {
+    const win = Object.hasOwn(BOARD_RANGES, range) ? range : '30d'
+    const sp = /^[a-z]{2,6}$/.test(sport) ? sport : 'all'
+    const lg = ['1', '2', '3', '4+'].includes(legs) ? legs : 'all'
+    const by = Object.hasOwn(SORTS, sort) ? sort : 'roi'
     const min = boardMin()
-    return cached(`board:${key}`, 60_000, async () => {
+    return cached(`board:${win}:${sp}:${lg}:${by}`, 60_000, async () => {
       const t = now()
+      const tz = billingConfig().usageTz
+      const days = BOARD_RANGES[win]
       // everyone with a recently graded pick (recordAt is stamped when a pick is graded)
-      const profs = await d.recent('profiles', { field: 'recordAt', limit: 200, ...(key === 'd30' ? { where: [['recordAt', '>=', t - 30 * DAY_MS]] } : {}) })
-      const rows = profs
-        .filter((p) => !p.hidden && isElite(p, t))
-        .map((p) => ({ p, rec: recordFromStats(p.stats, t, billingConfig().usageTz)?.[key] }))
+      const profs = await d.recent('profiles', { field: 'recordAt', limit: 300, ...(days ? { where: [['recordAt', '>=', t - days * DAY_MS]] } : {}) })
+      // members only: anyone on a paid plan (Elite pages also show their Instagram and X)
+      const shown = profs.filter((p) => !p.hidden && isPaid(p, t))
+      // records from before the league and leg-count cuts get rebuilt once, in the background
+      for (const p of shown) {
+        if (p.stats && p.stats.v !== STATS_V && !rebuilding.has(p.uid) && rebuilding.size < 20) {
+          rebuilding.add(p.uid)
+          rebuildRecord(p.uid).catch((e) => log.warn('record rebuild failed', { uid: p.uid, err: errText(e) }))
+        }
+      }
+      const rows = shown
+        .map((p) => ({ p, rec: recordFor(p.stats, t, tz, { range: win, sport: sp, legs: lg }), tierRec: recordFor(p.stats, t, tz, { range: '90d' }) }))
         .filter((x) => x.rec && x.rec.graded >= min)
-        .map((x) => ({ profile: publicProfile(x.p, t), record: x.rec }))
-        .sort((a, b) => (b.record.roi ?? -9) - (a.record.roi ?? -9) || (b.record.clv ?? -9) - (a.record.clv ?? -9) || b.record.graded - a.record.graded)
-        .slice(0, 50)
-      return { range: key === 'all' ? 'all' : '30d', rows, min, rankBy: 'roi' }
+        .map((x) => ({ profile: publicProfile(x.p, t), record: x.rec, tier: tierOf(x.tierRec) }))
+        .sort(SORTS[by])
+        .slice(0, 100)
+      return { range: win, sport: sp, legs: lg, sort: by, rows, min, rankBy: by, tiers: TIERS.map(({ key, name, min: m, roi, clv }) => ({ key, name, min: m, roi: Number.isFinite(roi) ? roi : null, clv: clv ?? null })) }
     })
   }
 
