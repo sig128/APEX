@@ -10,6 +10,7 @@ import { ImpliedHint } from '../ui/Odds.jsx'
 import { Headshot } from '../ui/Img.jsx'
 import { ErrorBox } from '../ui/Bits.jsx'
 import { useSport, apiOf, sp, legRef, legsSport } from '../lib/sport.js'
+import { useCredits, useCost, refreshCredits, CreditsLine } from '../ui/Credits.jsx'
 
 const RUNS = [10_000, 25_000, 50_000, 100_000]
 const BETS = [50, 100, 250, 500]
@@ -26,6 +27,8 @@ export function SimPage() {
   const [bets, setBets] = useState(100)
   const [priceText, setPriceText] = useState('')
   const [state, setState] = useState({ busy: false, err: null, out: null })
+  const credits = useCredits()
+  const cost = useCost(runs >= 50_000 || legs.length > 6 ? 'simLarge' : 'sim')
   const price = parseOdds(priceText) ?? (math?.priced ? math.book : null)
   useEffect(() => {
     if (!priceText && math?.priced) setPriceText(odds(math.book))
@@ -36,11 +39,14 @@ export function SimPage() {
     setState({ busy: true, err: null, out: state.out })
     try {
       // a slip can mix leagues: any league's simulator takes the others' legs by ref
-      const out = await api(`${apiOf(legsSport(legs, sport))}/sim`, { method: 'POST', body: { legs: legs.map(legRef), iterations: runs, price, bets } })
+      // one key per tap: if the network hiccups and it's sent again, it's charged once
+      const runKey = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      const out = await api(`${apiOf(legsSport(legs, sport))}/sim`, { method: 'POST', body: { legs: legs.map(legRef), iterations: runs, price, bets, runKey } })
       setState({ busy: false, err: null, out })
     } catch (err) {
       setState({ busy: false, err, out: null })
     }
+    refreshCredits()
   }
 
   return (
@@ -100,9 +106,10 @@ export function SimPage() {
                     ))}
                   </div>
                 </div>
-                <button type="button" className="btn btn--lime sim__run" onClick={run} disabled={state.busy}>
-                  {state.busy ? 'Simulating' : `Run ${runs.toLocaleString()} simulations`}
+                <button type="button" className="btn btn--lime sim__run" onClick={run} disabled={state.busy || (credits && !credits.unlimited && cost != null && credits.left < cost)}>
+                  {state.busy ? 'Simulating' : `Run ${runs.toLocaleString()} simulations${cost != null && credits && !credits.unlimited ? ` (${cost} credits)` : ''}`}
                 </button>
+                <CreditsLine c={credits} cost={cost} />
               </div>
             </section>
             {state.err && <ErrorBox error={state.err} />}

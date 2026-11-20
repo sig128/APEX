@@ -20,7 +20,7 @@ import { NO_AI } from '../ai/llm.js'
 /** Optional: make every read require sign-in (APEX_READS_NEED_AUTH=1). Off by default: stats are free. */
 const readsNeedAuth = () => process.env.APEX_READS_NEED_AUTH === '1'
 
-export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance, access, billing, engines = null } = {}) {
+export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance, access, billing, engines = null, credits = null } = {}) {
   const r = createRouter()
   const views = engine.views
   const home = engine.sport?.key || 'nfl'
@@ -261,11 +261,26 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
     if (!ids.length || ids.length > 12) throw new ApiError(400, 'bad_legs', 'Simulate 1 to 12 legs.')
     const { rows, missing } = legRows(ids)
     if (missing.length) throw new ApiError(404, 'no_prop', `${missing.length === 1 ? 'One leg isn’t' : `${missing.length} legs aren’t`} on the board anymore. Remove ${missing.length === 1 ? 'it' : 'them'} and try again.`, { legs: missing })
-    const iterations = [10_000, 25_000, 50_000, 100_000].includes(Number(body.iterations)) ? Number(body.iterations) : 10_000
-    const price = Number.isFinite(Number(body.price)) && Math.abs(Number(body.price)) >= 100 ? Math.round(Number(body.price)) : null
+    // the slip's quick same-game check (10,000 runs, no bankroll) is free; a full run costs credits
+    const quick = body.quick === true
+    const iterations = quick ? 10_000 : [10_000, 25_000, 50_000, 100_000].includes(Number(body.iterations)) ? Number(body.iterations) : 10_000
+    const price = !quick && Number.isFinite(Number(body.price)) && Math.abs(Number(body.price)) >= 100 ? Math.round(Number(body.price)) : null
     const bets = Math.min(1000, Math.max(10, Math.round(Number(body.bets) || 100)))
     const seed = Math.floor(Math.random() * 2 ** 31)
-    return { ...simulateSlip(rows, { iterations, price, bets, seed }), at: Date.now() }
+    const action = iterations >= 50_000 || rows.length > 6 ? 'simLarge' : 'sim'
+    // one charge per tap: the page sends a key per run, so a retry or double tap is free
+    const runKey = /^[A-Za-z0-9_-]{8,40}$/.test(String(body.runKey || '')) ? String(body.runKey) : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+    const key = `sim:${runKey}`
+    const charge = !quick && credits ? await credits.spend(m.user, action, { key }) : null
+    const t0 = Date.now()
+    try {
+      const out = simulateSlip(rows, { iterations, price, bets, seed })
+      if (!quick) credits?.measure(action, { ms: Date.now() - t0, credits: charge?.cost || 0 })
+      return { ...out, at: Date.now(), credits: charge ? { cost: charge.cost, left: charge.left, warn: charge.warn, free: Boolean(charge.free) } : null }
+    } catch (e) {
+      if (charge && !charge.free) await credits.refund(m.user, key).catch(() => {})
+      throw e
+    }
   })
 
   /**

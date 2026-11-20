@@ -198,6 +198,15 @@ const TERMS = {
       ),
     },
     {
+      id: 'credits',
+      title: 'Credits',
+      body: (
+        <p>
+          Members get a monthly allotment of credits for the heavy features: full simulations, bet breakdowns and parlay builds. Monthly credits reset on the 1st (UTC) and don’t roll over. Top-up credits don’t expire and are used after the monthly ones. Credits have no cash value, can’t be transferred, and aren’t refundable, except that a use that fails gives its credits back. What each feature costs is shown before you use it and on your <Link to="/account#credits">account page</Link>.
+        </p>
+      ),
+    },
+    {
       id: 'posting',
       title: 'Picks pages and what you post',
       body: <p>Picks you post stay yours. You let PropPickz show them, grade them and include them in records and leaderboards. Picks lock at kickoff and every graded pick counts; we may hide pages or picks that break these terms. Don’t post anything unlawful, abusive or misleading, or present results you didn’t get.</p>,

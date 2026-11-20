@@ -2676,3 +2676,109 @@ a.tick__link:focus-visible {
     display: none;
   }
 }
+
+/* ---- Credits ------------------------------------------------------------------------------- */
+.credits-line {
+  margin: 8px 0 0;
+  font-size: var(--t-s);
+  color: var(--chalk-2);
+}
+.credits-line b {
+  color: var(--chalk);
+}
+.credits-line__muted {
+  color: var(--chalk-3);
+}
+.credits-line.is-low b {
+  color: #ffd27a;
+}
+.credits-line.is-out b {
+  color: var(--flag);
+}
+.credits-line a {
+  color: var(--link);
+}
+.acct-credits {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-m);
+  background: var(--stand);
+  scroll-margin-top: calc(var(--header) + 16px);
+}
+.acct-credits__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.acct-credits__head h2 {
+  margin: 0;
+}
+.acct-credits__big {
+  margin: 0;
+  color: var(--chalk-2);
+}
+.acct-credits__big b {
+  font: 800 34px/1 var(--font-num);
+  color: var(--lime);
+}
+.acct-credits__bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--stand-3);
+  overflow: hidden;
+}
+.acct-credits__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lime);
+}
+.acct-credits__bar.is-low span {
+  background: #ffd27a;
+}
+.acct-credits__bar.is-out span {
+  background: var(--flag);
+}
+.acct-credits p {
+  margin: 0;
+}
+.credits-warn {
+  padding: 8px 12px;
+  border-radius: var(--r-s);
+  background: rgba(255, 210, 122, 0.1);
+  color: #ffe2a8;
+  font-size: var(--t-s);
+}
+.credits-warn.is-out {
+  background: var(--flag-dim);
+  color: #ffd2d2;
+}
+.acct-credits details summary {
+  cursor: pointer;
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+  font-weight: 600;
+}
+.acct-credits details ul {
+  margin: 8px 0;
+  padding-left: 18px;
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+}
+.acct-credits__log ul {
+  list-style: none;
+  padding: 0 !important;
+  display: grid;
+  gap: 4px;
+}
+.acct-credits__log li {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  gap: 8px;
+}
+.acct-credits__log .is-plus {
+  color: var(--turf);
+}

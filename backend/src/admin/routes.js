@@ -7,7 +7,7 @@ import { log, errText } from '../lib/log.js'
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 
-export function adminRoutes({ lock, metrics, sports, billing = null, picks = null, members = null }) {
+export function adminRoutes({ lock, metrics, sports, billing = null, picks = null, members = null, credits = null }) {
   const r = express.Router()
   const wrap = (fn) => async (req, res) => {
     res.set('Cache-Control', 'no-store')
@@ -62,6 +62,22 @@ export function adminRoutes({ lock, metrics, sports, billing = null, picks = nul
       if (!members) return { items: [], tour: [] }
       const [items, tour] = await Promise.all([members.feedbackList({ limit: Number(req.query.limit) || 100 }), members.tourStats(30)])
       return { items, tour }
+    }),
+  )
+  // credits: add some to someone's balance, and what each credit action really costs to run
+  r.post(
+    '/credits/grant',
+    wrap(async (req) => {
+      const a = await admin(req)
+      if (!credits) throw new ApiError(503, 'no_credits', 'Credits aren’t set up on this server.')
+      return credits.grant({ ...a, admin: true }, req.body || {})
+    }),
+  )
+  r.get(
+    '/credits/costs',
+    wrap(async (req) => {
+      await admin(req)
+      return { days: credits ? await credits.costs(Math.min(60, Number(req.query.days) || 14)) : [] }
     }),
   )
   // the Tools tab: passes by hand and hiding a picks page, under the same lock

@@ -357,7 +357,8 @@ function SameGame({ legs, prob }) {
     const leagues = new Set(legs.map((l) => l.sport || sport))
     // the simulator is for members; everyone else gets the note and a way in
     if (leagues.size !== 1 || !member) return () => ac.abort()
-    api(`${apiOf([...leagues][0])}/sim`, { method: 'POST', body: { legs: legs.map(legRef), iterations: 10000 }, signal: ac.signal })
+    // the quick check: 10,000 runs, free (a full run in the simulator uses credits)
+    api(`${apiOf([...leagues][0])}/sim`, { method: 'POST', body: { legs: legs.map(legRef), iterations: 10000, quick: true }, signal: ac.signal })
       .then((r) => setSim(r?.parlay || null))
       .catch(() => {})
     return () => ac.abort()

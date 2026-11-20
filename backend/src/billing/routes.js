@@ -7,7 +7,7 @@ import { createLimiter } from '../security/rateLimit.js'
 import { log, errText } from '../lib/log.js'
 import { redeemInvite } from './invites.js'
 
-export function billingRoutes({ billing, access, getDb = null, now = Date.now }) {
+export function billingRoutes({ billing, access, credits = null, getDb = null, now = Date.now }) {
   const r = express.Router()
   const confirmLimit = createLimiter({ burst: 20, perSec: 1 / 3 })
   const scanLimit = createLimiter({ burst: 4, perSec: 1 / 15 })
@@ -58,6 +58,8 @@ export function billingRoutes({ billing, access, getDb = null, now = Date.now })
     }),
   )
   r.get('/me', wrap(async (req) => billing.me(await who(req))))
+  // your credits: this month's allotment, what's left, top-ups, what things cost, recent uses
+  r.get('/credits', wrap(async (req) => (credits ? credits.status(await who(req)) : { left: null, unlimited: true })))
   r.post(
     '/invoice',
     wrap(async (req) => {

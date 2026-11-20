@@ -15,6 +15,7 @@ import { SPORTS, SPORT_KEYS } from './src/sports/index.js'
 import { createBilling } from './src/billing/service.js'
 import { billingConfig } from './src/billing/config.js'
 import { billingRoutes } from './src/billing/routes.js'
+import { createCredits } from './src/billing/credits.js'
 import { createPicks } from './src/picks/service.js'
 import { picksRoutes } from './src/picks/routes.js'
 import { createMembers } from './src/members/service.js'
@@ -201,6 +202,8 @@ export function createApexApp({
   }
   const billing = billingIn || createBilling({ getFirestore, store: engineStore, lookupUid: lookupUidByEmail, ...(now ? { now } : {}) })
   const access = createAccess({ auth, billing })
+  // credits for the heavy features; free in local dev without sign-in, like the model reads
+  const credits = createCredits({ docs: billing.docs, billing, ...(now ? { now } : {}), open: () => authMode() === 'optional' && !billingConfig().paywall })
   const picks = createPicks({ docs: billing.docs, engine, engines, billing, ...(now ? { now } : {}) })
   billing.onChange((uid) => {
     picks.syncPlan(uid).catch((e) => log.warn('plan sync failed', { uid, err: errText(e) }))
@@ -208,7 +211,7 @@ export function createApexApp({
   setGameContextProvider(gameContextFrom(engine))
 
   for (const [key, eng] of Object.entries(engines)) {
-    const router = createNflRouter(eng, { ai, auth, access, billing, engines })
+    const router = createNflRouter(eng, { ai, auth, access, billing, engines, credits })
     app.use(`/api/${key}`, (req, res, next) => {
       router.handle(req, res, next).catch(next)
     })
@@ -216,7 +219,7 @@ export function createApexApp({
   app.get('/api/sports', (req, res) => {
     res.set('Cache-Control', 'public, max-age=60, s-maxage=120').json({ sports: Object.keys(engines).map((k) => ({ key: k, name: SPORTS[k].name, title: SPORTS[k].title, calendar: SPORTS[k].calendar, offseason: SPORTS[k].offseason })) })
   })
-  app.use('/api/billing', billingRoutes({ billing, access, getDb: () => (typeof getFirestore === 'function' ? getFirestore() || null : null), now: now || Date.now }))
+  app.use('/api/billing', billingRoutes({ billing, access, credits, getDb: () => (typeof getFirestore === 'function' ? getFirestore() || null : null), now: now || Date.now }))
   app.use('/api/picks', picksRoutes({ picks, access, billing }))
   // the admin page's numbers, and the daily run that keeps the board's record without visitors
   const metrics = createAdminMetrics({ engines, store: engineStore, billing, listUsers, ...(now ? { now } : {}) })
@@ -229,7 +232,7 @@ export function createApexApp({
   // the consent screen's record, the onboarding tour's counts, feedback to the team's inbox
   const members = createMembers({ store: engineStore, mail: createMailer(), ...(now ? { now } : {}) })
   app.use('/api/members', membersRoutes({ members, access }))
-  app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks, members }))
+  app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks, members, credits }))
   // the public calibration page (src/calibration); the daily run also fingerprints the days it closed
   const calibration = createCalibration({ engines, store: engineStore, ...(now ? { now } : {}) })
   app.use('/api/calibration', calibrationRoutes({ calibration }))
@@ -617,5 +620,5 @@ export function createApexApp({
     const t = setInterval(() => picks.maybeGrade(), 3 * 60_000)
     t.unref?.()
   }
-  return { app, engine, engines, billing, picks, hub, access, metrics }
+  return { app, engine, engines, billing, picks, hub, access, metrics, credits }
 }

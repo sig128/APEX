@@ -1,5 +1,6 @@
 // Passes are paid in USDC on Base, straight to the owner's wallet. Nothing here holds funds.
 import { envNum, envInt } from '../lib/util.js'
+import { allotments, creditCosts, PACKS } from './credits.js'
 
 export const NETWORKS = {
   base: { id: 'base', chainId: 8453, name: 'Base', usdc: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', rpc: 'https://mainnet.base.org', explorer: 'https://basescan.org', testnet: false },
@@ -67,7 +68,7 @@ export function billingConfig() {
         priceUsd: pro,
         showcase: false,
         limits: { analyses: envInt('APEX_PRO_ANALYSES_PER_DAY', 8, { min: 0, max: 1000 }), aiReads: envInt('APEX_PRO_AI_READS_PER_DAY', 15, { min: 0, max: 5000 }) },
-        features: FEATURES.pro,
+        features: [...FEATURES.pro, `${allotments().pro} credits a month for full simulations, bet breakdowns and parlay builds`],
       },
       elite: {
         id: 'elite',
@@ -75,7 +76,7 @@ export function billingConfig() {
         priceUsd: elite,
         showcase: true,
         limits: { analyses: envInt('APEX_ELITE_ANALYSES_PER_DAY', 15, { min: 0, max: 1000 }), aiReads: envInt('APEX_ELITE_AI_READS_PER_DAY', 30, { min: 0, max: 5000 }) },
-        features: FEATURES.elite,
+        features: [...FEATURES.elite, `${allotments().elite} credits a month for full simulations, bet breakdowns and parlay builds`],
       },
     },
   }
@@ -96,5 +97,7 @@ export function publicBillingConfig(cfg = billingConfig()) {
     periodDays: cfg.periodDays,
     graceDays: cfg.graceDays,
     plans: Object.values(cfg.plans).map((p) => ({ id: p.id, name: p.name, priceUsd: p.priceUsd, showcase: p.showcase, limits: p.limits, features: p.features })),
+    // credits: a month's allotment by plan, what each heavy action costs, and the top-up packs
+    credits: { allot: allotments(), costs: creditCosts(), packs: PACKS },
   }
 }

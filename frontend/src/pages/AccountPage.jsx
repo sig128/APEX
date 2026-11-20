@@ -6,6 +6,8 @@ import { useTitle } from '../lib/hooks.js'
 import { Dialog } from '../ui/Dialog.jsx'
 import { PayFlow } from '../billing/PayFlow.jsx'
 import { Skeleton } from '../ui/Bits.jsx'
+import { CreditsCard } from '../ui/Credits.jsx'
+import { replayTour } from '../ui/Tour.jsx'
 
 const fmtDay = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '')
 const PLAN = { free: 'Free', pro: 'Pro', elite: 'Elite' }
@@ -19,7 +21,7 @@ export function AccountPage() {
 
   useEffect(() => {
     const b = q.get('buy')
-    if (paywall && (b === 'pro' || b === 'elite')) setBuy(b)
+    if (paywall && (b === 'pro' || b === 'elite' || /^c\d{2,4}$/.test(b || ''))) setBuy(b)
   }, [q, paywall])
 
   if (loading) return <div className="container page"><Skeleton rows={4} /></div>
@@ -75,6 +77,8 @@ export function AccountPage() {
         </section>
       )}
 
+      <CreditsCard onBuy={setBuy} />
+
       {me?.open?.length > 0 && (
         <section className="acct-list">
           <p className="acct-plan__k">Payment requests waiting</p>
@@ -97,7 +101,7 @@ export function AccountPage() {
           <ul>
             {me.payments.map((p) => (
               <li key={p.id}>
-                {fmtDay(p.at)}: {PLAN[p.plan]}, {p.amount} USDC{' '}
+                {fmtDay(p.at)}: {PLAN[p.plan] || (/^c\d+$/.test(p.plan) ? `${p.plan.slice(1)} credits` : p.plan)}, {p.amount} USDC{' '}
                 <a className="link" href={`${p.explorer}/tx/${p.txHash}`} target="_blank" rel="noopener noreferrer">
                   transaction
                 </a>
@@ -113,6 +117,9 @@ export function AccountPage() {
         <Link to="/me" className="link">
           My picks page
         </Link>
+        <button type="button" className="linkish" onClick={replayTour}>
+          Replay the tour
+        </button>
         {isAdmin && (
           <Link to="/admin" className="link">
             Admin
@@ -120,7 +127,7 @@ export function AccountPage() {
         )}
       </nav>
 
-      <Dialog open={Boolean(buy)} onClose={closeBuy} title={`Get ${PLAN[buy] || ''}`}>
+      <Dialog open={Boolean(buy)} onClose={closeBuy} title={PLAN[buy] ? `Get ${PLAN[buy]}` : `Add ${String(buy || '').slice(1)} credits`}>
         {buy && <PayFlow plan={buy} onDone={closeBuy} />}
       </Dialog>
     </div>

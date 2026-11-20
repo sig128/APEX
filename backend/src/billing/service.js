@@ -5,6 +5,7 @@ import { billingConfig, PLAN_RANK, DAY_MS, NETWORKS, usdToUnits, formatUnits, pu
 import { createChain } from './chain.js'
 import { createDocs } from './docs.js'
 import { ApiError } from '../lib/router.js'
+import { packOf, applyTopup } from './credits.js'
 import { log, errText } from '../lib/log.js'
 
 export const LIFETIME = Date.UTC(2100, 0, 1)
@@ -138,7 +139,8 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     return {
       id: inv.id,
       plan: inv.plan,
-      planName: cfg.plans[inv.plan]?.name || inv.plan,
+      planName: cfg.plans[inv.plan]?.name || (packOf(inv.plan) ? `${packOf(inv.plan).credits} credits` : inv.plan),
+      kind: inv.kind || 'plan',
       status,
       usd: inv.usd,
       units: inv.units,
@@ -168,10 +170,13 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     requireUser(user)
     const cfg = billingConfig()
     if (!cfg.paywall || !cfg.treasury) throw new ApiError(409, 'billing_off', 'Passes are not on sale right now.')
-    const plan = cfg.plans[planId]
+    // a pass, or a pack of credits (for members holding a pass)
+    const pack = packOf(planId)
+    const plan = cfg.plans[planId] || (pack && { id: pack.id, name: `${pack.credits} credits`, priceUsd: pack.priceUsd })
     if (!plan) throw new ApiError(400, 'bad_plan', 'Pick Pro or Elite.')
+    if (pack && !atLeast((await heldPlan(user)).plan, 'pro')) throw new ApiError(402, 'upgrade', 'Credit top-ups are for members with a Pro or Elite pass.', { need: 'pro' })
     const sub = await d.get('subscriptions', user.uid)
-    if (sub?.lifetime && atLeast(sub.plan, planId)) throw new ApiError(409, 'lifetime', 'You already have this plan for life.')
+    if (!pack && sub?.lifetime && atLeast(sub.plan, planId)) throw new ApiError(409, 'lifetime', 'You already have this plan for life.')
     let startBlock = null
     try {
       startBlock = await Promise.race([chain(cfg).blockNumber(), new Promise((_, rej) => setTimeout(() => rej(new Error('slow rpc')), 3000))])
@@ -199,6 +204,7 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
           uid: user.uid,
           email: user.email || null,
           plan: planId,
+          ...(pack ? { kind: 'credits', credits: pack.credits } : {}),
           usd: plan.priceUsd,
           units,
           token: cfg.token,
@@ -257,11 +263,15 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
       const u = (await tx.get('billingUsers', inv.uid)) || {}
       if (claim && claim.invoiceId !== inv.id) return { used: true }
       if (cur?.status === 'paid') return { already: cur }
-      const next = applyPurchase(sub, inv.plan, t, cfg)
+      const isPack = inv.kind === 'credits'
+      const next = isPack ? null : applyPurchase(sub, inv.plan, t, cfg)
+      const creds = isPack ? await tx.get('credits', inv.uid) : null
       tx.set('billingTx', claimId, { invoiceId: inv.id, uid: inv.uid, at: t })
       tx.set('billingInvoices', inv.id, { ...cur, status: 'paid', txHash: hash, paidAt: t, from: v.from, blockNumber: v.blockNumber })
       tx.set('billingPayments', inv.id, { invoiceId: inv.id, uid: inv.uid, email: inv.email, plan: inv.plan, usd: inv.usd, units: inv.units, txHash: hash, network: inv.network, from: v.from, createdAt: t })
-      tx.set('subscriptions', inv.uid, { ...next, source: 'usdc', lastPayment: inv.id, wallet: v.from, updatedAt: t, email: inv.email || sub?.email || null })
+      // a pack adds its credits; a pass extends the subscription
+      if (isPack) tx.set('credits', inv.uid, applyTopup(creds, inv, t))
+      else tx.set('subscriptions', inv.uid, { ...next, source: 'usdc', lastPayment: inv.id, wallet: v.from, updatedAt: t, email: inv.email || sub?.email || null })
       const payments = [inv.id, ...(u.payments || [])].slice(0, 30)
       tx.merge('billingUsers', inv.uid, { open: { [inv.plan]: null }, payments, updatedAt: t })
       return { paid: true }
