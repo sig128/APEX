@@ -10,6 +10,7 @@ import { PropRow } from '../ui/PropRow.jsx'
 import { Section, Skeleton, Empty, Pills } from '../ui/Bits.jsx'
 import { useSport, apiOf, sp, sportInfo, legRef } from '../lib/sport.js'
 import { trackLegs } from '../lib/track.js'
+import { LiveSignals } from '../ui/LiveSignals.jsx'
 
 /** Every game in progress (and the ones that just ended) with where each prop stands. */
 export function LivePage() {
@@ -29,6 +30,7 @@ export function LivePage() {
       {liveIds.map((id) => (
         <Subscribe key={id} id={id} />
       ))}
+      <LiveSignals sport={sport} live={liveIds.length > 0} />
       <SlipTracker />
       {loading ? (
         <Skeleton rows={8} />

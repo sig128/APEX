@@ -20,6 +20,8 @@ export const ROUTE_TIER = {
   shop: 'free',
   // decides for itself: the live list for members, a delayed snapshot for everyone else
   ticker: 'free',
+  // live signals decide for themselves too: the notes for members, the record for everyone
+  signals: 'free',
 }
 
 /** Every live topic is free; kept as a hook in case a topic ever needs a plan. */

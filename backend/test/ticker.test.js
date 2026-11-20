@@ -167,6 +167,14 @@ test('members get the live ticker and its stream; everyone else the delayed copy
   assert.equal(pro.body.live, true)
   assert.ok(Array.isArray(pro.body.items))
 
+  // live signals: the record is public, the notes are for members
+  const sAnon = await api.get('/api/nfl/signals')
+  assert.equal(sAnon.body.locked, true)
+  assert.ok(sAnon.body.record && 'rate' in sAnon.body.record)
+  assert.equal(sAnon.body.live, undefined)
+  const sPro = await api.get('/api/nfl/signals', { headers: bearer('u_pro') })
+  assert.equal(sPro.body.locked, false)
+  assert.ok(Array.isArray(sPro.body.live))
   // the stream: no ticker without a member's ticket
   const noTicket = await api.get('/api/nfl/stream?topics=ticker')
   assert.equal(noTicket.status, 204, 'a visitor asking only for the ticker gets nothing')

@@ -3709,3 +3709,105 @@ a.tick__link:focus-visible {
   border-color: var(--lime);
   box-shadow: 0 0 0 1px var(--lime);
 }
+
+/* ---- Live signals ---------------------------------------------------------------------------- */
+.sig {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.sig__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 14px;
+}
+.sig__title {
+  margin: 0;
+  font: 800 24px/1 var(--font-num);
+  letter-spacing: 0.01em;
+  color: var(--chalk);
+}
+.sig__rec {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--chalk-2);
+}
+.sig__rec b {
+  color: var(--chalk);
+}
+.sig__locked,
+.sig__none {
+  margin: 0;
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+}
+.sig__locked a {
+  color: var(--link);
+}
+.sig__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sig-card {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  border-left: 3px solid var(--lime);
+}
+.sig-card.is-u {
+  border-left-color: var(--link);
+}
+.sig-card__img {
+  border-radius: 50%;
+}
+.sig-card__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+}
+.sig-card__top a {
+  color: var(--chalk);
+  text-decoration: none;
+}
+.sig-card__tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--lime);
+  box-shadow: inset 0 0 0 1px rgba(184, 255, 31, 0.45);
+}
+.sig-card__clock {
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+.sig-card__note {
+  margin: 4px 0 0;
+  font-size: var(--t-s);
+  line-height: 1.5;
+  color: var(--chalk-2);
+}
+.sig__rg {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--seat);
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+.sig__rg a {
+  color: var(--link);
+}

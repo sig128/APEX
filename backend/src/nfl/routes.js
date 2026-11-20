@@ -200,6 +200,18 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
    * everyone else gets a snapshot at least 30 minutes old to look at through the glass. Decided
    * here, so the live list never reaches a free browser.
    */
+  /**
+   * Live signals: in-game value candidates with their notes (members), and the public record of
+   * every graded candidate (everyone).
+   */
+  r.get('/signals', { selfAuth: true }, async (ctx) => {
+    if (!engine.signals) throw new ApiError(503, 'no_signals', 'Live signals are off on this server.')
+    const m = await memberOf(ctx.req)
+    ctx.cache = { maxAge: m.paid ? 0 : 20, priv: true }
+    const out = await engine.signals.view()
+    return m.paid ? { ...out, locked: false } : { sport: out.sport, at: out.at, locked: true, count: out.live.length, record: out.record }
+  })
+
   r.get('/ticker', { selfAuth: true }, async (ctx) => {
     if (!engine.ticker) throw new ApiError(503, 'no_ticker', 'The ticker is off on this server.')
     const m = await memberOf(ctx.req)
