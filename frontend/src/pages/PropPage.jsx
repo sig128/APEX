@@ -7,6 +7,7 @@ import { pct, odds, kickoff, num, clock, decimalOf, parseOdds, bookName } from '
 import { kellyFraction } from '../lib/kelly.js'
 import { RULES } from '../lib/rules.js'
 import { LineShop } from '../ui/Books.jsx'
+import { Helpful } from '../ui/Feedback.jsx'
 import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
 import { Headshot, TeamLogo, logoFor } from '../ui/Img.jsx'
@@ -216,6 +217,7 @@ export function PropPage() {
           </div>
           <HitChart games={games} line={p.line} side={p.side} oneSided={p.oneSided} label={curW?.label} height={230} />
           {p.notes ? <ReadFeed p={p} /> : <OldNotes p={p} />}
+          <Helpful about={`${sport}:${p.id}`} />
         </div>
       </div>
 

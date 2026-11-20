@@ -917,3 +917,187 @@ a.booktile:active {
     transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease;
   }
 }
+
+/* ---------------------------------------------------------------- feedback */
+.fb {
+  display: grid;
+  gap: 12px;
+}
+.fb__intro {
+  margin: 0;
+}
+.fb__kinds {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.fb__kind {
+  position: relative;
+  padding: 7px 12px;
+  border: 1px solid var(--seat-2);
+  border-radius: 999px;
+  font-size: var(--t-s);
+  color: var(--chalk-2);
+  cursor: pointer;
+}
+.fb__kind input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.fb__kind.is-on {
+  border-color: var(--lime);
+  color: var(--chalk);
+  background: rgba(184, 255, 31, 0.08);
+}
+.fb__kind:focus-within {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+}
+.fb__field {
+  display: grid;
+  gap: 6px;
+  font-size: var(--t-s);
+  color: var(--chalk-2);
+}
+.fb__field textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 10px 12px;
+  border: 1px solid var(--seat-2);
+  border-radius: 12px;
+  background: var(--stand-2);
+  color: var(--chalk);
+  font: inherit;
+  resize: vertical;
+}
+.fb__field textarea:focus {
+  outline: 2px solid var(--lime);
+  outline-offset: 1px;
+}
+.fb__rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.fb__rating .muted {
+  margin-right: 8px;
+  font-size: var(--t-s);
+}
+.fb__star {
+  border: 0;
+  background: none;
+  padding: 2px 3px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--seat-2);
+  cursor: pointer;
+}
+.fb__star.is-on {
+  color: var(--lime);
+}
+.fb__trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.fb__check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: var(--t-s);
+  color: var(--chalk-2);
+}
+.fb__check input {
+  accent-color: var(--lime);
+}
+.fb__fine {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+.fb__fine a {
+  color: var(--chalk-2);
+}
+.fb__thanks {
+  margin: 4px 0 8px;
+  font-size: 17px;
+  color: var(--chalk);
+}
+.helpful {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: var(--t-s);
+}
+.helpful__btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--seat-2);
+  border-radius: 999px;
+  background: none;
+  color: var(--chalk-2);
+  cursor: pointer;
+}
+.helpful__btn:hover {
+  border-color: var(--lime);
+  color: var(--lime);
+}
+.adm-fb {
+  display: grid;
+  gap: 14px;
+}
+.adm-fb__sums p {
+  margin: 0 0 4px;
+  color: var(--chalk-2);
+}
+.adm-fb__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.adm-fb__item {
+  padding: 12px 14px;
+  border: 1px solid var(--seat);
+  border-radius: 12px;
+  background: var(--stand);
+}
+.adm-fb__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  font-size: var(--t-xs);
+}
+.adm-fb__kind {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--stand-3);
+  color: var(--chalk);
+  font-weight: 700;
+}
+.adm-fb__kind.is-bug {
+  background: rgba(255, 92, 92, 0.18);
+}
+.adm-fb__kind.is-feature {
+  background: rgba(184, 255, 31, 0.14);
+}
+.adm-fb__msg {
+  margin: 8px 0 6px;
+  white-space: pre-wrap;
+  color: var(--chalk);
+}
+.adm-fb__who {
+  margin: 0;
+  font-size: var(--t-xs);
+}

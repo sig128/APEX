@@ -11,6 +11,7 @@ import { SlipPanel } from './SlipPanel.jsx'
 import { backFromBook, clearAway } from './Books.jsx'
 import { ConsentGate } from './ConsentGate.jsx'
 import { Tour, replayTour } from './Tour.jsx'
+import { FeedbackDialog, openFeedback } from './Feedback.jsx'
 import { getSlip } from '../lib/slip.js'
 import { PickNudge } from './PickNudge.jsx'
 import { playIntro } from '../intro/intro.js'
@@ -133,6 +134,7 @@ export function Shell({ children }) {
       <TabBar slipCount={slip.legs.length} onSlip={() => setSlipOpen(true)} />
       <ConsentGate onAccepted={() => window.dispatchEvent(new Event('apex:consented'))} />
       <Tour />
+      <FeedbackDialog />
       <SlipPanel
         open={slipOpen}
         onClose={() => {
@@ -304,6 +306,9 @@ function Footer() {
           </button>
           <button type="button" className="linkish" onClick={replayTour}>
             Take the tour
+          </button>
+          <button type="button" className="linkish" onClick={() => openFeedback()}>
+            Feedback
           </button>
         </nav>
       </div>

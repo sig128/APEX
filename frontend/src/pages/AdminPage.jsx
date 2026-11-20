@@ -25,6 +25,7 @@ const TABS = [
   { key: 'money', label: 'Money' },
   { key: 'tools', label: 'Tools' },
   { key: 'contests', label: 'Contests' },
+  { key: 'feedback', label: 'Feedback' },
 ]
 const tabFromHash = () => {
   const h = (typeof window !== 'undefined' && window.location.hash.slice(1)) || ''
@@ -160,6 +161,7 @@ export function AdminPage() {
           {tab === 'money' && <Money cash={data.money} users={data.users} />}
           {tab === 'tools' && <Tools data={data} onChanged={load} onLocked={locked} />}
           {tab === 'contests' && <Contests onLocked={locked} />}
+          {tab === 'feedback' && <FeedbackInbox onLocked={locked} />}
         </div>
       )}
     </div>
@@ -361,3 +363,70 @@ function Standouts({ rows }) {
 }
 const GROUP_LABEL = { m: 'Bet type', s: 'Side', pb: 'Probability', eb: 'Edge', ld: 'The read', mu: 'Matchup', pr: 'Price', bk: 'Book', sc: 'Score', h: 'Venue', cl: 'Line move' }
 const groupLabel = (g) => GROUP_LABEL[g] || g
+
+const FB_KIND = { bug: 'Bug', feature: 'Idea', pick: 'Pick', general: 'Other' }
+const TOUR_STEP = ['Board', 'Research', 'Slip', 'Picks', 'Live', 'Plans']
+
+/** What people sent from the Feedback form and the "Was this helpful?" taps, and how far the tour gets them. */
+function FeedbackInbox({ onLocked }) {
+  const [state, setState] = useState({ data: null, err: null })
+  const [kind, setKind] = useState('all')
+  useEffect(() => {
+    adminApi('/api/admin/feedback?limit=300')
+      .then((data) => setState({ data, err: null }))
+      .catch((e) => {
+        if (e.status === 401) onLocked?.()
+        setState({ data: null, err: e.message })
+      })
+  }, [])
+  if (state.err) return <p className="form-err">{state.err}</p>
+  if (!state.data) return <Skeleton rows={6} />
+  const items = state.data.items.filter((f) => kind === 'all' || (kind === 'taps' ? f.helpful !== null : f.kind === kind && f.helpful === null))
+  const taps = state.data.items.filter((f) => f.helpful !== null)
+  const up = taps.filter((f) => f.helpful).length
+  const t = (state.data.tour || []).reduce((a, d) => ({ start: a.start + d.start, done: a.done + d.done, replay: a.replay + (d.replay || 0), skip: TOUR_STEP.map((_, i) => a.skip[i] + (d.skip?.[i] || 0)) }), { start: 0, done: 0, replay: 0, skip: TOUR_STEP.map(() => 0) })
+  return (
+    <div className="adm-fb">
+      <div className="adm-fb__sums">
+        <p>
+          <b className="num">{state.data.items.filter((f) => f.helpful === null).length}</b> notes, <b className="num">{taps.length}</b> helpful taps ({taps.length ? Math.round((100 * up) / taps.length) : 0}% yes)
+        </p>
+        <p>
+          Tour, last 30 days: <b className="num">{t.start}</b> started, <b className="num">{t.done}</b> finished, <b className="num">{t.replay}</b> replays. Skipped at:{' '}
+          {TOUR_STEP.map((s, i) => `${s} ${t.skip[i]}`).join(', ')}
+        </p>
+      </div>
+      <div className="pills" role="group" aria-label="Kind">
+        {['all', 'bug', 'feature', 'pick', 'general', 'taps'].map((k) => (
+          <button key={k} type="button" className={`pill${kind === k ? ' is-on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
+            {k === 'all' ? 'All' : k === 'taps' ? 'Helpful taps' : FB_KIND[k]}
+          </button>
+        ))}
+      </div>
+      {items.length ? (
+        <ul className="adm-fb__list">
+          {items.map((f) => (
+            <li key={f.id} className="adm-fb__item">
+              <div className="adm-fb__meta">
+                <span className={`adm-fb__kind is-${f.kind}`}>{f.helpful === null ? FB_KIND[f.kind] || f.kind : f.helpful ? 'Helpful' : 'Not helpful'}</span>
+                {f.rating && <span className="num">{'★'.repeat(f.rating)}</span>}
+                <span className="muted">{new Date(f.at).toLocaleString()}</span>
+                {f.page && <span className="muted">{f.page}</span>}
+                {f.mailed && <span className="muted">emailed</span>}
+              </div>
+              {f.message && <p className="adm-fb__msg">{f.message}</p>}
+              <p className="muted adm-fb__who">
+                {f.user ? `${f.user.name || ''} ${f.user.email || ''}`.trim() : 'Account not shared'}
+                {f.about ? ` · about ${f.about}` : ''}
+                {f.device ? ` · ${f.device.slice(0, 80)}` : ''}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">Nothing here yet.</p>
+      )}
+    </div>
+  )
+}
+
