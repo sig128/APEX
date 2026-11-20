@@ -804,33 +804,6 @@ a.booktile:active {
   color: var(--chalk-3);
 }
 
-/* ---------------------------------------------------------------- terms and privacy */
-.legal__body {
-  max-width: 68ch;
-  display: grid;
-  gap: 4px;
-  line-height: 1.6;
-}
-.legal__body h2 {
-  margin: 22px 0 4px;
-  font: 700 19px/1.25 var(--font-ui);
-  color: var(--chalk);
-}
-.legal__body p,
-.legal__body li {
-  color: var(--chalk-2);
-}
-.legal__body ul {
-  margin: 4px 0;
-  padding-left: 20px;
-  display: grid;
-  gap: 6px;
-}
-.legal__lead {
-  font-size: 17px;
-  color: var(--chalk) !important;
-}
-
 /* ---------------------------------------------------------------- the onboarding tour
    A spotlight on the real screen and a small card beside it: one idea per step. */
 .tour {
@@ -1101,26 +1074,6 @@ a.booktile:active {
   margin: 0;
   font-size: var(--t-xs);
 }
-.legal__checks {
-  list-style: none;
-  padding-left: 0 !important;
-}
-.legal__checks li {
-  position: relative;
-  padding-left: 26px;
-}
-.legal__checks li::before {
-  content: '';
-  position: absolute;
-  left: 3px;
-  top: 0.5em;
-  width: 10px;
-  height: 6px;
-  border-left: 2px solid var(--lime);
-  border-bottom: 2px solid var(--lime);
-  transform: rotate(-45deg);
-}
-
 /* ---------------------------------------------------------------- the members' leaderboard
    A podium for the top three (gold, silver, bronze rings), then a ranked list of cards: who,
    their tier, record, hit rate, units, average odds, streak and form, Instagram and X. */
@@ -1703,4 +1656,374 @@ a.booktile:active {
   .news__item--leagues {
     grid-area: leagues;
   }
+}
+
+/* ---- Consent, Terms and Privacy ---------------------------------------------------------------
+   One frame for all three: a switcher between them, a big title, the contents beside the text on
+   wide screens. The Consent page shows the real tick box, the statements, the data PropPickz uses
+   and the helplines as numbers you can tap. */
+.legal {
+  padding-top: 28px;
+  padding-bottom: 72px;
+}
+.legal-docs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--seat);
+  border-radius: 999px;
+  background: var(--stand);
+}
+.legal-docs__link {
+  padding: 6px 16px;
+  border-radius: 999px;
+  color: var(--chalk-2);
+  font-weight: 600;
+  font-size: var(--t-s);
+  text-decoration: none;
+}
+.legal-docs__link:hover {
+  color: var(--chalk);
+}
+.legal-docs__link.is-on {
+  background: var(--lime);
+  color: var(--lime-ink);
+}
+.legal-docs__link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.legal-head {
+  margin: 26px 0 34px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--seat);
+}
+.legal-head__title {
+  margin: 0;
+  font: 800 clamp(48px, 8vw, 84px) / 0.92 var(--font-num);
+  letter-spacing: 0.005em;
+  color: var(--chalk);
+}
+.legal-head__lead {
+  margin: 14px 0 0;
+  max-width: 58ch;
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--chalk);
+}
+.legal-head__date {
+  margin: 10px 0 0;
+  font-size: var(--t-s);
+  color: var(--chalk-3);
+}
+.legal-layout {
+  display: grid;
+  gap: 32px;
+}
+.legal-toc {
+  display: none;
+}
+@media (min-width: 980px) {
+  .legal-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 64px;
+    align-items: start;
+  }
+  .legal-toc {
+    display: block;
+    position: sticky;
+    top: calc(var(--header) + 24px);
+  }
+}
+.legal-toc__h {
+  margin: 0 0 10px;
+  font-size: var(--t-s);
+  font-weight: 700;
+  color: var(--chalk);
+}
+.legal-toc ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--seat);
+}
+.legal-toc a {
+  display: block;
+  margin-left: -1px;
+  padding: 6px 0 6px 14px;
+  border-left: 2px solid transparent;
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+  line-height: 1.35;
+  text-decoration: none;
+}
+.legal-toc a:hover {
+  color: var(--chalk);
+}
+.legal-toc a[aria-current='location'] {
+  border-left-color: var(--lime);
+  color: var(--lime);
+  font-weight: 600;
+}
+.legal-toc a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.legal-body {
+  max-width: 72ch;
+  min-width: 0;
+}
+.legal-sec {
+  scroll-margin-top: calc(var(--header) + 20px);
+}
+.legal-sec + .legal-sec {
+  margin-top: 36px;
+  padding-top: 32px;
+  border-top: 1px solid var(--seat);
+}
+.legal-sec h2 {
+  margin: 0 0 14px;
+  font: 700 23px/1.2 var(--font-ui);
+  color: var(--chalk);
+}
+.legal-sec p,
+.legal-sec li {
+  font-size: var(--t-m);
+  line-height: 1.65;
+  color: var(--chalk-2);
+}
+.legal-sec p {
+  margin: 0 0 12px;
+}
+.legal-sec p:last-child {
+  margin-bottom: 0;
+}
+.legal-sec a {
+  color: var(--link);
+}
+.legal-strong {
+  color: var(--chalk) !important;
+  font-weight: 600;
+}
+.legal-list {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+/* the tick box, as it appears at the door */
+.legal-tick {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 14px;
+  align-items: start;
+  margin: 0 0 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.legal-tick p {
+  margin: 0;
+  color: var(--chalk);
+  font-size: 17px;
+  line-height: 1.5;
+}
+.legal-tick__box {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  border-radius: 6px;
+  background: var(--lime);
+}
+.legal-tick__box::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 4px;
+  width: 7px;
+  height: 12px;
+  border-right: 3px solid var(--lime-ink);
+  border-bottom: 3px solid var(--lime-ink);
+  transform: rotate(45deg);
+}
+
+/* the statements */
+.legal-points {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.legal-points li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 14px;
+  padding: 16px 20px;
+}
+.legal-points li + li {
+  border-top: 1px solid var(--seat);
+}
+.legal-points__mark {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--lime-dim);
+  box-shadow: inset 0 0 0 1px rgba(184, 255, 31, 0.4);
+}
+.legal-points__mark::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 5px;
+  width: 6px;
+  height: 11px;
+  border-right: 2px solid var(--lime);
+  border-bottom: 2px solid var(--lime);
+  transform: rotate(45deg);
+}
+.legal-sec .legal-points__title {
+  margin: 0 0 2px;
+  color: var(--chalk);
+  font-weight: 700;
+  line-height: 1.35;
+}
+.legal-sec .legal-points__text {
+  margin: 0;
+}
+
+/* "PropPickz uses your data" */
+.legal-callout {
+  margin: 0 0 18px;
+  padding: 18px 20px;
+  border: 1px solid rgba(184, 255, 31, 0.35);
+  border-left: 4px solid var(--lime);
+  border-radius: var(--r-m);
+  background: linear-gradient(90deg, rgba(184, 255, 31, 0.09), rgba(184, 255, 31, 0.02) 70%);
+}
+.legal-sec .legal-callout__title {
+  margin: 0 0 6px;
+  font: 800 26px/1.05 var(--font-num);
+  letter-spacing: 0.01em;
+  color: var(--lime);
+}
+.legal-callout p:not(.legal-callout__title) {
+  color: var(--chalk);
+}
+.legal-table {
+  width: 100%;
+  margin: 0 0 16px;
+  border-collapse: collapse;
+  font-size: var(--t-s);
+}
+.legal-table th,
+.legal-table td {
+  padding: 12px 14px 12px 0;
+  border-bottom: 1px solid var(--seat);
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.5;
+}
+.legal-table thead th {
+  padding-top: 0;
+  color: var(--chalk-3);
+  font-weight: 600;
+  font-size: var(--t-xs);
+}
+.legal-table tbody th {
+  color: var(--chalk);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.legal-table td {
+  color: var(--chalk-2);
+}
+.legal-table td:last-child {
+  color: var(--chalk);
+}
+@media (max-width: 640px) {
+  .legal-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .legal-table,
+  .legal-table tbody,
+  .legal-table tr,
+  .legal-table th,
+  .legal-table td {
+    display: block;
+  }
+  .legal-table tr {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--seat);
+  }
+  .legal-table th,
+  .legal-table td {
+    padding: 0;
+    border: 0;
+  }
+  .legal-table tbody th {
+    margin-bottom: 2px;
+    white-space: normal;
+  }
+  .legal-table td:last-child {
+    margin-top: 4px;
+  }
+  .legal-table td:last-child::before {
+    content: 'Why: ';
+    color: var(--chalk-3);
+  }
+}
+
+/* helplines: numbers like the scoreboard, one tap to call */
+.legal-help {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 16px;
+}
+@media (min-width: 640px) {
+  .legal-help {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.legal-help__line {
+  display: grid;
+  gap: 2px;
+  padding: 16px 18px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+  color: var(--chalk);
+  text-decoration: none;
+}
+.legal-help__line:hover {
+  border-color: var(--seat-2);
+  background: var(--stand-2);
+}
+.legal-help__line:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.legal-help__where {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--chalk-3);
+}
+.legal-help__num {
+  font: 800 34px/1.05 var(--font-num);
+  letter-spacing: 0.01em;
+  color: var(--lime);
+}
+.legal-help__who {
+  font-size: var(--t-s);
+  color: var(--chalk-2);
 }

@@ -4,14 +4,15 @@ import { Logo } from '../brand/Logo.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { hasConsented, giveConsent, sendConsent } from '../lib/consent.js'
 
-/** The statements, kept in one place so the Terms page can repeat them word for word. */
+/** The statements, kept in one place so the Consent and Terms pages say them word for word. */
 export const CONSENT_POINTS = [
-  'I’m of legal age to bet where I live (21+ in most US states, 19+ in Ontario).',
-  'I’m not under the influence of alcohol, drugs or anything else, and I’m making my own decisions.',
-  'Picks, projections and analysis are information only. Sports are uncertain, and no result is guaranteed.',
-  'PropPickz isn’t a sportsbook. I’m responsible for every bet I place, and PropPickz isn’t liable for any bet won or lost.',
-  'Past results don’t guarantee future ones.',
-  'I know where to get help (1-800-MY-RESET in the US, ConnexOntario at 1-866-531-2600 in Ontario), and that I can set limits or take a break in my account at any time.',
+  { title: 'Legal age', text: 'I’m of legal age to bet where I live (21+ in most US states, 19+ in Ontario).' },
+  { title: 'A clear head', text: 'I’m not under the influence of alcohol, drugs or anything else, and I’m making my own decisions.' },
+  { title: 'Information, not advice', text: 'Picks, projections and analysis are information only. Sports are uncertain, and no result is guaranteed.' },
+  { title: 'My bets are mine', text: 'PropPickz isn’t a sportsbook. I’m responsible for every bet I place, and PropPickz isn’t liable for any bet won or lost.' },
+  { title: 'The past is not a promise', text: 'Past results don’t guarantee future ones.' },
+  { title: 'My data', text: 'PropPickz collects and uses my data to run the site, keep my account and picks, and keep the service safe, as described on the Consent page and in the Privacy Policy.' },
+  { title: 'Help is there', text: 'I know where to get help (1-800-MY-RESET in the US, ConnexOntario at 1-866-531-2600 in Ontario), and that I can set limits or take a break in my account at any time.' },
 ]
 // the consent, Terms and Privacy pages stay readable before agreeing
 const OPEN_PATHS = new Set(['/consent', '/terms', '/privacy'])
@@ -84,7 +85,7 @@ export function ConsentGate({ onAccepted }) {
             <Link to="/privacy" target="_blank" rel="noopener">
               Privacy Policy
             </Link>
-            .
+            , including how PropPickz uses my data.
           </span>
         </label>
         <button type="button" className="btn btn--lime consent__go" disabled={!tick || busy} onClick={accept}>
