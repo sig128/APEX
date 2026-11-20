@@ -212,6 +212,14 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
     return m.paid ? { ...out, locked: false } : { sport: out.sport, at: out.at, locked: true, count: out.live.length, record: out.record }
   })
 
+  /** Lineup and injury news: every change on the report, with notes on what it means (members). */
+  r.get('/news', { selfAuth: true }, async (ctx) => {
+    if (!engine.news) throw new ApiError(503, 'no_news', 'News is off on this server.')
+    const m = await memberOf(ctx.req)
+    ctx.cache = { maxAge: 20, priv: true }
+    return engine.news.view({ member: m.paid })
+  })
+
   r.get('/ticker', { selfAuth: true }, async (ctx) => {
     if (!engine.ticker) throw new ApiError(503, 'no_ticker', 'The ticker is off on this server.')
     const m = await memberOf(ctx.req)

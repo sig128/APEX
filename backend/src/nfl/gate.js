@@ -22,6 +22,8 @@ export const ROUTE_TIER = {
   ticker: 'free',
   // live signals decide for themselves too: the notes for members, the record for everyone
   signals: 'free',
+  // lineup and injury news: headlines for everyone, the notes for members
+  news: 'free',
 }
 
 /** Every live topic is free; kept as a hook in case a topic ever needs a plan. */

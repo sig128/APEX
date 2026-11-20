@@ -10,6 +10,7 @@ import { useWatch } from '../lib/watch.js'
 import { GameStrip } from '../ui/GameStrip.jsx'
 import { WhatsNew } from '../ui/WhatsNew.jsx'
 import { TickerBar } from '../ui/Ticker.jsx'
+import { NewsFeed } from '../ui/NewsFeed.jsx'
 import { PropList } from '../ui/PropRow.jsx'
 import { HitChart } from '../ui/HitChart.jsx'
 import { Headshot, TeamLogo } from '../ui/Img.jsx'
@@ -157,6 +158,8 @@ export function HomePage() {
             {loading ? <Skeleton rows={8} /> : <PropList rows={data?.tabs?.[cur]} ranked={cur === 'apex'} showGame empty="Nothing qualifies for this list right now. It fills in as lines post." />}
           </Section>
         )}
+
+        {!warming && <NewsFeed sport={sport} />}
 
         {data?.cheatsheets?.length > 0 && (
           <Section id="sheets" title="Cheatsheets">

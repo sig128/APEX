@@ -12,6 +12,7 @@ import { createScheduler } from '../lib/scheduler.js'
 import { createPropLog } from './proplog.js'
 import { createTicker } from './ticker.js'
 import { createSignals } from './signals.js'
+import { createNews } from './news.js'
 import { createStore } from '../lib/store.js'
 import { createViews } from './services/views.js'
 import { log, errText } from '../lib/log.js'
@@ -527,5 +528,6 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
   engine.proplog = createPropLog({ engine, store, now })
   engine.ticker = createTicker({ engine, store: store || createStore({ driver: 'memory' }), now })
   engine.signals = createSignals({ engine, store: store || createStore({ driver: 'memory' }), now })
+  engine.news = createNews({ engine, store: store || createStore({ driver: 'memory' }), now })
   return engine
 }
