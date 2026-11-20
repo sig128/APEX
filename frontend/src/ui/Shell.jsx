@@ -8,6 +8,8 @@ import { useSlip } from '../lib/useSlip.js'
 import { useApi } from '../lib/useApi.js'
 import { Search } from './Search.jsx'
 import { SlipPanel } from './SlipPanel.jsx'
+import { backFromBook, clearAway } from './Books.jsx'
+import { getSlip } from '../lib/slip.js'
 import { PickNudge } from './PickNudge.jsx'
 import { playIntro } from '../intro/intro.js'
 import { DAY } from './time.js'
@@ -92,7 +94,9 @@ function SportPicker() {
 }
 
 export function Shell({ children }) {
-  const [slipOpen, setSlipOpen] = useState(false)
+  // back from a sportsbook the slip opened, even if the phone reloaded the page meanwhile: the slip
+  // is open again, where you left it
+  const [slipOpen, setSlipOpen] = useState(() => backFromBook() && getSlip().legs.length > 0)
   const [searchOpen, setSearchOpen] = useState(false)
   const loc = useLocation()
   const slip = useSlip()
@@ -125,7 +129,13 @@ export function Shell({ children }) {
       </main>
       <Footer />
       <TabBar slipCount={slip.legs.length} onSlip={() => setSlipOpen(true)} />
-      <SlipPanel open={slipOpen} onClose={() => setSlipOpen(false)} />
+      <SlipPanel
+        open={slipOpen}
+        onClose={() => {
+          setSlipOpen(false)
+          clearAway()
+        }}
+      />
       {!slipOpen && <PickNudge />}
     </div>
   )

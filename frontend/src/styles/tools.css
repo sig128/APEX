@@ -613,6 +613,13 @@ a.booktile:active {
 .booktile.is-short .booktile__price {
   color: var(--chalk-2);
 }
+/* this slip's link is on its way: the tile waits rather than open the book's front page */
+.booktile.is-wait {
+  cursor: progress;
+}
+.booktile.is-wait .booktile__price {
+  opacity: 0.55;
+}
 .booktile.is-best {
   border-color: rgba(184, 255, 31, 0.7);
   background: linear-gradient(180deg, rgba(184, 255, 31, 0.09), rgba(184, 255, 31, 0.02)), var(--stand-2);
