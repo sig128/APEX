@@ -17,6 +17,7 @@ import { billingConfig } from './src/billing/config.js'
 import { billingRoutes } from './src/billing/routes.js'
 import { createCredits } from './src/billing/credits.js'
 import { createBreakdowns } from './src/breakdown/service.js'
+import { legendFor } from './src/learn/content.js'
 import { breakdownRoutes } from './src/breakdown/routes.js'
 import { createPicks } from './src/picks/service.js'
 import { picksRoutes } from './src/picks/routes.js'
@@ -241,6 +242,15 @@ export function createApexApp({
   // the Bet Breakdown: your settled picks, explained from the evidence (members), and a demo
   const breakdowns = createBreakdowns({ docs: billing.docs, engines, credits, ai, calibration, ...(now ? { now } : {}) })
   app.use('/api/breakdown', breakdownRoutes({ breakdowns, access }))
+  // Tips & Tricks: the basics for everyone, the math and strategy entries in full for members
+  app.get('/api/learn', async (req, res) => {
+    const a = await access.resolve(req).catch(() => null)
+    const open = authMode() === 'optional' && !billingConfig().paywall
+    const member = open || (a?.user ? (await credits.planOf(a.user).catch(() => 'free')) !== 'free' : false)
+    res.set('Vary', 'Authorization')
+    res.set('Cache-Control', req.get('authorization') ? 'private, max-age=60' : 'public, max-age=300, s-maxage=600')
+    res.json(legendFor(member))
+  })
   app.get('/api/cron/daily', cronHandler({ metrics: calibration.afterDaily(metrics) }))
 
   // ---- the AI analyzer (chat) ---------------------------------------------------------------

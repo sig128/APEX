@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApi } from '../lib/useApi.js'
+import { HelpTip } from './HelpTip.jsx'
 
 // Tracking: your graded picks as a running P&L line, your record, and trends by leg count,
 // league and market. Descriptive: wins and losses alike, every group with its sample size,
@@ -178,7 +179,9 @@ export function TrackingCard() {
               <dd className="num">{pct(r.hit)}</dd>
             </div>
             <div>
-              <dt>Units</dt>
+              <dt>
+                Units <HelpTip id="unit" label="units" />
+              </dt>
               <dd className={`num${r.units > 0 ? ' is-plus' : r.units < 0 ? ' is-minus' : ''}`}>{sign(r.units)}</dd>
             </div>
             <div>

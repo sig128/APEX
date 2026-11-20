@@ -298,6 +298,7 @@ function Footer() {
           <Link to={sp(sport, '/dvp')}>Defense vs position</Link>
           <Link to="/apex">Game analyzer</Link>
           <Link to="/calibration">Calibration</Link>
+          <Link to="/learn">Tips &amp; Tricks</Link>
           <Link to="/consent">Consent</Link>
           <Link to="/terms">Terms</Link>
           <Link to="/privacy">Privacy</Link>

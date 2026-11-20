@@ -16,6 +16,7 @@ import { Headshot } from './Img.jsx'
 import { Dialog } from './Dialog.jsx'
 import { ImpliedHint } from './Odds.jsx'
 import { SmartCheckPanel } from './SmartCheck.jsx'
+import { HelpTip } from './HelpTip.jsx'
 
 const BANKROLL_KEY = 'apex_bankroll'
 const FRACTIONS = [
@@ -227,7 +228,9 @@ export function SlipPanel({ open, onClose }) {
                   <b className="num">{odds(math.fair)}</b>
                 </div>
                 <div className="slip__row">
-                  <label htmlFor="parlay-odds">Your parlay odds</label>
+                  <label htmlFor="parlay-odds">
+                    Your parlay odds <HelpTip id="implied" label="implied probability" />
+                  </label>
                   <span className="odds-field">
                     <OddsInput value={slip.parlayPrice ?? (math.priced ? math.book : null)} onChange={(n) => setParlayPrice(n)} label="Your parlay odds" placeholder={math.priced ? odds(math.book) : '+600'} />
                     <ImpliedHint a={slip.parlayPrice ?? (math.priced ? math.book : null)} />

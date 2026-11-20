@@ -36,6 +36,7 @@ const AnalyzerPage = page(() => import('./pages/AnalyzerPage.jsx'), 'AnalyzerPag
 const AdminSportsPage = page(() => import('./pages/AdminSportsPage.jsx'), 'AdminSportsPage')
 const CalibrationPage = page(() => import('./pages/CalibrationPage.jsx'), 'CalibrationPage')
 const LegalPage = page(() => import('./pages/LegalPage.jsx'), 'LegalPage')
+const LearnPage = page(() => import('./pages/LearnPage.jsx'), 'LearnPage')
 const BreakdownPage = page(() => import('./pages/BreakdownPage.jsx'), 'BreakdownPage')
 const BreakdownDemoPage = page(() => import('./pages/BreakdownPage.jsx'), 'BreakdownDemoPage')
 
@@ -77,6 +78,7 @@ export function App() {
               <Route path="/me/live" element={<LiveSlipPage />} />
               <Route path="/me/breakdown/:id" element={<BreakdownPage />} />
               <Route path="/tools/breakdown" element={<BreakdownDemoPage />} />
+              <Route path="/learn" element={<LearnPage />} />
               <Route path="/contests" element={<ContestsPage />} />
               <Route path="/kelly" element={<KellyPage />} />
               <Route path="/tools" element={<ToolsPage />} />

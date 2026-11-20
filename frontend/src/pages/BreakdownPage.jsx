@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { Headshot } from '../ui/Img.jsx'
 import { ErrorBox, Skeleton } from '../ui/Bits.jsx'
 import { refreshCredits } from '../ui/Credits.jsx'
+import { HelpTip } from '../ui/HelpTip.jsx'
 
 // The Bet Breakdown: a settled pick explained from the evidence. Facts, estimates saved before the
 // bet, and possible factors are kept apart; every claim links to where it came from.
@@ -242,7 +243,7 @@ function Report({ data, onAsk, demo }) {
         </h2>
         <p>{r.summary}</p>
         <p className="muted small">
-          {r.rules.name}: {p.rule}
+          {r.rules.name}: {p.rule} <HelpTip id="push" label="push" />
         </p>
       </section>
       <section aria-labelledby="bd-time-h">

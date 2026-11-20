@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Headshot } from './Img.jsx'
 import { EliteBadge, InjChip } from './Bits.jsx'
+import { HelpTip } from './HelpTip.jsx'
 import { odds, units as fmtUnits, ago, kickoff, pct, bookName, impliedOf } from '../lib/format.js'
 import { importLegs } from '../lib/slip.js'
 import { sp, legRef } from '../lib/sport.js'
@@ -113,6 +114,7 @@ function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
             CLV {clvText(pick.clv)}
           </span>
         )}
+        {pick.status === 'graded' && Number.isFinite(pick.clv) && <HelpTip id="clv" label="CLV" />}
         <span className={`pick__status is-${status}`}>
           {status === 'open' && `Locks ${kickoff(new Date(pick.lockAt).toISOString())}`}
           {status === 'live' && 'In play'}

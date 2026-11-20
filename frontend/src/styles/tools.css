@@ -3506,3 +3506,206 @@ a.tick__link:focus-visible {
   font-size: var(--t-s);
   color: var(--chalk-2);
 }
+
+/* ---- Tips & Tricks -------------------------------------------------------------------------- */
+.lg {
+  display: grid;
+  gap: 18px;
+}
+.lg-tools {
+  display: grid;
+  gap: 10px;
+  position: sticky;
+  top: var(--header);
+  z-index: 5;
+  padding: 10px 0;
+  background: var(--night);
+}
+.lg-search {
+  min-height: 44px;
+  font-size: 16px;
+}
+.lg-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lg-sec {
+  display: grid;
+  gap: 10px;
+}
+.lg-sec__h {
+  margin: 10px 0 0;
+  font: 800 26px/1.1 var(--font-num);
+  letter-spacing: 0.01em;
+  color: var(--chalk);
+}
+.lg-entry {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+  scroll-margin-top: calc(var(--header) + 120px);
+}
+.lg-entry.is-on {
+  border-color: var(--lime);
+  box-shadow: inset 0 0 0 1px var(--lime);
+}
+.lg-entry__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.lg-entry__term {
+  margin: 0;
+  font: 700 19px/1.25 var(--font-ui);
+  color: var(--chalk);
+}
+.lg-level {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--chalk-3);
+  box-shadow: inset 0 0 0 1px var(--seat-2);
+}
+.lg-level.is-advanced {
+  color: var(--lime);
+  box-shadow: inset 0 0 0 1px rgba(184, 255, 31, 0.45);
+}
+.lg-entry__def {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--chalk);
+}
+.lg-entry__parts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.lg-entry__parts div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+}
+.lg-entry__parts dt {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--chalk-3);
+}
+.lg-entry__parts div:nth-child(2) dt {
+  color: var(--lime);
+}
+.lg-entry__parts div:nth-child(3) dt {
+  color: #ffb3b3;
+}
+.lg-entry__parts dd {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--chalk-2);
+  font-variant-numeric: tabular-nums;
+}
+.lg-entry__lock {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: var(--lime-dim);
+  font-size: var(--t-s);
+  color: var(--chalk-2);
+}
+.lg-entry__lock a,
+.lg-entry__see a {
+  color: var(--link);
+}
+.lg-entry__see {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--chalk-3);
+}
+@media (min-width: 760px) {
+  .lg-entry__parts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* the "?" next to a term */
+.helptip {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+.helptip__btn {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--seat-2);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--chalk-3);
+  font: 700 10px/1 var(--font-ui);
+  cursor: pointer;
+}
+.helptip__btn:hover,
+.helptip__btn[aria-expanded='true'] {
+  border-color: var(--lime);
+  color: var(--lime);
+}
+.helptip__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.helptip__pop {
+  position: absolute;
+  z-index: 70;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  display: grid;
+  gap: 4px;
+  width: min(280px, 80vw);
+  padding: 10px 12px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  font-size: var(--t-s);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--chalk-2);
+  text-align: left;
+  white-space: normal;
+}
+.helptip__pop b {
+  color: var(--chalk);
+}
+.helptip__pop a {
+  color: var(--link);
+  font-size: var(--t-xs);
+}
+.lg-search,
+.bd-ask__form input {
+  width: 100%;
+  padding: 0 14px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-m);
+  background: var(--stand);
+  color: var(--chalk);
+  font: 400 16px var(--font-ui);
+}
+.lg-search::placeholder,
+.bd-ask__form input::placeholder {
+  color: var(--chalk-3);
+}
+.lg-search:focus,
+.bd-ask__form input:focus {
+  outline: none;
+  border-color: var(--lime);
+  box-shadow: 0 0 0 1px var(--lime);
+}
