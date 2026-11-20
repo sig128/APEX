@@ -245,14 +245,16 @@ export function createViews(engine) {
     const minHit = Math.max(0, Math.min(1, Number(q.minHit) || 0))
     const game = q.game ? new Set(String(q.game).split(',').filter((x) => /^\d{6,12}$/.test(x)).slice(0, 16)) : null
     const name = q.q ? nameKey(q.q) : ''
-    // every filter but the bet type and the side, so each bet type and side can say how many
-    // props it would show with the rest of the filters as they are
-    const base = rows.filter((r) => {
+    // one player, picked from a game's roster (an id, not a name: two players can share one)
+    const player = /^\d{1,12}$/.test(String(q.player || '')) ? String(q.player) : null
+    // every filter but the game and the player: what the game chips and the roster count against
+    const keep = (r, { useGame = true, usePlayer = true } = {}) => {
       if (r.kind !== kind) return false
       if (pos && !pos.has(fam.posGroup(r.pos))) return false
-      if (game && game.size && !game.has(r.gameId)) return false
-      if (name && !nameKey(r.name).includes(name)) return false
-      if (!name && q.all !== '1' && (r.role ?? 1) < 0.45) return false
+      if (useGame && game && game.size && !game.has(r.gameId)) return false
+      if (usePlayer && player && String(r.playerId) !== player) return false
+      if (usePlayer && name && !nameKey(r.name).includes(name)) return false
+      if (!(usePlayer && (name || player)) && q.all !== '1' && (r.role ?? 1) < 0.45) return false
       if (minHit > 0) {
         const w = r.windows.find((x) => x.key === win)
         if (!w || !w.n || w.hits / w.n < minHit) return false
@@ -260,7 +262,10 @@ export function createViews(engine) {
       const st = wh.games.get(r.gameId)?.status.state
       if (q.live !== '1' && st && st !== 'pre') return false
       return true
-    })
+    }
+    // every filter but the bet type and the side, so each bet type and side can say how many
+    // props it would show with the rest of the filters as they are
+    const base = rows.filter((r) => keep(r))
     const marketOk = (r) => kind !== 'player' || !wantMarkets || wantMarkets.has(r.market)
     const perMarket = {}
     const perSide = { o: 0, u: 0 }
@@ -273,6 +278,22 @@ export function createViews(engine) {
       if (marketOk(r) && (r.side === 'o' || r.side === 'u')) perSide[r.side]++
     }
     let list = base.filter((r) => marketOk(r) && (!side || r.side === side))
+    // the game chips: how many props each game has under the other filters
+    const perGame = {}
+    for (const r of rows) if (keep(r, { useGame: false, usePlayer: false }) && marketOk(r) && (!side || r.side === side)) perGame[r.gameId] = (perGame[r.gameId] || 0) + 1
+    // with one or two games picked: everyone in them with a prop under the other filters, by team
+    let roster = null
+    if (game && game.size && game.size <= 2) {
+      const by = new Map()
+      for (const r of rows) {
+        if (!r.playerId || !keep(r, { usePlayer: false }) || !marketOk(r) || (side && r.side !== side)) continue
+        const cur = by.get(r.playerId) || { id: String(r.playerId), name: r.name, short: r.short, pos: r.pos || null, teamId: r.teamId, teamAbbr: r.teamAbbr, headshot: r.headshot || null, gameId: r.gameId, count: 0, best: 0 }
+        cur.count++
+        cur.best = Math.max(cur.best, r.rank ?? r.score ?? 0)
+        by.set(r.playerId, cur)
+      }
+      roster = [...by.values()].sort((a, b) => String(a.teamAbbr).localeCompare(String(b.teamAbbr)) || b.best - a.best).slice(0, 80).map(({ best, ...p }) => p)
+    }
     // Sort by one number, highest first (start time: earliest first); dir flips it. Props
     // without that number (no price, no sample) stay at the bottom either way, and ties go to
     // the better PropPickz read.
@@ -319,7 +340,12 @@ export function createViews(engine) {
         marketTotals: { core, all: Object.values(perMarket).reduce((s, n) => s + n, 0) },
         sides: perSide,
         groups: fam.GROUPS.map((g) => ({ key: g, label: fam.GROUP_NAMES?.[g] || g })),
-        games: [...wh.games.values()].filter((g) => g.status.state === 'pre').map((g) => ({ id: g.id, label: g.shortName, date: g.date })),
+        games: [...wh.games.values()]
+          .filter((g) => g.status.state === 'pre')
+          .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
+          .map((g) => ({ id: g.id, label: g.shortName, date: g.date, count: perGame[g.id] || 0, home: g.home && { abbr: g.home.abbr, logo: g.home.logo || null }, away: g.away && { abbr: g.away.abbr, logo: g.away.logo || null } })),
+        // the players in the picked game(s), for picking one (null with no game picked)
+        players: roster,
       },
     }
   }

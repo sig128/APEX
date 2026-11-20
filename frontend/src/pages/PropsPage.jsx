@@ -6,6 +6,8 @@ import { useTitle, useMedia } from '../lib/hooks.js'
 import { PropRow } from '../ui/PropRow.jsx'
 import { Pills, Skeleton, ErrorBox, Empty, Warming } from '../ui/Bits.jsx'
 import { useSport, apiOf, sportInfo } from '../lib/sport.js'
+import { Headshot, TeamLogo } from '../ui/Img.jsx'
+import { kickoff } from '../lib/format.js'
 
 const WINDOWS = [
   { key: 'L5', label: 'Last 5' },
@@ -62,6 +64,103 @@ const SIDES = [
 ]
 const PAGE = 40
 
+/** The slate's games as matchups to tap: both teams, kickoff, and how many props each has. */
+function GamePicker({ games, value, mine, onPick }) {
+  const mineKey = mine.join(',')
+  return (
+    <div className="gpick" role="group" aria-labelledby="gpick-k">
+      <span className="filters__k" id="gpick-k">
+        Game
+      </span>
+      <div className="gpick__row">
+        <button type="button" className={`gchip gchip--plain${!value ? ' is-on' : ''}`} aria-pressed={!value} onClick={() => onPick('')}>
+          All games
+        </button>
+        {mine.length > 0 && (
+          <button type="button" className={`gchip gchip--plain${value === mineKey ? ' is-on' : ''}`} aria-pressed={value === mineKey} onClick={() => onPick(value === mineKey ? '' : mineKey)}>
+            My games <span className="gchip__n num">{mine.length}</span>
+          </button>
+        )}
+        {games.map((g) => {
+          const on = value === g.id
+          return (
+            <button key={g.id} type="button" className={`gchip${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => onPick(on ? '' : g.id)} aria-label={`${g.away?.abbr} at ${g.home?.abbr}, ${kickoff(g.date)}, ${g.count} props`}>
+              <span className="gchip__teams" aria-hidden="true">
+                <TeamLogo src={g.away?.logo} abbr={g.away?.abbr} size={22} className="gchip__logo" />
+                <b>{g.away?.abbr}</b>
+                <span className="gchip__at">@</span>
+                <TeamLogo src={g.home?.logo} abbr={g.home?.abbr} size={22} className="gchip__logo" />
+                <b>{g.home?.abbr}</b>
+              </span>
+              <span className="gchip__meta" aria-hidden="true">
+                <span>{kickoff(g.date)}</span>
+                <span className="gchip__n num">{g.count}</span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Everyone in the picked game with a prop, by team: tap one to see only theirs. */
+function RosterPicker({ players, value, games, onPick }) {
+  const teams = []
+  for (const p of players) {
+    let t = teams.find((x) => x.abbr === p.teamAbbr)
+    if (!t) teams.push((t = { abbr: p.teamAbbr, players: [] }))
+    t.players.push(p)
+  }
+  const logoOf = (abbr) => games.flatMap((g) => [g.home, g.away]).find((x) => x?.abbr === abbr)?.logo || null
+  const title = games.length === 1 ? `Players in ${games[0].away?.abbr} @ ${games[0].home?.abbr}` : 'Players in these games'
+  return (
+    <div className="roster" role="group" aria-labelledby="roster-k">
+      <div className="roster__head">
+        <span className="roster__title" id="roster-k">
+          {title}
+        </span>
+        {value ? (
+          <button type="button" className="link roster__all" onClick={() => onPick('')}>
+            Show every player
+          </button>
+        ) : (
+          <span className="roster__hint">Tap a player to see only their props</span>
+        )}
+      </div>
+      {players.length ? (
+        <div className="roster__teams">
+          {teams.map((t) => (
+            <div key={t.abbr} className="roster__team">
+              <p className="roster__abbr">
+                <TeamLogo src={logoOf(t.abbr)} abbr={t.abbr} size={20} />
+                {t.abbr}
+              </p>
+              <div className="roster__list">
+                {t.players.map((p) => {
+                  const on = value === p.id
+                  return (
+                    <button key={p.id} type="button" className={`pchip${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => onPick(on ? '' : p.id)}>
+                      <Headshot src={p.headshot} name={p.name} size={30} className="pchip__img" />
+                      <span className="pchip__name">{p.short || p.name}</span>
+                      {p.pos && <span className="pchip__pos">{p.pos}</span>}
+                      <span className="pchip__n num" aria-label={`${p.count} props`}>
+                        {p.count}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="roster__none">No player props in this game under these filters.</p>
+      )}
+    </div>
+  )
+}
+
 /** Every prop on the slate, filtered and sorted however you like. Filters live in the URL so a view can be shared. */
 export function PropsPage() {
   const sport = useSport()
@@ -100,7 +199,7 @@ export function PropsPage() {
   const dir = get('dir') || naturalDir(sort)
   const page = Math.max(1, Math.min(40, Number(get('page', '1')) || 1))
   const params = new URLSearchParams({ market, window: win, sort, limit: String(PAGE) })
-  for (const k of ['side', 'minHit', 'game', 'q', 'dir']) if (get(k)) params.set(k, get(k))
+  for (const k of ['side', 'minHit', 'game', 'q', 'dir', 'player']) if (get(k)) params.set(k, get(k))
   if (pos.length) params.set('pos', pos.join(','))
   const base = params.toString()
   // a fresh server loads game logs for a few seconds; until then the board polls itself
@@ -164,7 +263,10 @@ export function PropsPage() {
   // "My games": the starred games still on the slate
   const watch = useWatch()
   const mine = (facets?.games || []).filter((g) => watch.includes(g.id)).map((g) => g.id)
-  const folded = ['minHit', 'game', 'q', 'pos'].filter((k) => get(k)).length + (win !== 'L10' ? 1 : 0)
+  const folded = ['minHit', 'game', 'q', 'pos', 'player'].filter((k) => get(k)).length + (win !== 'L10' ? 1 : 0)
+  // a new game means a new roster: the picked player goes with the old one
+  const pickGame = (v) => setMany({ game: v, player: '' })
+  const roster = facets?.players || null
   const active = folded + ['side', 'dir'].filter((k) => get(k)).length + (market !== 'core' ? 1 : 0) + (sort !== 'score' ? 1 : 0)
 
   return (
@@ -224,27 +326,19 @@ export function PropsPage() {
         )}
         {(!phone || showFilters) && (
           <div className="filters__more">
-            <label className="field field--inline">
-              <span>Game</span>
-              <select value={mine.length && get('game') === mine.join(',') ? '__mine' : get('game')} onChange={(e) => set('game', e.target.value === '__mine' ? mine.join(',') : e.target.value)}>
-                <option value="">All games</option>
-                {mine.length > 0 && <option value="__mine">My games ({mine.length})</option>}
-                {(facets?.games || []).map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field field--inline field--grow">
-              <span>Player</span>
-              <input type="search" placeholder="Any player" value={get('q')} onChange={(e) => set('q', e.target.value)} />
-            </label>
-            <div className="filters__row">
+            <GamePicker games={facets?.games || []} value={get('game')} mine={mine} onPick={pickGame} />
+            {roster ? (
+              <RosterPicker players={roster} value={get('player')} games={(facets?.games || []).filter((g) => get('game').split(',').includes(g.id))} onPick={(v) => setMany({ player: v, q: '' })} />
+            ) : (
+              <label className="field field--inline field--grow board-player">
+                <span>Player</span>
+                <input type="search" placeholder="Search any player, or pick a game to see its players" value={get('q')} onChange={(e) => set('q', e.target.value)} />
+              </label>
+            )}
+            <div className="filters__row board-narrow">
               <span className="filters__k">Position</span>
               <Pills label="Position" options={posPills} value={pos} multiple onChange={(_, k) => togglePos(k)} />
-            </div>
-            <div className="filters__row">
+              <span className="board-narrow__gap" aria-hidden="true" />
               <label className="field field--inline">
                 <span>Hit rate over</span>
                 <select value={win} onChange={(e) => set('window', e.target.value)}>

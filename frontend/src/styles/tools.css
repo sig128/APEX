@@ -2351,12 +2351,11 @@ a.tick__link:focus-visible {
   outline: none;
   box-shadow: var(--focus);
 }
-.ticker__note {
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: 0 var(--gutter) 8px;
-  font-size: var(--t-xs);
-  color: var(--chalk-3);
+.ticker__lockicon {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  fill: var(--lime);
 }
 @media (max-width: 640px) {
   .ticker__count {
@@ -2457,4 +2456,223 @@ a.tick__link:focus-visible {
 }
 .tickmark__ago {
   color: var(--chalk-3);
+}
+
+/* ---- Props page: pick a game, then a player ---------------------------------------------------
+   Games are matchups you can read at a glance (both logos, kickoff, how many props); a picked
+   game opens its roster by team, faces first. */
+.filters--board {
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--r-l);
+}
+.filters--board .filters__k {
+  min-width: 64px;
+}
+.filters__more {
+  gap: 16px;
+  padding-top: 16px;
+}
+@media (min-width: 960px) {
+  .filters--board .filters__more {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.gpick {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.gpick__row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 4px;
+  margin: -2px -2px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--seat-2) transparent;
+}
+.gchip {
+  flex: none;
+  display: grid;
+  gap: 5px;
+  min-width: 142px;
+  padding: 9px 12px 8px;
+  border: 1px solid var(--seat-2);
+  border-radius: 12px;
+  background: var(--stand-2);
+  color: var(--chalk-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gchip:hover {
+  border-color: var(--chalk-3);
+  color: var(--chalk);
+}
+.gchip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.gchip.is-on {
+  border-color: var(--lime);
+  box-shadow: inset 0 0 0 1px var(--lime);
+  background: linear-gradient(180deg, rgba(184, 255, 31, 0.1), rgba(184, 255, 31, 0.02)), var(--stand-2);
+  color: var(--chalk);
+}
+.gchip--plain {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--chalk);
+}
+.gchip__teams {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--chalk);
+  font-size: 15px;
+  white-space: nowrap;
+}
+.gchip__logo {
+  flex: none;
+}
+.gchip__at {
+  margin: 0 2px;
+  color: var(--chalk-3);
+  font-size: 13px;
+}
+.gchip__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--chalk-3);
+  white-space: nowrap;
+}
+.gchip__n {
+  font: 700 15px/1 var(--font-num);
+  letter-spacing: 0.02em;
+  color: var(--chalk-2);
+}
+.gchip.is-on .gchip__n {
+  color: var(--lime);
+}
+
+.board-player input {
+  min-height: 40px;
+}
+.roster {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--seat);
+  border-radius: 14px;
+  background: var(--stand-2);
+}
+.roster__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.roster__title {
+  font-weight: 800;
+  font-size: var(--t-m);
+  color: var(--chalk);
+}
+.roster__hint {
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+.roster__all {
+  font-size: var(--t-s);
+}
+.roster__teams {
+  display: grid;
+  gap: 14px;
+}
+@media (min-width: 900px) {
+  .roster__teams {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .roster__team + .roster__team {
+    padding-left: 18px;
+    border-left: 1px solid var(--seat);
+  }
+}
+.roster__abbr {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  font: 800 18px/1 var(--font-num);
+  letter-spacing: 0.02em;
+  color: var(--chalk);
+}
+.roster__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 11px 3px 3px;
+  border: 1px solid var(--seat-2);
+  border-radius: 999px;
+  background: var(--stand);
+  color: var(--chalk);
+  font: 600 14px/1.1 var(--font-ui);
+  cursor: pointer;
+}
+.pchip:hover {
+  border-color: var(--chalk-3);
+}
+.pchip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.pchip.is-on {
+  border-color: var(--lime);
+  background: var(--lime-dim);
+  box-shadow: inset 0 0 0 1px var(--lime);
+}
+.pchip__img {
+  flex: none;
+  border-radius: 50%;
+}
+.pchip__pos {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--chalk-3);
+}
+.pchip__n {
+  font: 700 14px/1 var(--font-num);
+  color: var(--chalk-3);
+}
+.pchip.is-on .pchip__n {
+  color: var(--lime);
+}
+.roster__none {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--chalk-3);
+}
+.board-narrow__gap {
+  width: 1px;
+  height: 22px;
+  margin: 0 6px;
+  background: var(--seat);
+}
+@media (max-width: 759px) {
+  .board-narrow__gap {
+    display: none;
+  }
 }

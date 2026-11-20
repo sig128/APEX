@@ -284,7 +284,13 @@ export function TickerBar({ sport }) {
     <section className={`ticker${locked ? ' ticker--locked' : ''}`} aria-labelledby="ticker-h">
       <div className="ticker__in">
         <div className="ticker__label">
-          <span className={`ticker__dot${locked ? '' : ' is-live'}`} aria-hidden="true" />
+          {locked ? (
+            <svg className="ticker__lockicon" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2h.5A1.5 1.5 0 0 1 13.5 8.5v5A1.5 1.5 0 0 1 12 15H4a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 4 7Zm1.5 0h4V5a2 2 0 1 0-4 0Z" />
+            </svg>
+          ) : (
+            <span className="ticker__dot is-live" aria-hidden="true" />
+          )}
           <h2 id="ticker-h" className="ticker__title">
             Live moves
           </h2>
@@ -315,19 +321,14 @@ export function TickerBar({ sport }) {
           )}
         </div>
         {locked ? (
-          <Link to="/pricing" className="ticker__unlock">
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2h.5A1.5 1.5 0 0 1 13.5 8.5v5A1.5 1.5 0 0 1 12 15H4a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 4 7Zm1.5 0h4V5a2 2 0 1 0-4 0Z" />
-            </svg>
-            <span>
-              Live with <b>Pro</b>
-            </span>
+          <Link to="/pricing" className="ticker__unlock" title="Every line, price and injury move on PropPickz picks, the moment it happens, with alerts. Part of Pro.">
+            Unlock live moves
+            <span className="sr-only">: every line, price and injury move on PropPickz picks as it happens, with alerts. Part of Pro.</span>
           </Link>
         ) : (
           <Alerts prefs={prefs} setPrefs={setPrefs} />
         )}
       </div>
-      {locked && <p className="ticker__note">Shown 30+ minutes late and blurred. Pro members see every move the moment it happens, with alerts.</p>}
       {!locked && <Toasts list={toasts} dismiss={(id) => setToasts((cur) => cur.filter((x) => x.id !== id))} />}
     </section>
   )
