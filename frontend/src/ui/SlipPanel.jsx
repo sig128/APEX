@@ -307,6 +307,9 @@ export function SlipPanel({ open, onClose }) {
                 Clear slip
               </button>
             </div>
+            <p className="slip__rg">
+              Only bet what you can afford to lose. <Link to="/me#limits" onClick={onClose}>Limits and breaks</Link>
+            </p>
           </>
         )}
       </aside>

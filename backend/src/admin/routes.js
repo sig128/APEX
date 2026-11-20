@@ -7,7 +7,7 @@ import { log, errText } from '../lib/log.js'
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 
-export function adminRoutes({ lock, metrics, sports, billing = null, picks = null }) {
+export function adminRoutes({ lock, metrics, sports, billing = null, picks = null, members = null }) {
   const r = express.Router()
   const wrap = (fn) => async (req, res) => {
     res.set('Cache-Control', 'no-store')
@@ -52,6 +52,16 @@ export function adminRoutes({ lock, metrics, sports, billing = null, picks = nul
       const out = await metrics.day({ sport, day })
       if (!out) throw new ApiError(404, 'not_found', 'Nothing on file for that day.')
       return out
+    }),
+  )
+  // the Feedback tab: what people sent, newest first, and how far the onboarding tour gets them
+  r.get(
+    '/feedback',
+    wrap(async (req) => {
+      await admin(req)
+      if (!members) return { items: [], tour: [] }
+      const [items, tour] = await Promise.all([members.feedbackList({ limit: Number(req.query.limit) || 100 }), members.tourStats(30)])
+      return { items, tour }
     }),
   )
   // the Tools tab: passes by hand and hiding a picks page, under the same lock

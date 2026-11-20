@@ -9,6 +9,7 @@ import { useApi } from '../lib/useApi.js'
 import { Search } from './Search.jsx'
 import { SlipPanel } from './SlipPanel.jsx'
 import { backFromBook, clearAway } from './Books.jsx'
+import { ConsentGate } from './ConsentGate.jsx'
 import { getSlip } from '../lib/slip.js'
 import { PickNudge } from './PickNudge.jsx'
 import { playIntro } from '../intro/intro.js'
@@ -129,6 +130,7 @@ export function Shell({ children }) {
       </main>
       <Footer />
       <TabBar slipCount={slip.legs.length} onSlip={() => setSlipOpen(true)} />
+      <ConsentGate onAccepted={() => window.dispatchEvent(new Event('apex:consented'))} />
       <SlipPanel
         open={slipOpen}
         onClose={() => {
@@ -282,13 +284,18 @@ function Footer() {
     <footer className="footer">
       <div className="footer__inner">
         <Logo height={24} className="logo--footer" />
-        <p className="footer__note">Stats and probabilities for research. PropPickz doesn't take bets. Bet within your means; if gambling stops being fun, call <a href="tel:18006973738">1-800-MY-RESET</a>.</p>
+        <p className="footer__note">
+          Stats and probabilities for research. PropPickz doesn't take bets. Bet within your means; if gambling stops being fun, call <a href="tel:18006973738">1-800-MY-RESET</a> (US) or ConnexOntario at{' '}
+          <a href="tel:18665312600">1-866-531-2600</a> (Ontario).
+        </p>
         <nav className="footer__links" aria-label="More">
           <Link to="/pricing">Plans</Link>
           <Link to="/contests">Weekly contest</Link>
           <Link to={sp(sport, '/dvp')}>Defense vs position</Link>
           <Link to="/apex">Game analyzer</Link>
           <Link to="/calibration">Calibration</Link>
+          <Link to="/terms">Terms</Link>
+          <Link to="/privacy">Privacy</Link>
           {isAdmin && <Link to="/admin">Admin</Link>}
           <button type="button" className="linkish" onClick={() => playIntro({ force: true, chipText: sportInfo(sport).name })}>
             Replay intro

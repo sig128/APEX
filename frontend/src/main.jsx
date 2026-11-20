@@ -2,7 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { App } from './App.jsx'
-import { maybePlayIntro } from './intro/intro.js'
+import { maybePlayIntro, playIntro, introWanted } from './intro/intro.js'
+import { hasConsented } from './lib/consent.js'
 import { api } from './lib/api.js'
 import { mutate } from './lib/useApi.js'
 import { sportFromPath, sportInfo, isSport, apiOf } from './lib/sport.js'
@@ -48,4 +49,9 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-if (landingHome) maybePlayIntro({ stats, chipText: sportInfo(league).name })
+if (landingHome && hasConsented()) maybePlayIntro({ stats, chipText: sportInfo(league).name })
+// a first visit: the consent screen comes first, then the intro welcomes them, then the tour
+window.addEventListener('apex:consented', () => {
+  const c = introWanted() ? playIntro({ stats, chipText: sportInfo(sportFromPath(window.location.pathname)).name, onDone: () => window.dispatchEvent(new Event('apex:welcomed')) }) : null
+  if (!c) window.dispatchEvent(new Event('apex:welcomed'))
+})

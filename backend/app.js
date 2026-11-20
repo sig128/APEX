@@ -17,6 +17,9 @@ import { billingConfig } from './src/billing/config.js'
 import { billingRoutes } from './src/billing/routes.js'
 import { createPicks } from './src/picks/service.js'
 import { picksRoutes } from './src/picks/routes.js'
+import { createMembers } from './src/members/service.js'
+import { membersRoutes } from './src/members/routes.js'
+import { createMailer } from './src/members/mail.js'
 import { createContests } from './src/contests/service.js'
 import { contestsRoutes } from './src/contests/routes.js'
 import { createAccess } from './src/security/access.js'
@@ -223,7 +226,10 @@ export function createApexApp({
   const contestApi = contestsRoutes({ contests, access, lock })
   app.use('/api/contests', contestApi.public)
   app.use('/api/admin/contests', contestApi.admin)
-  app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks }))
+  // the consent screen's record, the onboarding tour's counts, feedback to the team's inbox
+  const members = createMembers({ store: engineStore, mail: createMailer(), ...(now ? { now } : {}) })
+  app.use('/api/members', membersRoutes({ members, access }))
+  app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks, members }))
   // the public calibration page (src/calibration); the daily run also fingerprints the days it closed
   const calibration = createCalibration({ engines, store: engineStore, ...(now ? { now } : {}) })
   app.use('/api/calibration', calibrationRoutes({ calibration }))

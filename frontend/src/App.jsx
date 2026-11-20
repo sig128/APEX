@@ -35,6 +35,7 @@ const DvpPage = page(() => import('./pages/DvpPage.jsx'), 'DvpPage')
 const AnalyzerPage = page(() => import('./pages/AnalyzerPage.jsx'), 'AnalyzerPage')
 const AdminSportsPage = page(() => import('./pages/AdminSportsPage.jsx'), 'AdminSportsPage')
 const CalibrationPage = page(() => import('./pages/CalibrationPage.jsx'), 'CalibrationPage')
+const LegalPage = page(() => import('./pages/LegalPage.jsx'), 'LegalPage')
 
 /** League pages: an unknown league is a not-found, not an empty board. */
 function League({ children }) {
@@ -79,6 +80,8 @@ export function App() {
               <Route path="/tools/check" element={<CheckPage />} />
               <Route path="/calibration" element={<CalibrationPage />} />
               <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/terms" element={<LegalPage doc="terms" />} />
+              <Route path="/privacy" element={<LegalPage doc="privacy" />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/apex" element={<AnalyzerPage />} />

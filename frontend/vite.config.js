@@ -18,8 +18,12 @@ export default defineConfig(({ mode }) => {
   // Privy (wallet sign-in for payments) only goes into the build when it's configured and installed.
   const privy = Boolean((env.VITE_PRIVY_APP_ID || '').trim()) && installed('@privy-io/react-auth')
 
+  // the build's commit, recorded with each consent and feedback note (Vercel sets it at build)
+  const appVersion = (process.env.VERCEL_GIT_COMMIT_SHA || env.VITE_APP_VERSION || 'dev').slice(0, 7)
+
   return {
     root: __dirname,
+    define: { __APP_VERSION__: JSON.stringify(appVersion) },
     plugins: [
       react(),
       {
