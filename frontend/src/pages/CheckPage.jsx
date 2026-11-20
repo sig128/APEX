@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Helpful } from '../ui/Feedback.jsx'
 import { Link } from 'react-router-dom'
 import { streamNdjson } from '../lib/api.js'
 import { streamUrl } from '../lib/config.js'
@@ -317,6 +318,7 @@ export function CheckPage() {
                   </div>
                 )}
                 {run.usage && <p className="ask__usage">{run.usage.split('/')[0]} of {run.usage.split('/')[1]} model reads used today</p>}
+                {run.state === 'done' && <Helpful about={`check:${(run.legs || []).map((l) => l.id).join('~')}`} label="Was this check helpful?" />}
               </>
             )}
           </section>

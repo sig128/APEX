@@ -4598,3 +4598,68 @@ a.tick__link:focus-visible {
   color: #ffe2a8;
   font-size: var(--t-s);
 }
+
+/* ---- discover-later notes, feedback screenshots ----------------------------------------- */
+.discover {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border-radius: var(--r-m);
+  border: 1px solid rgba(168, 231, 255, 0.35);
+  background: linear-gradient(90deg, rgba(168, 231, 255, 0.08), transparent 70%), var(--stand);
+}
+.discover--home {
+  margin-top: 14px;
+}
+.discover__text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.discover__title {
+  margin: 0 0 4px;
+  font-weight: 700;
+  color: var(--link);
+}
+.discover__body {
+  max-width: 72ch;
+  font-size: var(--t-s);
+  line-height: 1.5;
+  color: var(--chalk-2);
+}
+.discover__ok {
+  flex: none;
+}
+.fb__shot-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  cursor: pointer;
+}
+.fb__shot-pick:focus-within .btn {
+  box-shadow: var(--focus);
+}
+.fb__shot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fb__thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--r-s);
+  border: 1px solid var(--seat-2);
+}
+.adm-fb__shot img {
+  display: block;
+  max-width: min(100%, 420px);
+  max-height: 420px;
+  margin: 6px 0;
+  border-radius: var(--r-s);
+  border: 1px solid var(--seat-2);
+}

@@ -64,6 +64,16 @@ export function adminRoutes({ lock, metrics, sports, billing = null, picks = nul
       return { items, tour, nudges }
     }),
   )
+  // a note's screenshot, opened from the inbox
+  r.get(
+    '/feedback/:id/shot',
+    wrap(async (req) => {
+      await admin(req)
+      const shot = members ? await members.feedbackShot(req.params.id) : null
+      if (!shot) throw new ApiError(404, 'not_found', 'No screenshot with that note.')
+      return { type: shot.type, data: shot.data }
+    }),
+  )
   // credits: add some to someone's balance, and what each credit action really costs to run
   r.post(
     '/credits/grant',

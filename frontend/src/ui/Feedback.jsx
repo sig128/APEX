@@ -12,6 +12,58 @@ const KINDS = [
   { key: 'general', label: 'Anything else' },
 ]
 
+/**
+ * A screenshot from the person's device, shrunk in the browser to a JPEG of about half a megabyte
+ * at most (1600 pixels wide, lower quality only if it's still too big). Resolves { type, data, url }.
+ */
+const MAX_SHOT = 690_000
+export function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type)) return reject(new Error('Pick an image (a screenshot from your photos or files).'))
+    if (file.size > 25 * 1024 * 1024) return reject(new Error('That image is too big to send.'))
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      try {
+        let w = img.naturalWidth
+        let h = img.naturalHeight
+        const scale = Math.min(1, 1600 / Math.max(w, 1))
+        w = Math.round(w * scale)
+        h = Math.round(h * scale)
+        const c = document.createElement('canvas')
+        let q = 0.8
+        let out = ''
+        for (let i = 0; i < 6; i++) {
+          c.width = w
+          c.height = h
+          const ctx = c.getContext('2d')
+          ctx.fillStyle = '#000'
+          ctx.fillRect(0, 0, w, h)
+          ctx.drawImage(img, 0, 0, w, h)
+          out = c.toDataURL('image/jpeg', q)
+          if (out.length <= MAX_SHOT + 30) break
+          // still too big: smaller and a little softer
+          w = Math.round(w * 0.8)
+          h = Math.round(h * 0.8)
+          q = Math.max(0.5, q - 0.08)
+        }
+        URL.revokeObjectURL(url)
+        const data = out.replace(/^data:[^,]+,/, '')
+        if (data.length > MAX_SHOT) return reject(new Error('That image is too big to send. Try cropping it.'))
+        resolve({ type: 'image/jpeg', data, url: out })
+      } catch {
+        URL.revokeObjectURL(url)
+        reject(new Error('That image couldn’t be read.'))
+      }
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('That image couldn’t be read.'))
+    }
+    img.src = url
+  })
+}
+
 /** Open the feedback form from anywhere: openFeedback({ kind: 'pick', about: 'nfl:123...' }). */
 export function openFeedback(detail = {}) {
   window.dispatchEvent(new CustomEvent('apex:feedback', { detail }))
@@ -29,6 +81,8 @@ export function FeedbackDialog() {
   const [kind, setKind] = useState('general')
   const [message, setMessage] = useState('')
   const [rating, setRating] = useState(null)
+  const [shot, setShot] = useState(null)
+  const [shotErr, setShotErr] = useState(null)
   const [include, setInclude] = useState(false)
   const [trap, setTrap] = useState('')
   const [state, setState] = useState({ busy: false, err: null, sent: false })
@@ -39,6 +93,8 @@ export function FeedbackDialog() {
       setAbout(e.detail?.about || null)
       setMessage('')
       setRating(null)
+      setShot(null)
+      setShotErr(null)
       setState({ busy: false, err: null, sent: false })
       setOpen(true)
     }
@@ -50,7 +106,7 @@ export function FeedbackDialog() {
     e.preventDefault()
     setState({ busy: true, err: null, sent: false })
     try {
-      await api('/api/members/feedback', { method: 'POST', body: { kind, message, rating, about, include: Boolean(user && include), page: loc.pathname + loc.search, app: APP_VERSION, website: trap } })
+      await api('/api/members/feedback', { method: 'POST', body: { kind, message, rating, about, include: Boolean(user && include), page: loc.pathname + loc.search, app: APP_VERSION, website: trap, shot: shot ? { type: shot.type, data: shot.data } : null } })
       setState({ busy: false, err: null, sent: true })
     } catch (err) {
       setState({ busy: false, err: err.message, sent: false })
@@ -90,6 +146,39 @@ export function FeedbackDialog() {
               </button>
             ))}
           </div>
+          <div className="fb__shot">
+            {shot ? (
+              <div className="fb__shot-row">
+                <img src={shot.url} alt="Your screenshot" className="fb__thumb" />
+                <span className="muted small">Screenshot added</span>
+                <button type="button" className="linkish" onClick={() => setShot(null)}>
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <label className="fb__shot-pick">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0]
+                    e.target.value = ''
+                    if (!f) return
+                    setShotErr(null)
+                    try {
+                      setShot(await shrinkImage(f))
+                    } catch (err) {
+                      setShotErr(err.message)
+                    }
+                  }}
+                />
+                <span className="btn btn--quiet btn--s">Add a screenshot</span>
+                <span className="muted small">Optional. It helps us see what you see.</span>
+              </label>
+            )}
+            {shotErr && <p className="form-err small">{shotErr}</p>}
+          </div>
           {/* only a script fills this in */}
           <label className="fb__trap" aria-hidden="true">
             Website
@@ -101,7 +190,7 @@ export function FeedbackDialog() {
               Include my account ({user.email}) so you can reply
             </label>
           )}
-          <p className="fb__fine">We keep your note, the page you’re on and your device type to look into it. See the <a href="/privacy">Privacy Policy</a>.</p>
+          <p className="fb__fine">We keep your note, any screenshot you add, the page you’re on and your device type to look into it. See the <a href="/privacy">Privacy Policy</a>.</p>
           {state.err && <p className="form-err">{state.err}</p>}
           <button type="submit" className="btn btn--lime" disabled={state.busy || message.trim().length < 3}>
             {state.busy ? 'Sending…' : 'Send'}

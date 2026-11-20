@@ -74,6 +74,7 @@ export function membersRoutes({ members, access }) {
       app: b.app,
       device: req.get('user-agent'),
       include: b.include === true,
+      shot: b.shot ?? null,
       user,
     })
   }))

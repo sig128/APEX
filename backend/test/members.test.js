@@ -11,7 +11,7 @@ import { fixtureHttp } from './helpers.js'
 import { clock, testAuth, USERS, bearer, withEnv, serve } from './support.js'
 
 const KEY = 'test-admin-key-0123456789abcdef'
-const restoreEnv = withEnv({ OPENAI_API_KEY: null, APEX_PAYWALL: null, APEX_AUTH: null, K_SERVICE: null, VERCEL: null, APEX_LOG_LEVEL: 'error', ADMIN_SPORTS_KEY: KEY, RESEND_API_KEY: null, SENDGRID_API_KEY: null, POSTMARK_SERVER_TOKEN: null, FEEDBACK_TO: null })
+const restoreEnv = withEnv({ OPENAI_API_KEY: null, APEX_PAYWALL: null, APEX_AUTH: null, K_SERVICE: null, VERCEL: null, APEX_LOG_LEVEL: 'error', ADMIN_SPORTS_KEY: KEY, RESEND_API_KEY: null, SENDGRID_API_KEY: null, POSTMARK_SERVER_TOKEN: null, FEEDBACK_TO: null, APEX_TRUST_PROXY: '1' })
 let api
 let made
 let store
@@ -111,6 +111,36 @@ test('feedback mail: the configured service gets it, a failure keeps the note', 
   const e = feedbackEmail({ id: 'x', at: 0, kind: 'pick', message: 'Line was stale', rating: null, about: 'nfl:1', page: '/nfl', app: 'v', device: 'd', user: null })
   assert.match(e.text, /Account: not shared/)
   assert.equal(clip('a\u0000b\u0007c ', 10), 'abc')
+})
+
+test('feedback screenshots: kept apart from the note, checked, and opened from the admin inbox', async () => {
+  const st = createStore({ driver: 'memory' })
+  const m = createMembers({ store: st, now: () => Date.parse('2026-11-20T20:00:00Z') })
+  // a 1x1 PNG
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+  const a = await m.feedback({ kind: 'bug', message: 'The slip overlaps the footer', shot: { type: 'image/png', data: `data:image/png;base64,${png}` } })
+  const note = await st.get('members', `fb-${a.id}`)
+  assert.equal(note.shot, true)
+  assert.equal(note.data, undefined, 'the picture isn’t in the note itself')
+  assert.deepEqual(await m.feedbackShot(a.id), { type: 'image/png', data: png, at: Date.parse('2026-11-20T20:00:00Z') })
+  assert.equal(await m.feedbackShot('../etc'), null)
+  await assert.rejects(m.feedback({ kind: 'bug', message: 'x y z', shot: { type: 'image/gif', data: png } }), (e) => e.code === 'bad_shot')
+  await assert.rejects(m.feedback({ kind: 'bug', message: 'x y z', shot: { type: 'image/png', data: 'not base64!' } }), (e) => e.code === 'bad_shot')
+  await assert.rejects(m.feedback({ kind: 'bug', message: 'x y z', shot: { type: 'image/jpeg', data: 'A'.repeat(700_004) } }), (e) => e.code === 'shot_too_big')
+  const tap = await m.feedback({ kind: 'pick', helpful: true, shot: { type: 'image/png', data: png } })
+  assert.equal((await st.get('members', `fb-${tap.id}`)).shot, false, 'a helpful tap carries no picture')
+  assert.match(feedbackEmail({ ...note }).text, /Screenshot: attached, on the admin page/)
+  // through the app: posted with a note, opened by the admin with the password
+  now.add(5 * 60_000)
+  // (from another address: the earlier test used up this one's notes for the minute)
+  const sent = await api.post('/api/members/feedback', { kind: 'bug', message: 'Here is what I see', shot: { type: 'image/png', data: png } }, { headers: { 'x-forwarded-for': '203.0.113.50' } })
+  assert.equal(sent.status, 200, JSON.stringify(sent.body))
+  const login = await api.post('/api/admin/login', { password: KEY })
+  const cookie = String(login.headers.get('set-cookie')).split(';')[0]
+  const pic = await api.get(`/api/admin/feedback/${sent.body.id}/shot`, { headers: { cookie } })
+  assert.equal(pic.status, 200)
+  assert.equal(pic.body.data, png)
+  assert.equal((await api.get(`/api/admin/feedback/${sent.body.id}/shot`)).status, 401)
 })
 
 test('Smart Check counts: what was shown and what happened next, per day', async () => {

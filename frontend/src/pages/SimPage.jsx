@@ -11,6 +11,7 @@ import { Headshot } from '../ui/Img.jsx'
 import { ErrorBox } from '../ui/Bits.jsx'
 import { useSport, apiOf, sp, legRef, legsSport } from '../lib/sport.js'
 import { useCredits, useCost, refreshCredits, CreditsLine } from '../ui/Credits.jsx'
+import { Helpful } from '../ui/Feedback.jsx'
 
 const RUNS = [10_000, 25_000, 50_000, 100_000]
 const BETS = [50, 100, 250, 500]
@@ -167,6 +168,7 @@ function Results({ out }) {
 
       {n > 1 && <LegsHit dist={p.legsHit} />}
       {out.luck && <Luck luck={out.luck} />}
+      <Helpful about={`sim:${n}:${out.iterations}:${out.legs.map((l) => l.id).join('~')}`} label="Was this simulation helpful?" />
     </div>
   )
 }

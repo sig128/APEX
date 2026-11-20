@@ -22,6 +22,18 @@ export const clip = (s, n) =>
     .trim()
     .slice(0, n)
 const okDevice = (d) => typeof d === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(d)
+// a screenshot with a note: an image the browser already shrank, about half a megabyte at most
+export const SHOT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+export const MAX_SHOT_CHARS = 700_000
+/** A screenshot from the form, or null when there's none; throws when it's there but unusable. */
+export function cleanShot(shot) {
+  if (shot == null || shot === false) return null
+  const type = String(shot?.type || '').toLowerCase()
+  const data = String(shot?.data || '').replace(/^data:[^,]+,/, '').replace(/\s+/g, '')
+  if (!SHOT_TYPES.has(type) || !data || !/^[A-Za-z0-9+/]+={0,2}$/.test(data)) throw new ApiError(400, 'bad_shot', 'That screenshot couldn’t be read. Try a PNG or JPEG.')
+  if (data.length > MAX_SHOT_CHARS) throw new ApiError(413, 'shot_too_big', 'That screenshot is too big. Try a smaller one.')
+  return { type, data }
+}
 
 export function createMembers({ store, mail = null, now = () => Date.now() }) {
   if (!store) throw new Error('members: a store is required')
@@ -115,11 +127,12 @@ export function createMembers({ store, mail = null, now = () => Date.now() }) {
    * Feedback from the form or a "Was this helpful?" tap. Kept first, so nothing is lost when the
    * mail service is down; then emailed to the team if one is set up.
    */
-  async function feedback({ kind, message, rating = null, helpful = null, page, app, device, include = false, user = null, about = null }) {
+  async function feedback({ kind, message, rating = null, helpful = null, page, app, device, include = false, user = null, about = null, shot = null }) {
     const k = FEEDBACK_KINDS.includes(kind) ? kind : 'general'
     const text = clip(message, 4000)
     const isTap = helpful === true || helpful === false
     if (!isTap && text.length < 3) throw new ApiError(400, 'empty', 'Write a few words first.')
+    const img = isTap ? null : cleanShot(shot)
     const t = now()
     const item = {
       id: `${t.toString(36)}-${newId()}`,
@@ -134,8 +147,11 @@ export function createMembers({ store, mail = null, now = () => Date.now() }) {
       device: clip(device, 160) || null,
       // the account only when they ticked "include my account details"
       user: include && user ? { uid: user.uid, email: user.email || null, name: user.name || null } : null,
+      shot: Boolean(img),
       mailed: false,
     }
+    // the picture in its own document, so the inbox list stays small
+    if (img) await store.set(NS, `fb-shot-${item.id}`, { ...img, at: t })
     await store.set(NS, `fb-${item.id}`, item)
     await store.update(NS, 'fb-index', (cur) => {
       const ids = [item.id, ...((cur && cur.ids) || [])].slice(0, KEEP_FEEDBACK)
@@ -152,6 +168,12 @@ export function createMembers({ store, mail = null, now = () => Date.now() }) {
     return { ok: true, id: item.id }
   }
 
+  /** A note's screenshot (for the admin inbox). */
+  async function feedbackShot(id) {
+    if (!/^[a-z0-9]+-[A-Za-z0-9_-]{12}$/.test(String(id || ''))) return null
+    return store.get(NS, `fb-shot-${id}`)
+  }
+
   async function feedbackList({ limit = 100 } = {}) {
     const idx = await store.get(NS, 'fb-index')
     const ids = ((idx && idx.ids) || []).slice(0, Math.min(500, Math.max(1, limit)))
@@ -159,5 +181,5 @@ export function createMembers({ store, mail = null, now = () => Date.now() }) {
     return items.filter(Boolean)
   }
 
-  return { consent, consentOf, tour, tourStats, nudges, nudgeStats, feedback, feedbackList }
+  return { consent, consentOf, tour, tourStats, nudges, nudgeStats, feedback, feedbackList, feedbackShot }
 }

@@ -16,7 +16,7 @@ const DATA = [
   { what: 'Alerts', has: 'Each device’s push address and the alerts you chose, only if you turn them on', why: 'To send the alerts you asked for' },
   { what: 'Payments', has: 'The wallet address and transaction of each pass', why: 'To confirm your pass' },
   { what: 'Your consent', has: 'A random id for your browser, when you agreed, which version of the text, and the app version', why: 'To show you agreed' },
-  { what: 'Feedback', has: 'Your message, the page you sent it from and your device type', why: 'To answer it and fix things' },
+  { what: 'Feedback', has: 'Your message, any screenshot you add, the page you sent it from and your device type', why: 'To answer it and fix things' },
   { what: 'The tour', has: 'Daily counts of how many people start, finish or skip each step, with no names', why: 'To make getting started easier' },
   { what: 'Server logs', has: 'Addresses and request details, kept briefly', why: 'To block abuse and fix problems' },
 ]

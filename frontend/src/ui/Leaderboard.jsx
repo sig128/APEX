@@ -4,6 +4,7 @@ import { useApi } from '../lib/useApi.js'
 import { units as fmtUnits, odds as fmtOdds } from '../lib/format.js'
 import { Avatar, clvText } from './PickCard.jsx'
 import { Skeleton, Empty } from './Bits.jsx'
+import { Discover } from './Discover.jsx'
 
 const RANGES = [
   { key: '30d', label: '30 days' },
@@ -227,6 +228,9 @@ export function Leaderboard() {
           </select>
         </label>
       </div>
+      <Discover id="leaderboard" title="How the leaderboard works">
+        Every record here is built from picks posted before kickoff at a sportsbook’s price and graded from the box score, so nobody can edit a loss away. Rank by ROI, units, hit rate or CLV; the tier badges come from each person’s last 90 days. For a board of just your friends, start a group from the Groups tab.
+      </Discover>
       <div className="lb-filters">
         <div className="seg seg--inline" role="group" aria-label="Window">
           {RANGES.map((r) => (

@@ -10,6 +10,7 @@ import { useWatch } from '../lib/watch.js'
 import { GameStrip } from '../ui/GameStrip.jsx'
 import { WhatsNew } from '../ui/WhatsNew.jsx'
 import { TickerBar } from '../ui/Ticker.jsx'
+import { Discover } from '../ui/Discover.jsx'
 import { NewsFeed } from '../ui/NewsFeed.jsx'
 import { PropList } from '../ui/PropRow.jsx'
 import { HitChart } from '../ui/HitChart.jsx'
@@ -116,6 +117,9 @@ export function HomePage() {
       <GameStrip games={data?.games} />
       <TickerBar sport={sport} />
       <div className="container">
+        <Discover id="moves" title="Reading a line move" className="discover--home">
+          When a sportsbook moves a line, say from 24.5 to 25.5 points, money or news pushed it. If it moves toward the side you took after you bet, you got the better number, which is a good sign over many bets. Live moves follows PropPickz picks and their injury news as they happen.
+        </Discover>
         <header className="week-head">
           <h1 className="week-head__title num">{daily ? boardDay(data, phone ? 'short' : 'long') || 'Today' : data?.week ? `Week ${data.week}` : 'This week'}</h1>
           {data && (

@@ -366,6 +366,36 @@ function Standouts({ rows }) {
 const GROUP_LABEL = { m: 'Bet type', s: 'Side', pb: 'Probability', eb: 'Edge', ld: 'The read', mu: 'Matchup', pr: 'Price', bk: 'Book', sc: 'Score', h: 'Venue', cl: 'Line move' }
 const groupLabel = (g) => GROUP_LABEL[g] || g
 
+/** A note's screenshot, loaded when the admin asks for it. */
+function Shot({ id, onLocked }) {
+  const [s, set] = useState({ busy: false, url: null, err: null })
+  const open = async () => {
+    set({ busy: true, url: null, err: null })
+    try {
+      const out = await adminApi(`/api/admin/feedback/${encodeURIComponent(id)}/shot`)
+      set({ busy: false, url: `data:${out.type};base64,${out.data}`, err: null })
+    } catch (e) {
+      if (e.status === 401) onLocked?.()
+      set({ busy: false, url: null, err: e.message })
+    }
+  }
+  if (s.url) {
+    return (
+      <a href={s.url} target="_blank" rel="noreferrer" className="adm-fb__shot">
+        <img src={s.url} alt="The screenshot sent with this note" />
+      </a>
+    )
+  }
+  return (
+    <p>
+      <button type="button" className="btn btn--quiet btn--s" onClick={open} disabled={s.busy}>
+        {s.busy ? 'Loading' : 'See the screenshot'}
+      </button>
+      {s.err && <span className="form-err small"> {s.err}</span>}
+    </p>
+  )
+}
+
 const FAIR_KIND = { wallet: 'Same wallet', mirror: 'Both sides', deletes: 'Deletes picks', network: 'Same network' }
 
 /**
@@ -508,6 +538,7 @@ function FeedbackInbox({ onLocked }) {
                 {f.mailed && <span className="muted">emailed</span>}
               </div>
               {f.message && <p className="adm-fb__msg">{f.message}</p>}
+              {f.shot && <Shot id={f.id} onLocked={onLocked} />}
               <p className="muted adm-fb__who">
                 {f.user ? `${f.user.name || ''} ${f.user.email || ''}`.trim() : 'Account not shared'}
                 {f.about ? ` · about ${f.about}` : ''}

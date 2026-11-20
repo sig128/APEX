@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { resetDiscover } from './Discover.jsx'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import { sp, useSport } from '../lib/sport.js'
@@ -44,8 +45,9 @@ function findTarget(sel) {
   return null
 }
 
-/** Ask the tour to play again (the footer's "Take the tour"). */
+/** Ask the tour to play again (the footer's "Take the tour"), with the first-visit notes back too. */
 export function replayTour() {
+  resetDiscover()
   window.dispatchEvent(new Event('apex:tour'))
 }
 

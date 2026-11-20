@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Discover } from './Discover.jsx'
 import { api } from '../lib/api.js'
 import { odds, pct, impliedOf, decimalOf, bookName } from '../lib/format.js'
 import { Dialog } from './Dialog.jsx'
@@ -362,6 +363,9 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
   return (
     <Dialog open={open} onClose={onClose} title={title}>
       <div className="shopsheet">
+        <Discover id="books" title="Sending legs to a sportsbook">
+          The button opens the sportsbook’s own site or app, with your legs on its bet slip where it supports that. Its price can differ from the one here, so check it before you place the bet. PropPickz never takes bets or holds money.
+        </Discover>
         <p className={copied ? 'shopsheet__copied' : 'shopsheet__intro'}>
           {copied ? 'Copied. Pick a book: the button opens its app.' : `${n === 1 ? 'This bet' : `Your ${n}-leg parlay`} at every sportsbook, best price first.`}
         </p>

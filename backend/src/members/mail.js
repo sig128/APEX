@@ -23,6 +23,7 @@ export function feedbackEmail(item) {
     `Kind: ${KIND[item.kind] || item.kind}`,
     item.rating ? `Rating: ${item.rating}/5` : null,
     item.about ? `About: ${item.about}` : null,
+    item.shot ? 'Screenshot: attached, on the admin page (Feedback tab)' : null,
     item.page ? `Page: ${item.page}` : null,
     item.app ? `App version: ${item.app}` : null,
     item.device ? `Device: ${item.device}` : null,
