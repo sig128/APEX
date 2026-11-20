@@ -134,15 +134,15 @@ function markPlayed() {
   }
 }
 
-/** Whether the intro should play on this page load. */
-export function introWanted({ force = false } = {}) {
+/** Whether the intro should play on this page load. everyVisit: right after the consent screen, whenever it was last seen. */
+export function introWanted({ force = false, everyVisit = false } = {}) {
   if (typeof window === 'undefined' || typeof document === 'undefined') return false
   const q = params()
   if (q.has('nointro')) return false
   if (force || q.has('intro')) return true
   if (prefersReducedMotion() || saveData() || navigator.webdriver) return false
   if (document.visibilityState === 'hidden') return false
-  return Date.now() - lastPlayed() > INTRO_EVERY_HOURS * 3600e3
+  return everyVisit || Date.now() - lastPlayed() > INTRO_EVERY_HOURS * 3600e3
 }
 
 /** Play the intro if introWanted() says so. Returns the controller or null. */

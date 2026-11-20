@@ -57,11 +57,13 @@ export function ConsentGate({ onAccepted }) {
   }, [open])
 
   if (!open) return null
-  const accept = async () => {
+  const accept = () => {
     setBusy(true)
-    await giveConsent()
-    setOk(true)
+    // recorded in the background: entering never waits on the network
+    giveConsent()
+    // the intro (when it plays) covers the screen before this one goes, so the site never flashes between them
     onAccepted?.()
+    setOk(true)
   }
   return (
     <div className="consent" role="dialog" aria-modal="true" aria-labelledby="consent-h">

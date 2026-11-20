@@ -50,8 +50,9 @@ createRoot(document.getElementById('root')).render(
 )
 
 if (landingHome && hasConsented()) maybePlayIntro({ stats, chipText: sportInfo(league).name })
-// a first visit: the consent screen comes first, then the intro welcomes them, then the tour
+// every visit: the consent screen comes first (nothing behind it), then the intro, then the site
+// (and on a first visit, the tour)
 window.addEventListener('apex:consented', () => {
-  const c = introWanted() ? playIntro({ stats, chipText: sportInfo(sportFromPath(window.location.pathname)).name, onDone: () => window.dispatchEvent(new Event('apex:welcomed')) }) : null
+  const c = introWanted({ everyVisit: true }) ? playIntro({ stats, chipText: sportInfo(sportFromPath(window.location.pathname)).name, onDone: () => window.dispatchEvent(new Event('apex:welcomed')) }) : null
   if (!c) window.dispatchEvent(new Event('apex:welcomed'))
 })

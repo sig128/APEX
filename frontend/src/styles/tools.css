@@ -710,8 +710,8 @@ a.booktile:active {
   display: grid;
   place-items: center;
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
-  background: radial-gradient(700px 380px at 50% 0%, rgba(124, 252, 0, 0.12), transparent 70%), rgba(3, 6, 5, 0.88);
-  backdrop-filter: blur(6px);
+  /* solid: the site stays hidden until the box is ticked */
+  background: radial-gradient(700px 380px at 50% 0%, rgba(124, 252, 0, 0.12), transparent 70%), var(--night);
   overflow-y: auto;
 }
 .consent__card {
