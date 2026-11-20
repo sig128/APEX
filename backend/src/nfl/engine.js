@@ -10,6 +10,8 @@ import { oddsKeys } from '../providers/oddsapi/keys.js'
 import { createWarehouse } from './warehouse.js'
 import { createScheduler } from '../lib/scheduler.js'
 import { createPropLog } from './proplog.js'
+import { createTicker } from './ticker.js'
+import { createStore } from '../lib/store.js'
 import { createViews } from './services/views.js'
 import { log, errText } from '../lib/log.js'
 import { mapLimit } from '../lib/util.js'
@@ -328,6 +330,8 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     persist: { run: () => persist(), every: () => (mode === 'lazy' ? 20_000 : 60_000), runAtStart: false },
     // what the board backed before each game, and how it came out (the admin page's record)
     proplog: { run: () => engine.proplog?.maybeTick(), every: () => 5 * MIN, runAtStart: false },
+    // the movement ticker on posted picks (members watch it live; every 30 s while someone is)
+    ticker: { run: () => engine.ticker?.tick(), every: () => (hub?.hasSubscribers?.('ticker') ? 30_000 : 3 * MIN), runAtStart: false },
   }
 
   function runTask(name) {
@@ -386,6 +390,7 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
       logs: age('logs') > 20_000 && (staleLogs.size > 0 || wantedPlayers().some((p) => !wh.logMeta.get(p)) || age('logs') > 3 * HOUR),
       odds: Boolean(odds) && age('odds') > 30 * MIN,
       persist: wh.dirty.size > 0 && age('persist') > 15_000,
+      ticker: Boolean(engine.ticker?.due()),
     }
     for (const [name, isDue] of Object.entries(due)) {
       if (!isDue) continue
@@ -519,5 +524,6 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
   const views = createViews(engine)
   engine.views = views
   engine.proplog = createPropLog({ engine, store, now })
+  engine.ticker = createTicker({ engine, store: store || createStore({ driver: 'memory' }), now })
   return engine
 }

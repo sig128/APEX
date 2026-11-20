@@ -7,6 +7,7 @@ import { pct, odds, clock } from '../lib/format.js'
 import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
 import { useSport, sp } from '../lib/sport.js'
+import { TickMark } from './Ticker.jsx'
 
 /**
  * One prop in a list: who, what line, how often it has hit, the PropPickz probability and fair
@@ -71,6 +72,7 @@ export const PropRow = memo(function PropRow({ c, rank, showGame = false, win, l
         <span className="prop-row__read">
           <b className={`prop-row__prob num${strong ? ' is-strong' : ''}`}>{pct(c.prob)}</b>
           <span className="prop-row__fair">fair {odds(c.fair)}</span>
+          <TickMark c={c} />
         </span>
       )}
       <SlipToggle on={on} onClick={() => toggleLeg(c)} label={`${c.name} ${c.shortLabel || c.label}`} />

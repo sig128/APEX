@@ -21,6 +21,7 @@ let helloTimer = null
 let pollTimer = null
 let reopenTimer = null
 let ticket = null
+let ticketAt = 0 // when the server was last asked (a ticket lasts 10 minutes; refreshed after 8)
 const stateSubs = new Set()
 
 function setState(s) {
@@ -76,13 +77,23 @@ function deliver(topic, data, sport = esSport) {
   }
 }
 
+// A ticket when reads need sign-in, and for members, the one that opens members-only topics
+// (the movement ticker). The server checks the plan when it signs it.
 async function getTicket() {
   try {
     const t = await api(`/api/${activeSport()}/ticket`)
-    ticket = t?.required ? t.ticket : null
+    ticket = t?.ticket || null
   } catch {
     ticket = null
   }
+  ticketAt = Date.now()
+}
+
+/** Signed in or out, or the plan changed: the next connection asks for a fresh ticket. */
+export function resetLiveAuth() {
+  ticket = null
+  ticketAt = 0
+  if (es || state === 'polling') open(true)
 }
 
 function close() {
@@ -105,6 +116,7 @@ function startPolling() {
     if (topics.includes('scoreboard')) api(`${A}/week`).then((d) => deliver('scoreboard', d, sport), () => {})
     for (const t of topics.filter((x) => x.startsWith('game:'))) load(`${A}/games/${t.slice(5)}`, { force: true }).then((d) => d?.live && deliver(t, d.live, sport), () => {})
     if (topics.includes('tracker')) load(`${A}/live`, { force: true }).then((d) => d?.games?.forEach((g) => deliver(`game:${g.id}`, g, sport)), () => {})
+    if (topics.includes('ticker')) load(`${A}/ticker`, { force: true }).then((d) => d && !d.locked && deliver('ticker', d, sport), () => {})
   }
   tick()
   pollTimer = setInterval(tick, 12_000)
@@ -129,7 +141,7 @@ async function open(force = false) {
   openTopics = key
   esSport = sport
   if (typeof EventSource === 'undefined') return startPolling()
-  if (ticket === null && retry === 0) await getTicket()
+  if (!ticketAt || Date.now() - ticketAt > 8 * 60_000) await getTicket()
   setState('connecting')
   const url = streamUrl(`/api/${sport}/stream?topics=${encodeURIComponent(topics.join(','))}${ticket ? `&ticket=${encodeURIComponent(ticket)}` : ''}`)
   const src = new EventSource(url)
@@ -163,7 +175,7 @@ async function open(force = false) {
     setState('connecting')
     clearTimeout(reopenTimer)
     reopenTimer = setTimeout(() => {
-      ticket = null
+      ticketAt = 0
       open(true)
     }, Math.min(30_000, 1000 * 2 ** retry))
   }

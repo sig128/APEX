@@ -97,3 +97,27 @@ test('sign-in-to-read mode: private caching and stream tickets', async () => {
   }
   assert.equal((await api.get('/api/nfl/ticket')).body.required, false)
 })
+
+test('no paywall: the simulator, the live ticker and the leaderboard still take a real pass', async () => {
+  const legs = engine.views.home().tabs.apex.slice(0, 3).map((c) => c.id)
+  assert.equal((await api.post('/api/nfl/sim', { legs })).status, 401, 'sign in first')
+  const free = await api.post('/api/nfl/sim', { legs }, { headers: bearer('u_free') })
+  assert.equal(free.status, 402, 'no pass: no simulator, even with passes not on sale')
+  assert.match(free.body.error, /Pro or Elite pass/)
+  assert.equal(free.body.code, 'upgrade')
+  await made.billing.grant({ uid: 'admin', admin: true }, { uid: 'u_elite', plan: 'elite', days: 30 })
+  const sim = await api.post('/api/nfl/sim', { legs, iterations: 10000 }, { headers: bearer('u_elite') })
+  assert.equal(sim.status, 200, 'a pass the admin gave opens it')
+  assert.ok(sim.body.parlay.hitRate >= 0 && sim.body.parlay.hitRate <= 1)
+  // the ticker: a visitor and a free account get the delayed copy, a member the live one
+  assert.equal((await api.get('/api/nfl/ticker')).body.locked, true)
+  assert.equal((await api.get('/api/nfl/ticker', { headers: bearer('u_free') })).body.locked, true)
+  assert.equal((await api.get('/api/nfl/ticker', { headers: bearer('u_elite') })).body.live, true)
+  const t = (await api.get('/api/nfl/ticket', { headers: bearer('u_free') })).body
+  assert.equal(t.paid, false)
+  assert.equal((await api.get(`/api/nfl/stream?topics=ticker&ticket=${encodeURIComponent(t.ticket)}`)).status, 204)
+  // the leaderboard: the podium for everyone, the full list for members
+  assert.equal((await api.get('/api/picks/leaderboard')).body.locked, true)
+  assert.equal((await api.get('/api/picks/leaderboard', { headers: bearer('u_free') })).body.locked, true)
+  assert.equal((await api.get('/api/picks/leaderboard', { headers: bearer('u_elite') })).body.locked, false)
+})

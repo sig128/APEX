@@ -6,8 +6,21 @@ import { createLimiter } from '../security/rateLimit.js'
 import { log, errText } from '../lib/log.js'
 import { billingConfig } from '../billing/config.js'
 import { atLeast } from '../billing/service.js'
+import { authMode } from '../security/auth.js'
 
-export function picksRoutes({ picks, access }) {
+export function picksRoutes({ picks, access, billing = null }) {
+  /**
+   * The members' leaderboard is for members: the admin and anyone holding a real Pro or Elite
+   * pass (paid, given by the admin, or from a plan code), passes on sale or not. Local dev
+   * without sign-in sees it all.
+   */
+  async function isMember(req) {
+    const a = await access.resolve(req).catch(() => null)
+    if (authMode() === 'optional' && !billingConfig().paywall) return true
+    if (!a?.user) return false
+    if (billing?.aiAccess) return (await billing.aiAccess(a.user)).allowed
+    return Boolean(a.user.admin) || (billingConfig().paywall && atLeast(a.tier || 'free', 'pro'))
+  }
   const r = express.Router()
   const writeLimit = createLimiter({ burst: 10, perSec: 1 / 6 })
   const readLimit = createLimiter({ burst: 120, perSec: 4 })
@@ -61,8 +74,7 @@ export function picksRoutes({ picks, access }) {
     throttle(readLimit, clientIp(req))
     const q = req.query
     const out = await picks.leaderboard({ range: String(q.range || '30d'), sport: String(q.sport || 'all'), legs: String(q.legs || 'all'), sort: String(q.sort || 'roi') })
-    const a = await access.resolve(req).catch(() => null)
-    const paid = !billingConfig().paywall || atLeast(a?.tier || 'free', 'pro')
+    const paid = await isMember(req)
     res.set('Vary', 'Authorization')
     // anyone signed in gets their own answer; the anonymous one is the same for everybody
     res.set('Cache-Control', req.get('authorization') ? 'private, max-age=30' : 'public, max-age=30, s-maxage=60, stale-while-revalidate=180')

@@ -2027,3 +2027,434 @@ a.booktile:active {
   font-size: var(--t-s);
   color: var(--chalk-2);
 }
+
+/* ---- The live movement ticker ------------------------------------------------------------------
+   A slim bar under the scores: every PropPickz pick that moved since it was posted, newest first,
+   scrolling like a stadium board. Toward the pick is turf green, against it is flag red. Members
+   tap through to the pick; everyone else sees a late copy under frosted glass. */
+.ticker {
+  position: relative;
+  border-bottom: 1px solid var(--seat);
+  background: linear-gradient(180deg, var(--stand-2), var(--stand));
+}
+.ticker__in {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  height: 46px;
+}
+.ticker__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding-right: 12px;
+  border-right: 1px solid var(--seat);
+  height: 26px;
+}
+.ticker__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chalk-3);
+}
+.ticker__dot.is-live {
+  background: var(--lime);
+  box-shadow: 0 0 0 0 rgba(184, 255, 31, 0.6);
+  animation: tickerPulse 2s ease-out infinite;
+}
+@keyframes tickerPulse {
+  70% {
+    box-shadow: 0 0 0 7px rgba(184, 255, 31, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(184, 255, 31, 0);
+  }
+}
+.ticker__title {
+  margin: 0;
+  font: 800 19px/1 var(--font-num);
+  letter-spacing: 0.02em;
+  color: var(--chalk);
+  white-space: nowrap;
+}
+.ticker__count {
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+  white-space: nowrap;
+}
+.ticker__viewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  height: 100%;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+}
+.ticker__track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: max-content;
+}
+.ticker__track.is-moving {
+  animation: tickerRoll var(--dur, 60s) linear infinite;
+}
+.ticker:hover .ticker__track,
+.ticker:focus-within .ticker__track {
+  animation-play-state: paused;
+}
+@keyframes tickerRoll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker__track.is-moving {
+    animation: none;
+  }
+  .ticker__viewport {
+    overflow-x: auto;
+  }
+}
+.ticker__empty {
+  margin: 0;
+  line-height: 46px;
+  font-size: var(--t-s);
+  color: var(--chalk-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tick__link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 5px 10px;
+  border-radius: 999px;
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+  white-space: nowrap;
+  text-decoration: none;
+}
+a.tick__link:hover {
+  background: var(--stand-3);
+  color: var(--chalk);
+}
+a.tick__link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.tick + .tick::before {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  margin-right: 6px;
+  background: var(--seat-2);
+  vertical-align: middle;
+}
+.tick {
+  display: flex;
+  align-items: center;
+}
+.tick__arrow {
+  width: 10px;
+  height: 10px;
+  flex: none;
+}
+.tick__arrow.is-up {
+  fill: var(--turf);
+}
+.tick__arrow.is-down {
+  fill: var(--flag);
+}
+.tick__arrow.is-flat {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--chalk-3);
+}
+.tick__who {
+  color: var(--chalk);
+  font-weight: 700;
+}
+.tick__what {
+  color: var(--chalk-2);
+}
+.tick__news {
+  color: var(--chalk);
+  font-variant-numeric: tabular-nums;
+}
+.tick__tag {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.tick__tag--valid {
+  color: var(--chalk-3);
+  box-shadow: inset 0 0 0 1px var(--seat-2);
+}
+.tick__tag--moved {
+  color: var(--lime);
+  box-shadow: inset 0 0 0 1px rgba(184, 255, 31, 0.45);
+}
+.tick__tag--risk {
+  color: #ffd2d2;
+  background: var(--flag-dim);
+  box-shadow: inset 0 0 0 1px rgba(255, 90, 90, 0.5);
+}
+.tick__tag--void {
+  color: var(--chalk-3);
+  background: var(--stand-3);
+  text-decoration: line-through;
+}
+.tick__tag--live {
+  color: var(--lime-ink);
+  background: var(--lime);
+}
+.tick__tag--closed {
+  color: var(--chalk-2);
+  background: var(--stand-3);
+}
+.tick__ago {
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+.tick.is-void .tick__who,
+.tick.is-void .tick__what {
+  text-decoration: line-through;
+  text-decoration-color: var(--chalk-3);
+}
+
+/* members: alerts */
+.ticker__alerts {
+  position: relative;
+  flex: none;
+}
+.ticker__bell {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--seat);
+  border-radius: 50%;
+  background: var(--stand);
+  color: var(--chalk-2);
+  cursor: pointer;
+}
+.ticker__bell svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ticker__bell.is-on {
+  color: var(--lime);
+  border-color: rgba(184, 255, 31, 0.45);
+}
+.ticker__bell:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.ticker__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 60;
+  width: min(300px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+.ticker__menu-h {
+  margin: 0 0 6px;
+  font-size: var(--t-xs);
+  font-weight: 700;
+  color: var(--chalk-3);
+}
+.ticker__opt {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+  padding: 7px 4px;
+  border-radius: var(--r-s);
+  cursor: pointer;
+}
+.ticker__opt:hover {
+  background: var(--stand-3);
+}
+.ticker__opt input {
+  margin: 3px 0 0;
+  accent-color: var(--lime);
+}
+.ticker__opt b {
+  display: block;
+  font-size: var(--t-s);
+  color: var(--chalk);
+}
+.ticker__opt small {
+  display: block;
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+  line-height: 1.35;
+}
+.ticker__opt--check {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--seat);
+  border-radius: 0;
+}
+
+/* everyone else: a late copy under frosted glass */
+.ticker--locked .ticker__viewport {
+  filter: blur(3.5px) saturate(0.8);
+  opacity: 0.8;
+  pointer-events: none;
+  user-select: none;
+}
+.ticker__unlock {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  padding: 7px 14px 7px 12px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--lime-ink);
+  font-size: var(--t-s);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: var(--lime-glow);
+}
+.ticker__unlock svg {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+}
+.ticker__unlock:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.ticker__note {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter) 8px;
+  font-size: var(--t-xs);
+  color: var(--chalk-3);
+}
+@media (max-width: 640px) {
+  .ticker__count {
+    display: none;
+  }
+  .ticker__title {
+    font-size: 17px;
+  }
+  .ticker__in {
+    gap: 8px;
+  }
+}
+
+/* toasts for alerts */
+.tick-toasts {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 8px);
+  z-index: 150;
+  display: grid;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+}
+@media (max-width: 759px) {
+  .tick-toasts {
+    bottom: calc(var(--tabbar) + 12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+.tick-toast {
+  display: grid;
+  grid-template-columns: 12px 1fr 24px;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 10px 12px 14px;
+  border: 1px solid var(--seat-2);
+  border-left: 3px solid var(--lime);
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+}
+.tick-toast.is-risk,
+.tick-toast.is-void {
+  border-left-color: var(--flag);
+}
+.tick-toast .tick__arrow {
+  margin-top: 5px;
+}
+.tick-toast__body {
+  display: grid;
+  gap: 2px;
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+  text-decoration: none;
+}
+.tick-toast__body b {
+  color: var(--chalk);
+}
+.tick-toast__x {
+  border: 0;
+  background: none;
+  color: var(--chalk-3);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* on a board card: the pick's latest move */
+.tickmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--chalk-2);
+  white-space: nowrap;
+}
+.tickmark.is-up .num {
+  color: var(--turf);
+}
+.tickmark.is-down .num {
+  color: var(--flag);
+}
+.tickmark .tick__arrow {
+  width: 8px;
+  height: 8px;
+}
+.tickmark__tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffd2d2;
+  background: var(--flag-dim);
+}
+.tickmark.is-void .tickmark__tag {
+  color: var(--chalk-3);
+  background: var(--stand-3);
+}
+.tickmark__ago {
+  color: var(--chalk-3);
+}

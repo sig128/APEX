@@ -49,7 +49,7 @@ export function SimPage() {
         <h1 className="page-title">Parlay simulator</h1>
         <p className="page-sub">Your slip, played out {k(runs)} times on the PropPickz numbers: how often each leg comes in, how often the whole thing cashes, and how much of a winning run is just luck.</p>
       </header>
-      <Locked need="pro" title="The parlay simulator">
+      <Locked need="pro" real title="The parlay simulator">
         {!legs.length ? (
           <div className="empty">
             <p className="empty__title">Your slip is empty</p>

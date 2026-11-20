@@ -56,6 +56,8 @@ export function BillingProvider({ children }) {
       isAdmin: Boolean(me?.user?.admin),
       // the AI costs money per use: a real Pro or Elite pass (or the admin), passes on sale or not
       canAI: Boolean(config?.aiOpen) || Boolean(me?.ai?.allowed),
+      // members-only features (the simulator, the live ticker, the full leaderboard): a real pass, on sale or not
+      member: Boolean(config?.aiOpen) || Boolean(me?.ai?.allowed),
       usage: me?.usage || null,
       loading: loading || authLoading || !config,
       has: (need) => (RANK[ent.plan] ?? 0) >= (RANK[need] ?? 0),

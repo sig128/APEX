@@ -12,10 +12,16 @@ const COPY = {
  * paywall off (no passes on sale yet), everyone has every plan, so children always show, except
  * for `ai`: the AI costs money per use, so it takes a real Pro or Elite pass either way.
  */
-export function Locked({ need = 'pro', children, title, inline = false, ai = false }) {
+export function Locked({ need = 'pro', children, title, inline = false, ai = false, real = false }) {
   const { user } = useAuth()
-  const { has, ent, paywall, loading, config, canAI, me } = useBilling()
+  const { has, ent, paywall, loading, config, canAI, member, me } = useBilling()
   const loc = useLocation()
+  // members-only: a real Pro or Elite pass (or the admin), whether passes are on sale or not
+  if (real) {
+    if (member) return children
+    if (loading) return <div className={`locked${inline ? ' locked--inline' : ''}`} aria-busy="true" />
+    return <MemberLocked title={title} inline={inline} signedIn={Boolean(user)} paywall={paywall} lapsed={me?.ai?.status === 'expired'} price={config?.plans?.find((p) => p.id === 'pro')?.priceUsd} next={loc.pathname + loc.search} what={COPY[need]?.what} />
+  }
   if (ai) {
     if (canAI) return children
     if (loading) return <div className={`locked${inline ? ' locked--inline' : ''}`} aria-busy="true" />
@@ -43,6 +49,37 @@ export function Locked({ need = 'pro', children, title, inline = false, ai = fal
             {lapsed ? 'Renew' : `Get ${c.plan}`}
             {price ? ` for $${price}` : ''}
           </Link>
+        )}
+        <Link className="btn btn--quiet" to="/pricing">
+          Compare plans
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+/** Members-only features: a Pro or Elite pass, with or without passes on sale. */
+function MemberLocked({ title, inline, signedIn, paywall, lapsed, price, next }) {
+  return (
+    <div className={`locked${inline ? ' locked--inline' : ''}`}>
+      <p className="locked__title">{title || 'For members'}</p>
+      <p className="locked__body">
+        {lapsed ? 'Your pass has ended. ' : ''}
+        This is for members with a Pro or Elite pass.
+        {!paywall && ' Passes aren’t on sale yet.'}
+      </p>
+      <div className="locked__actions">
+        {!signedIn ? (
+          <Link className="btn btn--lime" to={`/login?next=${encodeURIComponent(next)}`}>
+            Sign in
+          </Link>
+        ) : (
+          paywall && (
+            <Link className="btn btn--lime" to="/account?buy=pro">
+              {lapsed ? 'Renew' : 'Get Pro'}
+              {price ? ` for $${price}` : ''}
+            </Link>
+          )
         )}
         <Link className="btn btn--quiet" to="/pricing">
           Compare plans

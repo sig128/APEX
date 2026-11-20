@@ -348,18 +348,20 @@ function StakeLine({ p, d, bankroll, frac, label, cap = RULES.stake.single }) {
  */
 function SameGame({ legs, prob }) {
   const sport = useSport()
+  const { member } = useBilling()
   const [sim, setSim] = useState(null)
   const key = legs.map(legRef).join(',')
   useEffect(() => {
     const ac = new AbortController()
     setSim(null)
     const leagues = new Set(legs.map((l) => l.sport || sport))
-    if (leagues.size !== 1) return () => ac.abort()
+    // the simulator is for members; everyone else gets the note and a way in
+    if (leagues.size !== 1 || !member) return () => ac.abort()
     api(`${apiOf([...leagues][0])}/sim`, { method: 'POST', body: { legs: legs.map(legRef), iterations: 10000 }, signal: ac.signal })
       .then((r) => setSim(r?.parlay || null))
       .catch(() => {})
     return () => ac.abort()
-  }, [key])
+  }, [key, member])
   const corr = sim && Number.isFinite(sim.hitRate) ? sim.hitRate : null
   return (
     <p className="slip__warn">
@@ -371,8 +373,13 @@ function SameGame({ legs, prob }) {
           {sim.correlated?.length ? `, ${sim.correlated.length} ${sim.correlated.length === 1 ? 'pair moves' : 'pairs move'} together` : ''}.{' '}
           <Link to="/tools/sim">Open in the simulator</Link>
         </>
-      ) : (
+      ) : member ? (
         ' Books price same-game parlays for that.'
+      ) : (
+        <>
+          {' '}
+          Pro members can play this slip out 10,000 times in the <Link to="/tools/sim">simulator</Link>.
+        </>
       )}
     </p>
   )

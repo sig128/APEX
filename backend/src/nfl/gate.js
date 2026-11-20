@@ -18,6 +18,8 @@ export const ROUTE_TIER = {
   intel: 'pro',
   lock: 'pro',
   shop: 'free',
+  // decides for itself: the live list for members, a delayed snapshot for everyone else
+  ticker: 'free',
 }
 
 /** Every live topic is free; kept as a hook in case a topic ever needs a plan. */
@@ -25,4 +27,7 @@ export function topicAllowed() {
   return true
 }
 
-export const TOPIC_RE = /^(scoreboard|tracker|status|game:\d{6,12}|props:\d{6,12})$/
+/** Topics only members get live; the stream drops them for anyone else. */
+export const PAID_TOPICS = new Set(['ticker'])
+
+export const TOPIC_RE = /^(scoreboard|tracker|status|ticker|game:\d{6,12}|props:\d{6,12})$/

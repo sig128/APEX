@@ -217,7 +217,7 @@ export function createApexApp({
     res.set('Cache-Control', 'public, max-age=60, s-maxage=120').json({ sports: Object.keys(engines).map((k) => ({ key: k, name: SPORTS[k].name, title: SPORTS[k].title, calendar: SPORTS[k].calendar, offseason: SPORTS[k].offseason })) })
   })
   app.use('/api/billing', billingRoutes({ billing, access, getDb: () => (typeof getFirestore === 'function' ? getFirestore() || null : null), now: now || Date.now }))
-  app.use('/api/picks', picksRoutes({ picks, access }))
+  app.use('/api/picks', picksRoutes({ picks, access, billing }))
   // the admin page's numbers, and the daily run that keeps the board's record without visitors
   const metrics = createAdminMetrics({ engines, store: engineStore, billing, listUsers, ...(now ? { now } : {}) })
   const lock = createAdminLock({ store: engineStore, ...(now ? { now } : {}) })

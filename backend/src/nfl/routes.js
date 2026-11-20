@@ -1,7 +1,7 @@
 // /api/<sport>/* — the stats API (free), the live stream, the AI tools (Pro). One router per
 // sport engine; NFL was first, so the file keeps its name.
 import { createRouter, ApiError, RAW, clientIp } from '../lib/router.js'
-import { ROUTE_TIER, TOPIC_RE, topicAllowed } from './gate.js'
+import { ROUTE_TIER, TOPIC_RE, PAID_TOPICS, topicAllowed } from './gate.js'
 import { streamPropInsight, readKey, createReadCache } from './ai.js'
 import { createIntel } from './intel.js'
 import { createLedger } from './ledger.js'
@@ -73,6 +73,26 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
       return { ok: true, user, ent: OPEN.ent, tier: 'elite' }
     }
     return OPEN
+  }
+
+  /**
+   * Members-only features (the movement ticker, the parlay simulator): the admin and members
+   * holding a real Pro or Elite pass (paid, given by the admin, or from a plan code), whether
+   * passes are on sale or not, like the model reads. Open only in local dev without Firebase.
+   */
+  async function memberOf(req) {
+    const user = await auth.identify(req).catch(() => null)
+    if (authMode() === 'optional' && !paywallOn()) return { paid: true, user, ent: null }
+    if (!user) return { paid: false, user: null, ent: null }
+    if (billing?.aiAccess) {
+      const g = await billing.aiAccess(user)
+      return { paid: g.allowed, user, ent: g.ent }
+    }
+    return { paid: Boolean(user.admin), user, ent: null }
+  }
+  function needMember(m, what) {
+    if (!m.user) throw new ApiError(401, 'signin', `Sign in to use ${what}.`, { need: 'pro' })
+    throw new ApiError(402, 'upgrade', `${what[0].toUpperCase()}${what.slice(1)} is for members with a Pro or Elite pass.`, { need: 'pro', plan: m.ent?.plan || 'free', status: m.ent?.status || null })
   }
 
   function needPlan(need, a) {
@@ -159,21 +179,44 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
   r.get('/dvp', { tier: t('dvp'), cache: C(120, 300, 900) }, () => views.dvp())
   r.get('/rankings', { tier: t('rankings'), cache: C(30, 60, 180) }, () => views.rankings())
 
-  /** A ticket for the stream when reads need sign-in. */
+  /**
+   * A ticket for the stream (EventSource can't send the sign-in header): needed when reads need
+   * sign-in, and how a member's stream gets the members-only topics. It carries the plan, checked
+   * here on the server.
+   */
   r.get('/ticket', { selfAuth: true }, async (ctx) => {
     ctx.cache = null
-    if (!readsNeedAuth()) return { ticket: null, required: false }
-    const user = await auth.authenticate(ctx.req)
-    return { ticket: signTicket({ uid: user.uid }), required: true, ttlMs: 10 * 60_000 }
+    const required = readsNeedAuth()
+    const signedIn = Boolean(ctx.req.headers?.authorization)
+    if (!required && !signedIn) return { ticket: null, required: false, paid: false }
+    const m = await memberOf(ctx.req)
+    if (required && !m.user) throw new ApiError(401, 'signin', 'Sign in to get live updates.')
+    if (!m.user && !m.paid) return { ticket: null, required, paid: false }
+    return { ticket: signTicket({ uid: m.user?.uid || null, paid: m.paid }), required, paid: m.paid, ttlMs: 10 * 60_000 }
+  })
+
+  /**
+   * The movement ticker on PropPickz's posted picks. Members get it live (and on the stream);
+   * everyone else gets a snapshot at least 30 minutes old to look at through the glass. Decided
+   * here, so the live list never reaches a free browser.
+   */
+  r.get('/ticker', { selfAuth: true }, async (ctx) => {
+    if (!engine.ticker) throw new ApiError(503, 'no_ticker', 'The ticker is off on this server.')
+    const m = await memberOf(ctx.req)
+    if (readsNeedAuth() && !m.user) throw new ApiError(401, 'signin', 'Sign in to see this.')
+    const paid = m.paid
+    // one URL, two answers: never shared between people
+    ctx.cache = { maxAge: paid ? 0 : 30, priv: true }
+    return paid ? engine.ticker.live() : engine.ticker.delayed()
   })
 
   r.get('/stream', { selfAuth: true }, async (ctx) => {
     const { req, res } = ctx
-    if (readsNeedAuth()) {
-      const ok = verifyTicket(String(ctx.query.ticket || ''))
-      if (!ok) throw new ApiError(401, 'signin', 'Sign in again to get live updates.')
-    }
-    const list = [...new Set(String(ctx.query.topics || 'scoreboard').split(',').map((s) => s.trim()))].filter((x) => TOPIC_RE.test(x) && topicAllowed(x)).slice(0, 12)
+    const tk = ctx.query.ticket ? verifyTicket(String(ctx.query.ticket)) : null
+    if (readsNeedAuth() && !tk) throw new ApiError(401, 'signin', 'Sign in again to get live updates.')
+    // members-only topics need a ticket from a member; anyone else's stream just goes without them
+    const member = Boolean(tk?.paid) || (authMode() === 'optional' && !paywallOn())
+    const list = [...new Set(String(ctx.query.topics || 'scoreboard').split(',').map((s) => s.trim()))].filter((x) => TOPIC_RE.test(x) && topicAllowed(x) && (member || !PAID_TOPICS.has(x))).slice(0, 12)
     if (!list.length) {
       res.statusCode = 204
       res.end()
@@ -186,6 +229,7 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
       owner: clientIp(req),
       initial: (topic) => {
         if (topic === 'scoreboard') return views.strip()
+        if (topic === 'ticker') return engine.ticker?.initial() || null
         if (topic.startsWith('game:')) {
           const g = views.liveGame(topic.slice(5))
           return g && g.status.state !== 'pre' ? g : null
@@ -204,9 +248,12 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
 
   // Parlay simulator: 10,000-100,000 runs of the slip on the PropPickz distributions. Pro.
   const simLimiter = createLimiter({ burst: 12, perSec: 1 / 3 })
-  r.post('/sim', { tier: t('sim') }, (ctx) => {
+  // Members only, passes on sale or not (like the model reads)
+  r.post('/sim', { tier: t('sim') }, async (ctx) => {
     ctx.cache = null
-    const who = ctx.user?.uid || clientIp(ctx.req)
+    const m = await memberOf(ctx.req)
+    if (!m.paid) needMember(m, 'the parlay simulator')
+    const who = m.user?.uid || ctx.user?.uid || clientIp(ctx.req)
     const lim = simLimiter.take(who)
     if (!lim.ok) throw new ApiError(429, 'rate', 'A few seconds between simulations, please.', { retryAfter: lim.retryAfter })
     const body = ctx.req.body || {}

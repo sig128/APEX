@@ -9,6 +9,7 @@ import { useSlip } from '../lib/useSlip.js'
 import { useWatch } from '../lib/watch.js'
 import { GameStrip } from '../ui/GameStrip.jsx'
 import { WhatsNew } from '../ui/WhatsNew.jsx'
+import { TickerBar } from '../ui/Ticker.jsx'
 import { PropList } from '../ui/PropRow.jsx'
 import { HitChart } from '../ui/HitChart.jsx'
 import { Headshot, TeamLogo } from '../ui/Img.jsx'
@@ -112,6 +113,7 @@ export function HomePage() {
   return (
     <div className="page home">
       <GameStrip games={data?.games} />
+      <TickerBar sport={sport} />
       <div className="container">
         <header className="week-head">
           <h1 className="week-head__title num">{daily ? boardDay(data, phone ? 'short' : 'long') || 'Today' : data?.week ? `Week ${data.week}` : 'This week'}</h1>
