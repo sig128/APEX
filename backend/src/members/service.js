@@ -71,6 +71,37 @@ export function createMembers({ store, mail = null, now = () => Date.now() }) {
     return { ok: true }
   }
 
+  /**
+   * Smart Check: which kinds of note were shown, and what people did next (dismissed, turned the
+   * type off, or took the leg off). Counts per day only: no slips, no names.
+   */
+  const NUDGE_TYPES = ['injury', 'conflict', 'together', 'legs', 'weak', 'price', 'sample', 'personal']
+  const NUDGE_ACTIONS = ['shown', 'dismissed', 'muted', 'removed']
+  async function nudges({ types, action }) {
+    if (!NUDGE_ACTIONS.includes(action)) throw new ApiError(400, 'bad_event', 'Unknown action.')
+    const list = (Array.isArray(types) ? types : []).filter((x) => NUDGE_TYPES.includes(x)).slice(0, 12)
+    if (!list.length) return { ok: true }
+    const day = dayOf(now())
+    await store.update(NS, `nudge-${day}`, (cur) => {
+      const doc = cur || { day, types: {} }
+      for (const t of list) {
+        const c = doc.types[t] || { shown: 0, dismissed: 0, muted: 0, removed: 0 }
+        c[action]++
+        doc.types[t] = c
+      }
+      return doc
+    })
+    return { ok: true }
+  }
+  async function nudgeStats(days = 30) {
+    const out = []
+    for (let i = 0; i < days; i++) {
+      const d = await store.get(NS, `nudge-${dayOf(now() - i * 86_400_000)}`)
+      if (d) out.push(d)
+    }
+    return out
+  }
+
   async function tourStats(days = 30) {
     const out = []
     for (let i = 0; i < days; i++) {
@@ -128,5 +159,5 @@ export function createMembers({ store, mail = null, now = () => Date.now() }) {
     return items.filter(Boolean)
   }
 
-  return { consent, consentOf, tour, tourStats, feedback, feedbackList }
+  return { consent, consentOf, tour, tourStats, nudges, nudgeStats, feedback, feedbackList }
 }

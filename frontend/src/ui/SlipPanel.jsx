@@ -15,6 +15,7 @@ import { useBilling } from '../context/BillingContext.jsx'
 import { Headshot } from './Img.jsx'
 import { Dialog } from './Dialog.jsx'
 import { ImpliedHint } from './Odds.jsx'
+import { SmartCheckPanel } from './SmartCheck.jsx'
 
 const BANKROLL_KEY = 'apex_bankroll'
 const FRACTIONS = [
@@ -235,6 +236,7 @@ export function SlipPanel({ open, onClose }) {
                 {math.sameGame && <SameGame legs={legs} prob={math.prob} />}
               </div>
             )}
+            <SmartCheckPanel legs={legs} />
 
             {(mode === 'parlay' ? math?.priced : legs.some((l) => Number.isFinite(l.price))) && (
               <div className="slip__kelly">

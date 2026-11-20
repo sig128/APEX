@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { onPick, removeLeg } from '../lib/slip.js'
 import { sp } from '../lib/sport.js'
+import { useSlip } from '../lib/useSlip.js'
+import { SmartCheckBrief } from './SmartCheck.jsx'
 
 const SHOW_MS = 9000
 
@@ -14,12 +16,12 @@ export function PickNudge() {
   const [pick, setPick] = useState(null)
   const [held, setHeld] = useState(false)
   const timer = useRef(null)
+  const slip = useSlip()
 
   useEffect(
     () =>
       onPick(({ leg, replaced }) => {
-        // nothing to say about it (a team total, say): no card
-        if (!leg.read && !leg.pro && !leg.con) return setPick(null)
+        // every tap gets the card: the leg's read (when it has one) and Smart Check on the slip
         setPick({ leg, replaced, at: Date.now() })
       }),
     [],
@@ -91,6 +93,7 @@ export function PickNudge() {
           </li>
         )}
       </ul>
+      {slip.legs.length > 0 && <SmartCheckBrief legs={slip.legs} onAct={() => setPick(null)} />}
       <div className="pick-nudge__actions">
         <Link to={sp(leg.sport, `/prop/${encodeURIComponent(leg.id)}`)} className="link" onClick={() => setPick(null)}>
           See every reason

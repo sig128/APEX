@@ -50,6 +50,13 @@ export function membersRoutes({ members, access }) {
     return members.tour({ action: String(b.action || ''), step: Number.isInteger(b.step) ? b.step : null })
   }))
 
+  // Smart Check: counts of the notes shown and what happened next
+  r.post('/nudges', wrap(async (req) => {
+    throttle(small, clientIp(req))
+    const b = req.body || {}
+    return members.nudges({ types: b.types, action: String(b.action || '') })
+  }))
+
   r.post('/feedback', wrap(async (req) => {
     const b = req.body || {}
     const tap = b.helpful === true || b.helpful === false

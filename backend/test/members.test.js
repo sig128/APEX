@@ -112,3 +112,16 @@ test('feedback mail: the configured service gets it, a failure keeps the note', 
   assert.match(e.text, /Account: not shared/)
   assert.equal(clip('a\u0000b\u0007c ', 10), 'abc')
 })
+
+test('Smart Check counts: what was shown and what happened next, per day', async () => {
+  const { createMembers } = await import('../src/members/service.js')
+  const { createStore } = await import('../src/lib/store.js')
+  const store = createStore({ driver: 'memory' })
+  const m = createMembers({ store, now: () => Date.parse('2026-11-20T20:00:00Z') })
+  await m.nudges({ types: ['weak', 'legs', 'nope'], action: 'shown' })
+  await m.nudges({ types: ['weak'], action: 'removed' })
+  await assert.rejects(m.nudges({ types: ['weak'], action: 'stole' }))
+  const [d] = await m.nudgeStats(1)
+  assert.deepEqual(d.types.weak, { shown: 1, dismissed: 0, muted: 0, removed: 1 })
+  assert.equal(d.types.nope, undefined, 'unknown types are dropped')
+})

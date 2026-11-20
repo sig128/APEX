@@ -41,7 +41,12 @@ export function snapshot(c) {
   // the read travels with the leg: its bottom line, and the best reason for it and against it
   const pro = c.pro ?? c.notes?.find((n) => n.tone === 'for') ?? null
   const con = c.con ?? c.notes?.find((n) => n.tone === 'against') ?? null
-  return { id: c.id, sport: c.sport || 'nfl', name: c.name, short: c.short, label: c.label, shortLabel: c.shortLabel || c.label, prob: c.prob, fair: c.fair, headshot: c.headshot || null, logo: c.logo || null, teamAbbr: c.teamAbbr, oppAbbr: c.oppAbbr, gameId: c.gameId, kickoff, market: c.market, side: c.side, line: c.line, oneSided: Boolean(oneSided), playerId: c.playerId || null, teamId: c.teamId || null, kind: c.kind || (c.teamId && !c.playerId ? 'team' : 'player'), read: c.read || null, pro, con }
+  return { id: c.id, sport: c.sport || 'nfl', name: c.name, short: c.short, label: c.label, shortLabel: c.shortLabel || c.label, prob: c.prob, fair: c.fair, headshot: c.headshot || null, logo: c.logo || null, teamAbbr: c.teamAbbr, oppAbbr: c.oppAbbr, gameId: c.gameId, kickoff, market: c.market, side: c.side, line: c.line, oneSided: Boolean(oneSided), playerId: c.playerId || null, teamId: c.teamId || null, kind: c.kind || (c.teamId && !c.playerId ? 'team' : 'player'), read: c.read || null, pro, con,
+    // for Smart Check: injury news, how many recent games the read rests on, the headline book's price
+    inj: c.inj && typeof c.inj === 'object' ? { tag: c.inj.tag, detail: c.inj.detail || null } : c.inj || null,
+    n10: c.l10?.n ?? null,
+    bookPrice: c.price && typeof c.price === 'object' ? c.price[c.side === 'u' ? 'under' : oneSided ? 'yes' : 'over'] ?? null : null,
+    bookName: c.price && typeof c.price === 'object' ? c.price.book || null : null }
 }
 
 // Someone just picked a prop (one tap, not a bulk add): the pick card says why it's good or not.

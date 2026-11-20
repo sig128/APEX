@@ -59,9 +59,9 @@ export function adminRoutes({ lock, metrics, sports, billing = null, picks = nul
     '/feedback',
     wrap(async (req) => {
       await admin(req)
-      if (!members) return { items: [], tour: [] }
-      const [items, tour] = await Promise.all([members.feedbackList({ limit: Number(req.query.limit) || 100 }), members.tourStats(30)])
-      return { items, tour }
+      if (!members) return { items: [], tour: [], nudges: [] }
+      const [items, tour, nudges] = await Promise.all([members.feedbackList({ limit: Number(req.query.limit) || 100 }), members.tourStats(30), members.nudgeStats(30)])
+      return { items, tour, nudges }
     }),
   )
   // credits: add some to someone's balance, and what each credit action really costs to run
