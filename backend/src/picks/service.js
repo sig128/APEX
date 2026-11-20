@@ -270,7 +270,7 @@ export function recordFromStats(stats, t, tz) {
   return { all: recordView(stats.all, recent), d30: recordView(d30, recent) }
 }
 
-export function createPicks({ docs, engine, engines = null, billing, now = () => Date.now() }) {
+export function createPicks({ docs, engine, engines = null, billing, now = () => Date.now(), notify = null }) {
   const d = docs
   // Picks can be on any league: a leg id is "<id>" (NFL) or "<league>:<id>", and each leg is
   // priced, frozen and graded by its own league's engine.
@@ -879,7 +879,14 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
         if (prof) tx.patch('profiles', p.uid, { stats: applyGraded(prof.stats, { ...cur, ...graded }, dayKey(t, tz)), recordAt: t })
         return true
       })
-      if (ok) touched.add(p.uid)
+      if (ok) {
+        touched.add(p.uid)
+        if (notify) {
+          const word = graded.result === 'win' ? 'won' : graded.result === 'loss' ? 'lost' : graded.result === 'push' ? 'pushed' : 'was voided'
+          const what = p.legs.length === 1 ? `${p.legs[0].short || p.legs[0].name} ${p.legs[0].label}` : `Your ${p.legs.length}-leg parlay`
+          Promise.resolve(notify(p.uid, 'results', { title: `Your pick ${word}`, body: `${what}${graded.result === 'win' || graded.result === 'loss' ? `: ${graded.profit > 0 ? '+' : ''}${graded.profit}u` : ''}`, url: `/me/breakdown/${p.id}`, tag: `result-${p.id}` })).catch(() => {})
+        }
+      }
     }
     if (touched.size) bust()
     lastGrade = t
@@ -953,6 +960,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
       })
     }
     if (alerts.size) bust()
+    if (notify) for (const [uid, items] of alerts) for (const a of items.slice(0, 3)) Promise.resolve(notify(uid, 'injuries', { title: `${a.name}: ${a.to}`, body: `On your pick (${a.label}). It was ${a.from}.`, url: '/me', tag: `inj-${a.pickId}-${a.playerId}` })).catch(() => {})
     return { watched: soon.length, alerted: alerts.size }
   }
 

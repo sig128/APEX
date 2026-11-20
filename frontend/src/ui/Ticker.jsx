@@ -145,6 +145,9 @@ function Alerts({ prefs, setPrefs }) {
               </span>
             </label>
           ))}
+          <Link to="/account#alerts" className="ticker__more" onClick={() => setOpen(false)}>
+            Alerts on your phone or computer, even when PropPickz is closed
+          </Link>
           {canNotify && (
             <label className="ticker__opt ticker__opt--check">
               <input type="checkbox" checked={prefs.notify} onChange={toggleNotify} disabled={prefs.level === 'off'} />

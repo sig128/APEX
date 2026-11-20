@@ -7,6 +7,7 @@ import { Dialog } from '../ui/Dialog.jsx'
 import { PayFlow } from '../billing/PayFlow.jsx'
 import { Skeleton } from '../ui/Bits.jsx'
 import { CreditsCard } from '../ui/Credits.jsx'
+import { PushCard } from '../ui/PushCard.jsx'
 import { replayTour } from '../ui/Tour.jsx'
 
 const fmtDay = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '')
@@ -78,6 +79,7 @@ export function AccountPage() {
       )}
 
       <CreditsCard onBuy={setBuy} />
+      <PushCard />
 
       {me?.open?.length > 0 && (
         <section className="acct-list">

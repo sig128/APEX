@@ -302,12 +302,15 @@ export function createTicker({ engine, store, now = () => Date.now() }) {
       const picks = currentPicks()
       const byId = engine.views.allRows().byId
       let changed = 0
+      let fresh = []
       const doc = await store.update(NS, 'state', (cur) => {
         changed = 0
+        fresh = []
         const d = cur && cur.v === 1 ? cur : { v: 1, sport, posted: {}, last: {}, close: {}, events: {}, snaps: [], snapAt: 0 }
         let dirty = !cur || cur.v !== 1
         const push = (key, evs) => {
           if (!evs.length) return
+          for (const ev of evs) fresh.push({ key, ev })
           d.events[key] = [...(d.events[key] || []), ...evs].slice(-MAX_EVENTS * 2)
           changed += evs.length
           dirty = true
@@ -369,7 +372,14 @@ export function createTicker({ engine, store, now = () => Date.now() }) {
       stats.ticks++
       if (changed) {
         stats.changes += changed
-        engine.hub?.publish('ticker', 'update', { sport, at: t, items: itemsOf(doc) })
+        const items = itemsOf(doc)
+        engine.hub?.publish('ticker', 'update', { sport, at: t, items })
+        // phones and browsers: each new change with its pick, for people who asked for alerts
+        if (engine.onTickerEvents) {
+          const byKey = new Map(items.map((it) => [it.key, it]))
+          const evs = fresh.filter((x) => byKey.has(x.key)).map((x) => ({ item: byKey.get(x.key), ev: x.ev }))
+          Promise.resolve(engine.onTickerEvents(evs)).catch(() => {})
+        }
       }
       return { changed, picks: Object.keys(doc?.posted || {}).length }
     })()

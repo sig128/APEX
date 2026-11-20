@@ -10,6 +10,8 @@ const UPDATED_ISO = '2026-11-20'
 const DATA = [
   { what: 'Your account', has: 'Name, email and Google account id, if you sign in', why: 'To keep your picks, pass and settings' },
   { what: 'Picks you post', has: 'The picks, how they did, and your record', why: 'For your page, your record and the members’ leaderboard' },
+  { what: 'Your page and socials', has: 'Your handle, name, bio and picture, and the X and Instagram you add', why: 'Shown on your public page and, for members, on the leaderboard' },
+  { what: 'Alerts', has: 'Each device’s push address and the alerts you chose, only if you turn them on', why: 'To send the alerts you asked for' },
   { what: 'Payments', has: 'The wallet address and transaction of each pass', why: 'To confirm your pass' },
   { what: 'Your consent', has: 'A random id for your browser, when you agreed, which version of the text, and the app version', why: 'To show you agreed' },
   { what: 'Feedback', has: 'Your message, the page you sent it from and your device type', why: 'To answer it and fix things' },
@@ -268,6 +270,7 @@ const PRIVACY = {
           <ul className="legal-list">
             <li>Google Firebase (sign-in and database) and Vercel (hosting) run the service for us.</li>
             <li>An email service delivers your feedback to our inbox.</li>
+            <li>If you turn on alerts, your browser’s push service (Apple, Google or Mozilla) delivers them to your device.</li>
             <li>When you ask for a model read, the prop’s stats go to the model provider (OpenAI or Anthropic). Don’t put personal details in questions.</li>
             <li>Sportsbook logos load from Google’s site-icon service, which sees the request but not the page you’re on.</li>
             <li>A sportsbook you open sees you arrive from PropPickz. We don’t share your data with sportsbooks and aren’t paid by them.</li>

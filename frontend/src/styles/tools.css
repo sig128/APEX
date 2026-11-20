@@ -3913,3 +3913,58 @@ a.tick__link:focus-visible {
 .news-item__note.is-frost span + span {
   width: 70%;
 }
+
+/* ---- Alerts on this device ----------------------------------------------------------------- */
+.push {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-m);
+  background: var(--stand);
+  scroll-margin-top: calc(var(--header) + 16px);
+}
+.push h2 {
+  margin: 0;
+}
+.push p {
+  margin: 0;
+}
+.push-ask {
+  display: grid;
+  gap: 8px;
+}
+.push-ask__q {
+  font: 800 22px/1.1 var(--font-num);
+  color: var(--chalk);
+}
+.push-ask ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+}
+.push-help {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: rgba(255, 210, 122, 0.08);
+  font-size: var(--t-s);
+  color: #ffe2a8;
+}
+.push-on {
+  display: grid;
+  gap: 8px;
+}
+.push-msg {
+  font-size: var(--t-s);
+  color: var(--turf);
+}
+.ticker__more {
+  display: block;
+  margin: 6px 4px 2px;
+  font-size: var(--t-xs);
+  color: var(--link);
+}

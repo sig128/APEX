@@ -17,6 +17,7 @@ import { billingConfig } from './src/billing/config.js'
 import { billingRoutes } from './src/billing/routes.js'
 import { createCredits } from './src/billing/credits.js'
 import { createBreakdowns } from './src/breakdown/service.js'
+import { createPush, pushConfig } from './src/push/service.js'
 import { legendFor } from './src/learn/content.js'
 import { breakdownRoutes } from './src/breakdown/routes.js'
 import { createPicks } from './src/picks/service.js'
@@ -207,7 +208,10 @@ export function createApexApp({
   const access = createAccess({ auth, billing })
   // credits for the heavy features; free in local dev without sign-in, like the model reads
   const credits = createCredits({ docs: billing.docs, billing, ...(now ? { now } : {}), open: () => authMode() === 'optional' && !billingConfig().paywall })
-  const picks = createPicks({ docs: billing.docs, engine, engines, billing, ...(now ? { now } : {}) })
+  // push notifications: results, injury news on open picks, and ticker moves for members
+  const push = createPush({ docs: billing.docs, ...(now ? { now } : {}), isMember: async (uid) => (await credits.planOf({ uid }).catch(() => 'free')) !== 'free' })
+  for (const [key, eng] of Object.entries(engines)) eng.onTickerEvents = (evs) => push.tickerEvents(key, evs)
+  const picks = createPicks({ docs: billing.docs, engine, engines, billing, ...(now ? { now } : {}), notify: (uid, kind, payload) => push.notify(uid, kind, payload) })
   billing.onChange((uid) => {
     picks.syncPlan(uid).catch((e) => log.warn('plan sync failed', { uid, err: errText(e) }))
   })
@@ -242,6 +246,30 @@ export function createApexApp({
   // the Bet Breakdown: your settled picks, explained from the evidence (members), and a demo
   const breakdowns = createBreakdowns({ docs: billing.docs, engines, credits, ai, calibration, ...(now ? { now } : {}) })
   app.use('/api/breakdown', breakdownRoutes({ breakdowns, access }))
+  // push notifications: the public key for the browser, and each person's devices and choices
+  app.get('/api/push/config', (req, res) => {
+    const c = pushConfig()
+    res.set('Cache-Control', 'public, max-age=300').json({ enabled: c.enabled, publicKey: c.publicKey })
+  })
+  const pushUser = async (req) => {
+    const a = await access.resolve(req).catch(() => null)
+    if (!a?.user) throw Object.assign(new Error('Sign in to set up alerts.'), { status: 401, code: 'signin' })
+    return a.user
+  }
+  const pushWrap = (fn) => async (req, res) => {
+    res.set('Cache-Control', 'no-store')
+    try {
+      res.json(await fn(await pushUser(req), req.body || {}))
+    } catch (e) {
+      res.status(e.status || 500).json({ error: e.message || 'Something went wrong.', code: e.code || 'server' })
+    }
+  }
+  app.get('/api/push/status', pushWrap((u) => push.status(u)))
+  app.post('/api/push/subscribe', pushWrap((u, b) => push.subscribe(u, { subscription: b.subscription, prefs: b.prefs, device: b.device })))
+  app.post('/api/push/unsubscribe', pushWrap((u, b) => push.unsubscribe(u, { endpoint: b.endpoint, all: b.all === true })))
+  app.post('/api/push/prefs', pushWrap((u, b) => push.setPrefs(u, b.prefs)))
+  app.post('/api/push/test', pushWrap(async (u) => ({ sent: await push.test(u) })))
+
   // Tips & Tricks: the basics for everyone, the math and strategy entries in full for members
   app.get('/api/learn', async (req, res) => {
     const a = await access.resolve(req).catch(() => null)

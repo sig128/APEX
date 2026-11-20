@@ -286,7 +286,8 @@ function anthropicCitations(msg) {
 }
 
 function anthropicAdapter(key) {
-  const client = () => new Anthropic({ apiKey: key })
+  // tests put a scripted stand-in on globalThis.__anthropicFake (never set in a real server)
+  const client = () => (globalThis.__anthropicFake ? { messages: globalThis.__anthropicFake } : new Anthropic({ apiKey: key }))
   const params = ({ model, system, messages, maxTokens, webSearch }) => {
     const tools = anthropicTools(webSearch)
     return { model, max_tokens: maxTokens, system, messages: anthropicMessages(messages), ...(tools ? { tools } : {}) }
