@@ -8,6 +8,7 @@ import { toggleLeg } from '../lib/slip.js'
 import { useSlip } from '../lib/useSlip.js'
 import { useWatch } from '../lib/watch.js'
 import { GameStrip } from '../ui/GameStrip.jsx'
+import { WhatsNew } from '../ui/WhatsNew.jsx'
 import { PropList } from '../ui/PropRow.jsx'
 import { HitChart } from '../ui/HitChart.jsx'
 import { Headshot, TeamLogo } from '../ui/Img.jsx'
@@ -87,6 +88,7 @@ export function HomePage() {
         <header className="week-head">
           <h1 className="week-head__title">{info.title}</h1>
         </header>
+        <WhatsNew />
         <Empty
           title={between ? `The ${info.name} is between seasons` : `No ${info.name} games on the board yet`}
           action={
@@ -131,6 +133,7 @@ export function HomePage() {
           )}
         </header>
 
+        <WhatsNew />
         {warming && <Warming pending={data.counts.pending} />}
         {!warming && <LockBanner />}
         <MyGames games={data?.games} />

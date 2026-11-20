@@ -1607,3 +1607,100 @@ a.booktile:active {
     transition: none;
   }
 }
+
+/* ---- What's new (top of the board) ---------------------------------------------------------- */
+.news {
+  margin: 0 0 18px;
+  padding: 14px 18px 16px;
+  border-radius: var(--r-m);
+  background: var(--stand);
+  border: 1px solid var(--seat);
+  border-top: 3px solid var(--lime);
+}
+.news__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.news__title {
+  margin: 0;
+  font-size: var(--t-l);
+  font-weight: 800;
+  line-height: 1.2;
+}
+.news__date {
+  color: var(--chalk-3);
+  font-size: var(--t-s);
+}
+.news__hide {
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-s);
+  background: none;
+  color: var(--chalk-2);
+  font: 600 var(--t-s) var(--font-ui);
+  cursor: pointer;
+}
+.news__hide:hover {
+  border-color: var(--seat-2);
+  color: var(--chalk);
+}
+.news__hide:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.news__grid {
+  display: grid;
+  gap: 14px 28px;
+  grid-template-columns: 1fr;
+}
+.news__item h3 {
+  margin: 0 0 4px;
+  font-size: var(--t-m);
+  font-weight: 700;
+  color: var(--lime);
+}
+.news__item p,
+.news__item ul {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--chalk-2);
+  font-size: var(--t-s);
+  line-height: 1.5;
+}
+.news__item ul {
+  padding-left: 18px;
+}
+.news__item li + li {
+  margin-top: 3px;
+}
+.news__item a {
+  color: var(--link);
+}
+.news__item .news__go {
+  display: inline-block;
+  margin-top: 8px;
+  font-weight: 600;
+  font-size: var(--t-s);
+}
+@media (min-width: 860px) {
+  .news__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'consent board'
+      'leagues board';
+    align-items: start;
+  }
+  .news__item--consent {
+    grid-area: consent;
+  }
+  .news__item--board {
+    grid-area: board;
+  }
+  .news__item--leagues {
+    grid-area: leagues;
+  }
+}
