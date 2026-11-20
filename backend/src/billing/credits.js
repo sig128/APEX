@@ -137,7 +137,8 @@ export function createCredits({ docs, billing, now = () => Date.now(), open = ()
     if (plan === 'free') throw new ApiError(402, 'upgrade', 'This is for members with a Pro or Elite pass.', { need: 'pro' })
     const out = await docs.tx(async (tx) => {
       const d = rolled(await tx.get(NS, user.uid), plan, t)
-      if (d.spent[key]) return { already: true, d }
+      // paid already: no second charge (a refunded key can be charged again)
+      if (d.spent[key] && !d.spent[key].refunded) return { already: true, d }
       if (leftOf(d) < cost) return { short: true, d }
       const fromMonth = Math.min(cost, monthLeft(d))
       const fromTop = cost - fromMonth

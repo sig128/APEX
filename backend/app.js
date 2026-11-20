@@ -16,6 +16,8 @@ import { createBilling } from './src/billing/service.js'
 import { billingConfig } from './src/billing/config.js'
 import { billingRoutes } from './src/billing/routes.js'
 import { createCredits } from './src/billing/credits.js'
+import { createBreakdowns } from './src/breakdown/service.js'
+import { breakdownRoutes } from './src/breakdown/routes.js'
 import { createPicks } from './src/picks/service.js'
 import { picksRoutes } from './src/picks/routes.js'
 import { createMembers } from './src/members/service.js'
@@ -236,6 +238,9 @@ export function createApexApp({
   // the public calibration page (src/calibration); the daily run also fingerprints the days it closed
   const calibration = createCalibration({ engines, store: engineStore, ...(now ? { now } : {}) })
   app.use('/api/calibration', calibrationRoutes({ calibration }))
+  // the Bet Breakdown: your settled picks, explained from the evidence (members), and a demo
+  const breakdowns = createBreakdowns({ docs: billing.docs, engines, credits, ai, calibration, ...(now ? { now } : {}) })
+  app.use('/api/breakdown', breakdownRoutes({ breakdowns, access }))
   app.get('/api/cron/daily', cronHandler({ metrics: calibration.afterDaily(metrics) }))
 
   // ---- the AI analyzer (chat) ---------------------------------------------------------------

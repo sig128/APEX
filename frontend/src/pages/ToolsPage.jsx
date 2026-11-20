@@ -133,6 +133,7 @@ function TwoWay() {
 }
 
 const TOOLS = [
+  { to: '/tools/breakdown', title: 'Bet breakdown', body: 'Why a settled bet won or lost, leg by leg, from the evidence: what each leg needed, what happened, and what the data can and can’t explain. Open the example.', plan: 'Pro' },
   { to: '/tools/sim', title: 'Parlay simulator', body: 'Play your parlay out 10,000 to 100,000 times: how often each leg hits, how often it all cashes, and what luck does to a bankroll.', plan: 'Pro' },
   { to: '/tools/check', title: 'Parlay check', body: 'Paste your legs or upload a screenshot of your betslip. The model says which legs to keep and which to cut, and why.', plan: 'Pro' },
   { to: '/kelly', title: 'Kelly calculator', body: 'How much to bet from your edge and your bankroll, and thousands of simulated seasons of betting it.', plan: 'Pro' },

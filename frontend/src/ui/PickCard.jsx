@@ -131,6 +131,11 @@ function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
           <a className="linkish" href={`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(pageUrl)}`} target="_blank" rel="noopener noreferrer">
             Post on X
           </a>
+          {owner && pick.status === 'graded' && (
+            <Link to={`/me/breakdown/${pick.id}`} className="btn btn--quiet btn--s pick__analyze">
+              Analyze this bet
+            </Link>
+          )}
           {owner && !locked && onDelete && (
             <button type="button" className="linkish is-minus" onClick={() => onDelete(pick)}>
               Delete

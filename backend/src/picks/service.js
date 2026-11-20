@@ -536,6 +536,8 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
       prob: row.prob,
       fair: row.fair,
       score: row.score,
+      // the projection as it stood when posted (the Bet Breakdown never rebuilds it later)
+      proj: Number.isFinite(row.proj) ? row.proj : null,
       inj: injTag(eng, row.playerId),
     }
   }

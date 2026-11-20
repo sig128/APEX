@@ -36,6 +36,8 @@ const AnalyzerPage = page(() => import('./pages/AnalyzerPage.jsx'), 'AnalyzerPag
 const AdminSportsPage = page(() => import('./pages/AdminSportsPage.jsx'), 'AdminSportsPage')
 const CalibrationPage = page(() => import('./pages/CalibrationPage.jsx'), 'CalibrationPage')
 const LegalPage = page(() => import('./pages/LegalPage.jsx'), 'LegalPage')
+const BreakdownPage = page(() => import('./pages/BreakdownPage.jsx'), 'BreakdownPage')
+const BreakdownDemoPage = page(() => import('./pages/BreakdownPage.jsx'), 'BreakdownDemoPage')
 
 /** League pages: an unknown league is a not-found, not an empty board. */
 function League({ children }) {
@@ -73,6 +75,8 @@ export function App() {
               <Route path="/u/:handle" element={<UserPage />} />
               <Route path="/me" element={<MePage />} />
               <Route path="/me/live" element={<LiveSlipPage />} />
+              <Route path="/me/breakdown/:id" element={<BreakdownPage />} />
+              <Route path="/tools/breakdown" element={<BreakdownDemoPage />} />
               <Route path="/contests" element={<ContestsPage />} />
               <Route path="/kelly" element={<KellyPage />} />
               <Route path="/tools" element={<ToolsPage />} />
