@@ -126,15 +126,17 @@ function Podium({ rows, sort }) {
   )
 }
 
-function Row({ r, rank, sort }) {
+/** One ranked bettor (the leaderboard and private groups). tag: a word after the name ("You"). */
+export function BoardRow({ r, rank, sort, tag = null }) {
   return (
-    <li className="lb-row">
+    <li className={`lb-row${tag === 'You' ? ' is-you' : ''}`}>
       <Link to={`/u/${r.profile.handle}`} className="lb-row__link" aria-label={`${rank}. ${r.profile.name}`}>
         <span className="lb-row__rank num">{rank}</span>
         <Avatar profile={r.profile} size={42} />
         <span className="lb-row__who">
           <span className="lb-row__name">
             {r.profile.name} <TierBadge tier={r.tier} small />
+            {tag && <span className="lb-row__tag">{tag}</span>}
           </span>
           <span className="lb-row__handle muted">@{r.profile.handle}</span>
         </span>
@@ -261,7 +263,7 @@ export function Leaderboard() {
             rows.length > 3 && (
               <ol className="lb-list" start={4}>
                 {rows.slice(3).map((r, i) => (
-                  <Row key={r.profile.handle} r={r} rank={i + 4} sort={sort} />
+                  <BoardRow key={r.profile.handle} r={r} rank={i + 4} sort={sort} />
                 ))}
               </ol>
             )

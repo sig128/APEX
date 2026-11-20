@@ -26,6 +26,7 @@ const TABS = [
   { key: 'tools', label: 'Tools' },
   { key: 'contests', label: 'Contests' },
   { key: 'feedback', label: 'Feedback' },
+  { key: 'fairplay', label: 'Fair play' },
 ]
 const tabFromHash = () => {
   const h = (typeof window !== 'undefined' && window.location.hash.slice(1)) || ''
@@ -162,6 +163,7 @@ export function AdminPage() {
           {tab === 'tools' && <Tools data={data} onChanged={load} onLocked={locked} />}
           {tab === 'contests' && <Contests onLocked={locked} />}
           {tab === 'feedback' && <FeedbackInbox onLocked={locked} />}
+          {tab === 'fairplay' && <FairPlay onLocked={locked} />}
         </div>
       )}
     </div>
@@ -363,6 +365,97 @@ function Standouts({ rows }) {
 }
 const GROUP_LABEL = { m: 'Bet type', s: 'Side', pb: 'Probability', eb: 'Edge', ld: 'The read', mu: 'Matchup', pr: 'Price', bk: 'Book', sc: 'Score', h: 'Venue', cl: 'Line move' }
 const groupLabel = (g) => GROUP_LABEL[g] || g
+
+const FAIR_KIND = { wallet: 'Same wallet', mirror: 'Both sides', deletes: 'Deletes picks', network: 'Same network' }
+
+/**
+ * Fair play: accounts that look like one person running several (a shared wallet, opposite sides
+ * of a prop from one network) or posting selectively (deleting most picks before kickoff). Strong
+ * flags hold the accounts off the public leaderboard until cleared here; a shared network alone
+ * is only a note.
+ */
+function FairPlay({ onLocked }) {
+  const [state, setState] = useState({ data: null, err: null, busy: null })
+  const [show, setShow] = useState('open')
+  const load = () =>
+    adminApi('/api/admin/integrity')
+      .then((data) => setState({ data, err: null, busy: null }))
+      .catch((e) => {
+        if (e.status === 401) onLocked?.()
+        setState({ data: null, err: e.message, busy: null })
+      })
+  useEffect(() => {
+    load()
+  }, [])
+  const act = async (id, undo) => {
+    setState((s) => ({ ...s, busy: id }))
+    await adminApi('/api/admin/integrity/clear', { method: 'POST', body: { id, undo } }).catch((e) => setState((s) => ({ ...s, err: e.message })))
+    load()
+  }
+  if (state.err) return <p className="form-err">{state.err}</p>
+  if (!state.data) return <Skeleton rows={6} />
+  const flags = state.data.flags.filter((f) => (show === 'open' ? !f.cleared : show === 'cleared' ? f.cleared : true))
+  const held = state.data.flags.filter((f) => f.strong && !f.cleared)
+  return (
+    <div className="adm-fb">
+      <div className="adm-fb__sums">
+        <p>
+          <b className="num">{held.length}</b> open {held.length === 1 ? 'flag holds' : 'flags hold'} accounts off the public leaderboard. Same-network notes don’t hold anyone: households and campuses share one.
+        </p>
+      </div>
+      <div className="pills" role="group" aria-label="Show">
+        {[
+          ['open', 'Open'],
+          ['cleared', 'Cleared'],
+          ['all', 'All'],
+        ].map(([k, label]) => (
+          <button key={k} type="button" className={`pill${show === k ? ' is-on' : ''}`} aria-pressed={show === k} onClick={() => setShow(k)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {flags.length ? (
+        <ul className="adm-fb__list">
+          {flags.map((f) => (
+            <li key={f.id} className="adm-fb__item">
+              <div className="adm-fb__meta">
+                <span className={`adm-fb__kind${f.strong ? ' is-bug' : ''}`}>{FAIR_KIND[f.kind] || f.kind}</span>
+                <span>{f.strong ? (f.cleared ? 'Cleared' : 'Holding') : 'Note only'}</span>
+                <span className="muted">
+                  first {new Date(f.at).toLocaleDateString()}, last {new Date(f.last).toLocaleString()}
+                  {f.n > 1 ? `, seen ${f.n} times` : ''}
+                </span>
+              </div>
+              <p className="adm-fb__msg">{f.detail}</p>
+              <p className="adm-fb__who">
+                {f.people.map((x, i) => (
+                  <span key={x.uid}>
+                    {i > 0 && ', '}
+                    {x.handle ? (
+                      <a href={`/u/${x.handle}`} target="_blank" rel="noreferrer">
+                        @{x.handle}
+                      </a>
+                    ) : (
+                      <span className="muted">no page ({x.uid.slice(0, 10)})</span>
+                    )}
+                  </span>
+                ))}
+              </p>
+              {f.strong && (
+                <button type="button" className="btn btn--quiet btn--s" disabled={state.busy === f.id} onClick={() => act(f.id, Boolean(f.cleared))}>
+                  {f.cleared ? 'Hold again' : 'Clear: they’re fine'}
+                </button>
+              )}
+              {f.cleared && <p className="muted small">Cleared by {f.cleared.by} on {new Date(f.cleared.at).toLocaleDateString()}</p>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">Nothing here.</p>
+      )}
+    </div>
+  )
+}
 
 const FB_KIND = { bug: 'Bug', feature: 'Idea', pick: 'Pick', general: 'Other' }
 const TOUR_STEP = ['Board', 'Research', 'Slip', 'Picks', 'Live', 'Plans']

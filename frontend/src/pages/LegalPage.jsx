@@ -11,6 +11,8 @@ const DATA = [
   { what: 'Your account', has: 'Name, email and Google account id, if you sign in', why: 'To keep your picks, pass and settings' },
   { what: 'Picks you post', has: 'The picks, how they did, and your record', why: 'For your page, your record and the members’ leaderboard' },
   { what: 'Your page and socials', has: 'Your handle, name, bio and picture, and the X and Instagram you add', why: 'Shown on your public page and, for members, on the leaderboard' },
+  { what: 'Groups', has: 'The groups you start or join, who is in each, and its invite code', why: 'To show each group its own board of its members’ records' },
+  { what: 'Fair play', has: 'A one-way fingerprint of the network you post picks from (never the address itself), kept 30 days; the times you post and delete picks; and which accounts paid from the same wallet', why: 'To keep one person from running several accounts or posting only the picks that went well on the leaderboard' },
   { what: 'Alerts', has: 'Each device’s push address and the alerts you chose, only if you turn them on', why: 'To send the alerts you asked for' },
   { what: 'Payments', has: 'The wallet address and transaction of each pass', why: 'To confirm your pass' },
   { what: 'Your consent', has: 'A random id for your browser, when you agreed, which version of the text, and the app version', why: 'To show you agreed' },

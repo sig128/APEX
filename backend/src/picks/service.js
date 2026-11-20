@@ -270,7 +270,7 @@ export function recordFromStats(stats, t, tz) {
   return { all: recordView(stats.all, recent), d30: recordView(d30, recent) }
 }
 
-export function createPicks({ docs, engine, engines = null, billing, now = () => Date.now(), notify = null }) {
+export function createPicks({ docs, engine, engines = null, billing, now = () => Date.now(), notify = null, integrity = null }) {
   const d = docs
   // Picks can be on any league: a leg id is "<id>" (NFL) or "<league>:<id>", and each leg is
   // priced, frozen and graded by its own league's engine.
@@ -381,6 +381,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
       profit: p.profit ?? null,
       note: p.note || '',
       tails: p.tails || 0,
+      tailOf: p.tailOf ? { id: p.tailOf.id, handle: p.tailOf.handle } : null,
       legs: p.legs.map(publicLeg),
     }
   }
@@ -428,7 +429,9 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in with Google to make your page.')
     const ent = await billing.entitlement(user)
     const p = await refreshElite(user, await profileOf(user.uid))
-    return { profile: p ? { ...publicProfile(p), x: p.x || null, ig: p.ig || null, handleChangedAt: p.handleChangedAt || null } : null, entitlement: ent, suggested: p ? null : suggestHandle(user) }
+    // a fair-play hold keeps a page off the public leaderboard until the admin has looked
+    const held = integrity ? (await integrity.holds()).get(user.uid) || null : null
+    return { profile: p ? { ...publicProfile(p), x: p.x || null, ig: p.ig || null, handleChangedAt: p.handleChangedAt || null } : null, entitlement: ent, suggested: p ? null : suggestHandle(user), held }
   }
 
   function suggestHandle(user) {
@@ -576,7 +579,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     return { ok: problems.length === 0, legs: problems.map(({ id, code, error }) => ({ id, code, error })), warnings }
   }
 
-  async function post(user, body = {}) {
+  async function post(user, body = {}, { ip = null, tailOf = null } = {}) {
     if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in to post picks.')
     const prof = await refreshElite(user, await profileOf(user.uid))
     if (!prof) throw new ApiError(409, 'no_profile', 'Make your page first.')
@@ -642,6 +645,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
           hidden: Boolean(prof.hidden),
           subs,
           ...(pickTz ? { tz: pickTz } : {}),
+          ...(tailOf ? { tailOf } : {}),
         }
         tx.set('picks', pick.id, pick)
         out.push(pick)
@@ -650,6 +654,9 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
       return out
     })
     bust()
+    // fair play: the network it came from (as a fingerprint) and the sides it took, checked
+    // against other accounts; never more than a couple of seconds on the way out
+    if (integrity) await Promise.race([integrity.notePost(user.uid, { ip, legs }), new Promise((r) => setTimeout(r, 2500).unref?.())])
     return { picks: made.map(publicPick) }
   }
 
@@ -661,7 +668,51 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     if (now() >= p.lockAt && !user.admin) throw new ApiError(409, 'locked', 'This pick locked at kickoff and is part of your record now.')
     await d.del('picks', id)
     bust()
+    // deleting before kickoff is allowed; doing it a lot is selective posting, and it shows
+    if (integrity && p.uid === user.uid) await integrity.noteDelete(user.uid)
     return { ok: true }
+  }
+
+  /**
+   * Tail a pick into your own record: the same legs, posted as your pick (your limits, your units),
+   * marked as tailed from the person who posted it. It counts as a tail on theirs too.
+   */
+  async function track(user, id, { units, ip = null } = {}) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in to track picks.')
+    if (typeof id !== 'string' || !/^pk_[0-9a-f]{20}$/.test(id)) throw new ApiError(404, 'not_found', 'No such pick.')
+    const src = await d.get('picks', id)
+    if (!src) throw new ApiError(404, 'not_found', 'No such pick.')
+    if (src.uid === user.uid) throw new ApiError(400, 'own_pick', 'That’s your own pick: it’s on your record already.')
+    if (src.subs && !(await canSeePick(src, user))) throw new ApiError(403, 'subscribers', 'This pick is for subscribers.')
+    if (now() >= src.lockAt) throw new ApiError(409, 'locked', 'This pick has kicked off, so it can’t be tracked now.')
+    const refs = src.legs.map((l) => (!l.sport || l.sport === 'nfl' ? l.id : `${l.sport}:${l.id}`))
+    const out = await post(user, { legs: refs, units: units ?? src.units, mode: 'parlay', note: '' }, { ip, tailOf: { id: src.id, handle: src.handle, uid: src.uid } })
+    await tail(id, `u:${user.uid}`, user).catch(() => null)
+    return out
+  }
+
+  /**
+   * Board rows for a set of people (a private group): their record over the window, ranked like
+   * the leaderboard; people with no graded picks in the window come last. Holds don't apply:
+   * a group is private and sees its own members.
+   */
+  async function rowsFor(uids, { range = '30d', sport = 'all', legs = 'all', sort = 'roi' } = {}) {
+    const win = Object.hasOwn(BOARD_RANGES, range) ? range : '30d'
+    const sp = /^[a-z]{2,6}$/.test(sport) ? sport : 'all'
+    const lg = ['1', '2', '3', '4+'].includes(legs) ? legs : 'all'
+    const by = Object.hasOwn(SORTS, sort) ? sort : 'roi'
+    const t = now()
+    const tz = billingConfig().usageTz
+    const rows = []
+    for (const uid of uids.slice(0, 100)) {
+      const p = await profileCached(uid)
+      if (!p) continue
+      const rec = recordFor(p.stats, t, tz, { range: win, sport: sp, legs: lg })
+      rows.push({ uid, profile: publicProfile(p, t), record: rec, tier: tierOf(recordFor(p.stats, t, tz, { range: '90d' })) })
+    }
+    const ranked = rows.filter((r) => r.record?.graded > 0).sort((a, b) => SORTS[by](a, b))
+    const rest = rows.filter((r) => !(r.record?.graded > 0)).sort((a, b) => a.profile.name.localeCompare(b.profile.name))
+    return { range: win, sport: sp, legs: lg, sort: by, rows: [...ranked, ...rest] }
   }
 
   /**
@@ -715,7 +766,9 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     const history = list.filter((p) => p.status === 'graded')
     const canSee = isOwner || Boolean(viewer?.admin) || (open.some((p) => p.subs) && viewer?.uid ? await isSubscriber(owner.uid, viewer.uid) : false)
     const show = (p) => publicPick(p, { canSee })
-    return { profile: publicProfile(prof), owner: isOwner, subscriber: !isOwner && canSee && !viewer?.admin, open: open.map(show), history: history.map(show), next: list.length === 30 ? list[list.length - 1].createdAt : null }
+    // selective posting shows: picks deleted before kickoff, out of those posted, in 30 days
+    const fairPlay = integrity && !before ? await integrity.statsFor(owner.uid).catch(() => null) : null
+    return { profile: publicProfile(prof), owner: isOwner, subscriber: !isOwner && canSee && !viewer?.admin, open: open.map(show), history: history.map(show), next: list.length === 30 ? list[list.length - 1].createdAt : null, fairPlay }
   }
 
   async function feed({ before } = {}) {
@@ -759,8 +812,10 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
       const days = BOARD_RANGES[win]
       // everyone with a recently graded pick (recordAt is stamped when a pick is graded)
       const profs = await d.recent('profiles', { field: 'recordAt', limit: 300, ...(days ? { where: [['recordAt', '>=', t - days * DAY_MS]] } : {}) })
-      // members only: anyone on a paid plan (Elite pages also show their Instagram and X)
-      const shown = profs.filter((p) => !p.hidden && isPaid(p, t))
+      // members only: anyone on a paid plan (Elite pages also show their Instagram and X); an
+      // account on a fair-play hold sits out until the admin has looked
+      const held = integrity ? await integrity.holds() : new Map()
+      const shown = profs.filter((p) => !p.hidden && isPaid(p, t) && !held.has(p.uid))
       // records from before the league and leg-count cuts get rebuilt once, in the background
       for (const p of shown) {
         if (p.stats && p.stats.v !== STATS_V && !rebuilding.has(p.uid) && rebuilding.size < 20) {
@@ -1186,5 +1241,5 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     return { picks: out, at: at || null, refreshMs: 20_000, now: t }
   }
 
-  return { me, saveProfile, post, check, remove, tail, page, feed, leaderboard, gradeOpen, watchOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, pickFor, subscribers, setSubscriber, alertsFor, seenAlerts, coachFor, trackingFor, rgGet, rgLimits, rgPause, pauseOf, liveFor, _atLeast: atLeast }
+  return { me, saveProfile, post, check, remove, tail, track, rowsFor, profileOf, page, feed, leaderboard, gradeOpen, watchOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, pickFor, subscribers, setSubscriber, alertsFor, seenAlerts, coachFor, trackingFor, rgGet, rgLimits, rgPause, pauseOf, liveFor, _atLeast: atLeast }
 }

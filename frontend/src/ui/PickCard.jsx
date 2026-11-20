@@ -10,6 +10,8 @@ import { SITE_URL } from '../lib/config.js'
 import { Odds } from './Odds.jsx'
 import { SendToBook } from './Books.jsx'
 import { api } from '../lib/api.js'
+import { invalidate } from '../lib/useApi.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
 const RESULT = { win: 'Won', loss: 'Lost', push: 'Push', void: 'Void' }
 
@@ -49,10 +51,25 @@ function HiddenPick({ pick, showProfile }) {
 }
 
 function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
+  const { user } = useAuth()
   const locked = pick.locked || Date.now() >= pick.lockAt
   const [tails, setTails] = useState(pick.tails || 0)
   const [tailed, setTailed] = useState(false)
   const [sending, setSending] = useState(false)
+  // tail it into your own record: posted as your pick, marked as tailed
+  const [track, setTrack] = useState({ busy: false, done: false, err: null })
+  const trackIt = async () => {
+    setTrack({ busy: true, done: false, err: null })
+    try {
+      await api(`/api/picks/${pick.id}/track`, { method: 'POST', body: { units: pick.units } })
+      setTrack({ busy: false, done: true, err: null })
+      setTails((n) => n + (tailed ? 0 : 1))
+      setTailed(true)
+      invalidate('/api/picks')
+    } catch (err) {
+      setTrack({ busy: false, done: false, err })
+    }
+  }
   const tail = () => {
     // the legs go on your slip at the prices they were posted at; then pick a book
     importLegs(pick.legs, Object.fromEntries(pick.legs.filter((l) => Number.isFinite(l.price)).map((l) => [legRef(l), l.price])))
@@ -105,6 +122,11 @@ function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
         ))}
       </ul>
       {pick.note && <p className="pick__note">{pick.note}</p>}
+      {pick.tailOf?.handle && (
+        <p className="pick__tailof muted">
+          Tailed from <Link to={`/u/${pick.tailOf.handle}`}>@{pick.tailOf.handle}</Link>
+        </p>
+      )}
       <footer className="pick__foot">
         <Odds a={pick.price} className="pick__price" />
         <span className="pick__units num">{pick.units}u</span>
@@ -130,6 +152,11 @@ function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
               Tail
             </button>
           )}
+          {!locked && !owner && user && !track.done && (
+            <button type="button" className="btn btn--quiet btn--s" onClick={trackIt} disabled={track.busy} title="Post the same legs as your own pick, so it counts on your record">
+              {track.busy ? 'Adding' : 'Add to my record'}
+            </button>
+          )}
           <a className="linkish" href={`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(pageUrl)}`} target="_blank" rel="noopener noreferrer">
             Post on X
           </a>
@@ -145,6 +172,22 @@ function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
           )}
         </span>
       </footer>
+      {track.done && (
+        <p className="pick__tracked" role="status">
+          On your record at {pick.units}u, marked as tailed. <Link to="/me">Your page</Link>
+        </p>
+      )}
+      {track.err && (
+        <p className="form-err small" role="alert">
+          {track.err.message}
+          {track.err.code === 'no_profile' && (
+            <>
+              {' '}
+              <Link to="/me">Make your page</Link>
+            </>
+          )}
+        </p>
+      )}
       {sending && <SendToBook open={sending} onClose={() => setSending(false)} legs={pick.legs} p={pick.legs.reduce((x, l) => x * (l.prob || 0), 1) || null} title={`Tail ${pick.handle ? `@${pick.handle}` : 'this pick'} at a sportsbook`} />}
     </article>
   )

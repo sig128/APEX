@@ -13,7 +13,7 @@ import { PropPage } from './pages/PropPage.jsx'
 import { PlayerPage } from './pages/PlayerPage.jsx'
 import { LivePage } from './pages/LivePage.jsx'
 import { SlipPage } from './pages/SlipPage.jsx'
-import { PicksPage } from './pages/PicksPage.jsx'
+import { PicksPage, JoinGroupPage } from './pages/PicksPage.jsx'
 import { UserPage } from './pages/UserPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
 import { NotFound } from './pages/NotFound.jsx'
@@ -74,6 +74,7 @@ export function App() {
               <Route path="/:sport/dvp" element={<League><DvpPage /></League>} />
               <Route path="/:sport/lock" element={<League><LockPage /></League>} />
               <Route path="/picks" element={<PicksPage />} />
+              <Route path="/picks/join/:code" element={<JoinGroupPage />} />
               <Route path="/u/:handle" element={<UserPage />} />
               <Route path="/me" element={<MePage />} />
               <Route path="/me/live" element={<LiveSlipPage />} />

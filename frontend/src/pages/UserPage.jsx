@@ -100,6 +100,11 @@ export function UserPage() {
           <RecordPanel title="Last 30 days" r={prof.record.d30} />
           <RecordPanel title="All time" r={prof.record.all} />
         </div>
+        {data.fairPlay?.posted > 0 && (
+          <p className="fairplay muted small">
+            Deleted before kickoff, last 30 days: <b className="num">{data.fairPlay.deleted}</b> of <b className="num">{data.fairPlay.posted}</b> {data.fairPlay.posted === 1 ? 'pick' : 'picks'} posted.
+          </p>
+        )}
         </>
       ) : (
         <p className="muted">No graded picks yet. The record starts with the first pick that finishes.</p>

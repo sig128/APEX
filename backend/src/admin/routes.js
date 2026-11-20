@@ -7,7 +7,7 @@ import { log, errText } from '../lib/log.js'
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 
-export function adminRoutes({ lock, metrics, sports, billing = null, picks = null, members = null, credits = null }) {
+export function adminRoutes({ lock, metrics, sports, billing = null, picks = null, members = null, credits = null, integrity = null }) {
   const r = express.Router()
   const wrap = (fn) => async (req, res) => {
     res.set('Cache-Control', 'no-store')
@@ -103,6 +103,29 @@ export function adminRoutes({ lock, metrics, sports, billing = null, picks = nul
       const a = await admin(req)
       if (!picks) throw new ApiError(503, 'no_picks', 'Picks pages aren’t set up on this server.')
       return picks.setHidden(a, req.body || {})
+    }),
+  )
+  // fair play: accounts that look like one person running several, or posting selectively;
+  // strong flags hold them off the public leaderboard until cleared here
+  r.get(
+    '/integrity',
+    wrap(async (req) => {
+      await admin(req)
+      if (!integrity) return { flags: [] }
+      const flags = await integrity.list({ limit: 200 })
+      const handles = new Map()
+      for (const f of flags) for (const u of f.uids) if (!handles.has(u)) handles.set(u, (await picks?.profileOf(u).catch(() => null))?.handle || null)
+      return { flags: flags.map((f) => ({ ...f, people: f.uids.map((u) => ({ uid: u, handle: handles.get(u) })) })) }
+    }),
+  )
+  r.post(
+    '/integrity/clear',
+    wrap(async (req) => {
+      const a = await admin(req)
+      if (!integrity) throw new ApiError(503, 'no_integrity', 'Fair-play checks aren’t set up on this server.')
+      const out = await integrity.clear({ ...a, admin: true }, req.body || {})
+      if (out.missing) throw new ApiError(404, 'not_found', 'No such flag.')
+      return out
     }),
   )
   // "Update now" on the admin page: the same run as the daily cron, shorter

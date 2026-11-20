@@ -6,7 +6,7 @@ import { ApiError } from '../lib/router.js'
 import { log, errText } from '../lib/log.js'
 
 /** Bump with any change to the consent text: everyone is asked again. Keep in step with the app. */
-export const CONSENT_VERSION = '2026-11-20b'
+export const CONSENT_VERSION = '2026-11-21'
 export const FEEDBACK_KINDS = ['bug', 'feature', 'pick', 'general']
 export const TOUR_STEPS = 6
 const NS = 'members'

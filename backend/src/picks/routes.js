@@ -8,7 +8,7 @@ import { billingConfig } from '../billing/config.js'
 import { atLeast } from '../billing/service.js'
 import { authMode } from '../security/auth.js'
 
-export function picksRoutes({ picks, access, billing = null }) {
+export function picksRoutes({ picks, access, billing = null, groups = null }) {
   /**
    * The members' leaderboard is for members: the admin and anyone holding a real Pro or Elite
    * pass (paid, given by the admin, or from a plan code), passes on sale or not. Local dev
@@ -101,7 +101,7 @@ export function picksRoutes({ picks, access, billing = null }) {
     needDb()
     const u = await signedIn(req)
     throttle(writeLimit, u.uid)
-    return picks.post(u, req.body || {})
+    return picks.post(u, req.body || {}, { ip: clientIp(req) })
   }))
   r.post('/check', wrap(async (req) => {
     throttle(readLimit, clientIp(req))
@@ -114,6 +114,41 @@ export function picksRoutes({ picks, access, billing = null }) {
     throttle(writeLimit, who)
     return picks.tail(req.params.id, who, u)
   }))
+  // tail a pick into your own record (your units, your limits), marked as tailed
+  r.post('/:id/track', wrap(async (req) => {
+    needDb()
+    const u = await signedIn(req)
+    throttle(writeLimit, u.uid)
+    const units = Number(req.body?.units)
+    return picks.track(u, req.params.id, { units: Number.isFinite(units) ? units : undefined, ip: clientIp(req) })
+  }))
+
+  // ---- private groups: their own boards ---------------------------------------------------
+  if (groups) {
+    const groupLimit = createLimiter({ burst: 20, perSec: 1 / 3 })
+    const g = (fn) =>
+      wrap(async (req) => {
+        needDb()
+        const u = await signedIn(req)
+        throttle(groupLimit, u.uid)
+        return fn(u, req)
+      })
+    r.get('/groups', g((u) => groups.mine(u)))
+    r.post('/groups', g((u, req) => groups.create(u, req.body || {})))
+    r.post('/groups/join', g((u, req) => groups.join(u, req.body || {})))
+    // what a code opens (name and size), for the join link; no sign-in needed to look
+    r.get('/groups/code/:code', wrap(async (req) => {
+      throttle(readLimit, clientIp(req), 4)
+      return groups.preview(req.params.code)
+    }))
+    r.get('/groups/:id', g((u, req) => groups.board(u, req.params.id, { range: String(req.query.range || '30d'), sport: String(req.query.sport || 'all'), legs: String(req.query.legs || 'all'), sort: String(req.query.sort || 'roi') })))
+    r.post('/groups/:id/leave', g((u, req) => groups.leave(u, req.params.id)))
+    r.post('/groups/:id/remove', g((u, req) => groups.removeMember(u, req.params.id, req.body || {})))
+    r.post('/groups/:id/rename', g((u, req) => groups.rename(u, req.params.id, req.body || {})))
+    r.post('/groups/:id/code', g((u, req) => groups.resetCode(u, req.params.id)))
+    r.delete('/groups/:id', g((u, req) => groups.remove(u, req.params.id)))
+  }
+
   // one pick (subscriber picks show their legs to subscribers)
   r.get('/p/:id', wrap(async (req) => {
     throttle(readLimit, clientIp(req))

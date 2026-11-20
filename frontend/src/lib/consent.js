@@ -3,7 +3,7 @@
 // bumping both, and everyone is asked again.
 import { api } from './api.js'
 
-export const CONSENT_VERSION = '2026-11-20b'
+export const CONSENT_VERSION = '2026-11-21'
 /* global __APP_VERSION__ */
 export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
 const KEY = 'apex_consent'

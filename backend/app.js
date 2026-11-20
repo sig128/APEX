@@ -21,6 +21,8 @@ import { createPush, pushConfig } from './src/push/service.js'
 import { legendFor } from './src/learn/content.js'
 import { breakdownRoutes } from './src/breakdown/routes.js'
 import { createPicks } from './src/picks/service.js'
+import { createIntegrity } from './src/picks/integrity.js'
+import { createGroups } from './src/picks/groups.js'
 import { picksRoutes } from './src/picks/routes.js'
 import { createMembers } from './src/members/service.js'
 import { membersRoutes } from './src/members/routes.js'
@@ -211,7 +213,11 @@ export function createApexApp({
   // push notifications: results, injury news on open picks, and ticker moves for members
   const push = createPush({ docs: billing.docs, ...(now ? { now } : {}), isMember: async (uid) => (await credits.planOf({ uid }).catch(() => 'free')) !== 'free' })
   for (const [key, eng] of Object.entries(engines)) eng.onTickerEvents = (evs) => push.tickerEvents(key, evs)
-  const picks = createPicks({ docs: billing.docs, engine, engines, billing, ...(now ? { now } : {}), notify: (uid, kind, payload) => push.notify(uid, kind, payload) })
+  // fair play on the leaderboard: duplicate accounts and selective posting
+  const integrity = createIntegrity({ docs: billing.docs, ...(now ? { now } : {}) })
+  const picks = createPicks({ docs: billing.docs, engine, engines, billing, ...(now ? { now } : {}), notify: (uid, kind, payload) => push.notify(uid, kind, payload), integrity })
+  // private groups with their own boards: started by members, joined by anyone with a page
+  const groups = createGroups({ docs: billing.docs, picks, ...(now ? { now } : {}), isMember: async (user) => user?.admin || (await credits.planOf(user).catch(() => 'free')) !== 'free' })
   billing.onChange((uid) => {
     picks.syncPlan(uid).catch((e) => log.warn('plan sync failed', { uid, err: errText(e) }))
   })
@@ -227,7 +233,7 @@ export function createApexApp({
     res.set('Cache-Control', 'public, max-age=60, s-maxage=120').json({ sports: Object.keys(engines).map((k) => ({ key: k, name: SPORTS[k].name, title: SPORTS[k].title, calendar: SPORTS[k].calendar, offseason: SPORTS[k].offseason })) })
   })
   app.use('/api/billing', billingRoutes({ billing, access, credits, getDb: () => (typeof getFirestore === 'function' ? getFirestore() || null : null), now: now || Date.now }))
-  app.use('/api/picks', picksRoutes({ picks, access, billing }))
+  app.use('/api/picks', picksRoutes({ picks, access, billing, groups }))
   // the admin page's numbers, and the daily run that keeps the board's record without visitors
   const metrics = createAdminMetrics({ engines, store: engineStore, billing, listUsers, ...(now ? { now } : {}) })
   const lock = createAdminLock({ store: engineStore, ...(now ? { now } : {}) })
@@ -239,7 +245,7 @@ export function createApexApp({
   // the consent screen's record, the onboarding tour's counts, feedback to the team's inbox
   const members = createMembers({ store: engineStore, mail: createMailer(), ...(now ? { now } : {}) })
   app.use('/api/members', membersRoutes({ members, access }))
-  app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks, members, credits }))
+  app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks, members, credits, integrity }))
   // the public calibration page (src/calibration); the daily run also fingerprints the days it closed
   const calibration = createCalibration({ engines, store: engineStore, ...(now ? { now } : {}) })
   app.use('/api/calibration', calibrationRoutes({ calibration }))

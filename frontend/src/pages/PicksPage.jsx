@@ -1,16 +1,21 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useApi } from '../lib/useApi.js'
 import { useTitle } from '../lib/hooks.js'
 import { units as fmtUnits, pct } from '../lib/format.js'
 import { PickCard, Avatar, clvText } from '../ui/PickCard.jsx'
 import { Tabs, Skeleton, Empty, EliteBadge } from '../ui/Bits.jsx'
 import { Leaderboard } from '../ui/Leaderboard.jsx'
+import { GroupsPanel, JoinGroup } from '../ui/Groups.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
 /** The picks showcase: Elite cappers' live feed and the leaderboard of graded records. */
 export function PicksPage() {
-  const [tab, setTab] = useState('feed')
+  // the tab and an open group live in the address, so a group's board can be linked to
+  const [params, setParams] = useSearchParams()
+  const tab = ['feed', 'board', 'groups'].includes(params.get('tab')) ? params.get('tab') : 'feed'
+  const group = /^g_[0-9a-f]{16}$/.test(params.get('group') || '') ? params.get('group') : null
+  const setTab = (t) => setParams(t === 'feed' ? {} : { tab: t }, { replace: true })
+  const openGroup = (id) => setParams(id ? { tab: 'groups', group: id } : { tab: 'groups' })
   useTitle('Picks')
   const { user } = useAuth()
   return (
@@ -28,12 +33,13 @@ export function PicksPage() {
         tabs={[
           { key: 'feed', label: 'Feed' },
           { key: 'board', label: 'Leaderboard' },
+          { key: 'groups', label: 'Groups' },
         ]}
         value={tab}
         onChange={setTab}
         label="Picks"
       />
-      {tab === 'feed' ? <Feed /> : <Leaderboard />}
+      {tab === 'feed' ? <Feed /> : tab === 'board' ? <Leaderboard /> : <GroupsPanel open={group} onOpen={openGroup} />}
     </div>
   )
 }
@@ -47,6 +53,17 @@ function Feed() {
       {data.picks.map((p) => (
         <PickCard key={p.id} pick={p} showProfile />
       ))}
+    </div>
+  )
+}
+
+/** /picks/join/:code — an invite to a private group. */
+export function JoinGroupPage() {
+  const { code } = useParams()
+  useTitle('Join a group')
+  return (
+    <div className="container page narrow">
+      <JoinGroup code={String(code || '')} />
     </div>
   )
 }

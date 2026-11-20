@@ -55,6 +55,11 @@ export function MePage() {
         <h1 className="page-title">{p ? 'Your page' : 'Make your picks page'}</h1>
         <p className="page-sub">{p ? `proppickz.com/u/${p.handle}` : 'Post picks before kickoff and PropPickz grades them from the box score. Your record builds itself, and nobody can fake one.'}</p>
       </header>
+      {p && me?.held && (
+        <p className="me-held" role="status">
+          Your page is off the public leaderboard while we check {me.held === 'deletes' ? 'how many picks were deleted before kickoff' : me.held === 'wallet' ? 'an account that paid from the same wallet as yours' : 'picks on both sides of the same prop from accounts on one network'}. Your page, picks and groups work as usual. If something looks wrong, send us a note from Feedback.
+        </p>
+      )}
       {p && (
         <div className="me-card">
           <Avatar profile={p} size={56} />
