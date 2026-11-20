@@ -256,7 +256,7 @@ function Hero({ card }) {
   const wins = p?.windows?.filter((w) => ['L5', 'L10', 'L20', 'season', 'h2h'].includes(w.key) && w.n) || [card.l5, card.l10].filter(Boolean)
   return (
     <article className="hero" aria-labelledby="hero-name">
-      <div className="hero__who">
+      <div className="hero__who" data-tour="prop">
         <Headshot src={card.headshot} name={card.name} size={88} className="hero__img" />
         <div>
           <p className="hero__rank">No. 1 on the PropPickz board</p>

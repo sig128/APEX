@@ -10,6 +10,7 @@ import { Search } from './Search.jsx'
 import { SlipPanel } from './SlipPanel.jsx'
 import { backFromBook, clearAway } from './Books.jsx'
 import { ConsentGate } from './ConsentGate.jsx'
+import { Tour, replayTour } from './Tour.jsx'
 import { getSlip } from '../lib/slip.js'
 import { PickNudge } from './PickNudge.jsx'
 import { playIntro } from '../intro/intro.js'
@@ -131,6 +132,7 @@ export function Shell({ children }) {
       <Footer />
       <TabBar slipCount={slip.legs.length} onSlip={() => setSlipOpen(true)} />
       <ConsentGate onAccepted={() => window.dispatchEvent(new Event('apex:consented'))} />
+      <Tour />
       <SlipPanel
         open={slipOpen}
         onClose={() => {
@@ -160,7 +162,7 @@ function Header({ onSlip, slipCount, onSearch }) {
         </div>
         <nav className="header__nav" aria-label="Main">
           {navFor(sport).map((n) => (
-            <NavLink key={n.label} to={n.to} end={n.end} className={({ isActive }) => `header__link${isActive ? ' is-on' : ''}`}>
+            <NavLink key={n.label} to={n.to} end={n.end} data-tour={n.label === 'Picks' ? 'picks' : n.label === 'Live' ? 'live' : undefined} className={({ isActive }) => `header__link${isActive ? ' is-on' : ''}`}>
               {n.label}
               {n.live && liveCount > 0 && <span className="header__count num">{liveCount}</span>}
             </NavLink>
@@ -176,7 +178,7 @@ function Header({ onSlip, slipCount, onSearch }) {
               <path d="M13.2 13.2L17 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>
-          <button type="button" className="slip-btn" onClick={onSlip} aria-label={`Bet slip, ${slipCount} legs`}>
+          <button type="button" className="slip-btn" data-tour="slip" onClick={onSlip} aria-label={`Bet slip, ${slipCount} legs`}>
             Slip
             <span className={`slip-btn__n num${slipCount ? ' is-on' : ''}`}>{slipCount}</span>
           </button>
@@ -209,16 +211,16 @@ function TabBar({ slipCount, onSlip }) {
         <Icon d="M4 5h12M4 10h12M4 15h7" />
         Props
       </NavLink>
-      <NavLink to={sp(sport, '/live')} className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
+      <NavLink to={sp(sport, '/live')} data-tour="live" className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
         <Icon d="M10 3v7l4 3M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
         Live
       </NavLink>
-      <button type="button" className="tabbar__item" onClick={onSlip}>
+      <button type="button" className="tabbar__item" data-tour="slip" onClick={onSlip}>
         <Icon d="M5 3h10v14l-2.5-1.6L10 17l-2.5-1.6L5 17zM7.5 7h5M7.5 10h5" />
         Slip
         {slipCount > 0 && <span className="tabbar__badge num">{slipCount}</span>}
       </button>
-      <NavLink to="/picks" className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
+      <NavLink to="/picks" data-tour="picks" className={({ isActive }) => `tabbar__item${isActive ? ' is-on' : ''}`}>
         <Icon d="M10 3l2.2 4.6 5 .7-3.6 3.5.9 5L10 14.4 5.5 16.8l.9-5L2.8 8.3l5-.7z" />
         Picks
       </NavLink>
@@ -299,6 +301,9 @@ function Footer() {
           {isAdmin && <Link to="/admin">Admin</Link>}
           <button type="button" className="linkish" onClick={() => playIntro({ force: true, chipText: sportInfo(sport).name })}>
             Replay intro
+          </button>
+          <button type="button" className="linkish" onClick={replayTour}>
+            Take the tour
           </button>
         </nav>
       </div>

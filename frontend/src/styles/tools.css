@@ -830,3 +830,90 @@ a.booktile:active {
   font-size: 17px;
   color: var(--chalk) !important;
 }
+
+/* ---------------------------------------------------------------- the onboarding tour
+   A spotlight on the real screen and a small card beside it: one idea per step. */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+}
+.tour__dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 6, 5, 0.72);
+}
+.tour__hole {
+  position: fixed;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(3, 6, 5, 0.72);
+  outline: 2px solid var(--lime);
+  outline-offset: 0;
+  pointer-events: none;
+}
+.tour__card {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(390px, calc(100vw - 32px));
+  display: grid;
+  gap: 8px;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--seat-2);
+  border-radius: 16px;
+  background: var(--stand);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  outline: none;
+}
+.tour__card.is-center {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.tour__count {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--lime);
+  letter-spacing: 0.02em;
+}
+.tour__title {
+  margin: 0;
+  font: 800 21px/1.15 var(--font-num);
+  color: var(--chalk);
+}
+.tour__text {
+  margin: 0;
+  line-height: 1.45;
+  color: var(--chalk-2);
+}
+.tour__dots {
+  display: flex;
+  gap: 5px;
+  margin-top: 2px;
+}
+.tour__dots span {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--seat-2);
+}
+.tour__dots .is-past {
+  background: rgba(184, 255, 31, 0.45);
+}
+.tour__dots .is-on {
+  background: var(--lime);
+}
+.tour__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.tour__skip {
+  margin-right: auto;
+  font-size: var(--t-xs);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tour__hole {
+    transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease;
+  }
+}
