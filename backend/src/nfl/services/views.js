@@ -10,6 +10,7 @@ import { injurySeverity } from '../../providers/espn/normalize.js'
 import { progressFor as progressAt, boxLeaders, winCurve } from './live.js'
 import { nameKey, round, mean, median } from '../../lib/util.js'
 import { findLock } from '../analytics/lock.js'
+import { buildParlays } from '../analytics/builder.js'
 import { absences, returnRule, statusTag, returnRecord } from '../analytics/availability.js'
 
 export function createViews(engine) {
@@ -680,6 +681,58 @@ export function createViews(engine) {
     return out
   }
 
+  /** Games that haven't started (and don't start in the next five minutes). */
+  function openGames(t = engine.now()) {
+    return new Set([...wh.games.values()].filter((g) => g.status?.state === 'pre' && Date.parse(g.date) - t > 5 * 60_000).map((g) => String(g.id)))
+  }
+
+  /** The builder's pool: props for games that haven't started, with nearby alternates both ways. */
+  function builderRows({ gameId = null } = {}) {
+    const t = engine.now()
+    return cached(`builderRows:${gameId || ''}`, `${wh.aVersion}:${Math.floor(t / (5 * 60_000))}`, () => {
+      const open = openGames(t)
+      const rows = allRows().rows.filter((r) => open.has(String(r.gameId)) && !r.pending && (!gameId || String(r.gameId) === gameId))
+      const out = [...rows]
+      for (const r of rows) {
+        if (r.oneSided || !(r.prob >= 0.5) || !r.alts?.length) continue
+        const subject = r.kind === 'team' ? `t${r.teamId}` : r.playerId
+        const near = (x) => Math.abs(x - r.line)
+        const easier = r.alts.filter((x) => (r.side === 'u' ? x > r.line : x < r.line)).sort((a, b) => near(a) - near(b)).slice(0, 3)
+        const harder = r.alts.filter((x) => (r.side === 'u' ? x < r.line : x > r.line)).sort((a, b) => near(a) - near(b)).slice(0, 2)
+        for (const line of [...easier, ...harder]) {
+          const alt = findProp(`${subject}.${r.market}.${r.side}.${line}`)
+          if (alt) out.push(alt)
+        }
+      }
+      return out
+    })
+  }
+
+  /**
+   * The parlay builder for this league (see analytics/builder.js). keep: prop ids from the
+   * person's slip that have to be in it. The same request on the same data gives the same
+   * answer, so it's kept for a few minutes.
+   */
+  function build({ risk, legs, target, keep = [], avoid = [], gameId = null }) {
+    const t = engine.now()
+    const open = openGames(t)
+    const keepRows = []
+    for (const id of keep) {
+      const r = findProp(id)
+      if (!r) return { status: 'error', code: 'no_prop', reason: 'One of the legs you kept isn’t on the board anymore. Remove it from your slip and try again.', builds: [] }
+      if (!open.has(String(r.gameId))) return { status: 'error', code: 'started', reason: `${r.short || r.name}’s game has started, so that leg can’t go in a new parlay.`, builds: [] }
+      if (gameId && String(r.gameId) !== gameId) return { status: 'error', code: 'other_game', reason: `${r.short || r.name} isn’t in the game you picked. Pick all games, or leave that leg out.`, builds: [] }
+      keepRows.push(r)
+    }
+    if (gameId && !open.has(gameId)) return { status: 'error', code: 'started', reason: 'That game has started or isn’t on the board. Pick another one.', builds: [] }
+    const key = `build:${JSON.stringify([risk, legs, target, keep, avoid, gameId])}`
+    return cached(key, `${wh.aVersion}:${Math.floor(t / (5 * 60_000))}`, () => {
+      const out = buildParlays(builderRows({ gameId }), { risk, legs, target, keepRows, avoid, gameId, now: t, injuryOf: (id) => wh.injuryOf(id), core: fam.CORE || null })
+      const legOut = (l) => ({ ...card(l.r), kept: l.kept, support: l.support, simHit: l.simHit, injury: l.injury, swaps: (l.swaps || []).map((x) => ({ ...card(x.r), support: x.support, chance: x.chance })) })
+      return { ...out, builds: out.builds.map((b) => ({ ...b, legs: b.legs.map(legOut) })) }
+    })
+  }
+
   /** The week's lock, recomputed when the data moves (and at least every 15 minutes for recency). */
   function lock() {
     const t = engine.now()
@@ -690,5 +743,5 @@ export function createViews(engine) {
     })
   }
 
-  return { ctx, allRows, strip, home, props, game, liveGame, live, trackerDiff, track, findProp, prop, player, search, dvp, rankings, teamProps, propContext, card, lockRows, lock, h2h, statusOf, statuses }
+  return { ctx, allRows, strip, home, props, game, liveGame, live, trackerDiff, track, findProp, prop, player, search, dvp, rankings, teamProps, propContext, card, lockRows, lock, builderRows, build, h2h, statusOf, statuses }
 }

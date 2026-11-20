@@ -112,7 +112,7 @@ export function FeedbackDialog() {
   )
 }
 
-/** "Was this helpful?" under a pick: one tap, and an offer to say more. */
+/** "Was this helpful?" under a pick or a parlay: one tap, and an offer to say more. */
 export function Helpful({ about, label = 'Was this pick helpful?' }) {
   const [said, setSaid] = useState(null)
   const tap = (helpful) => {

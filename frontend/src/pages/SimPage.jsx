@@ -59,10 +59,15 @@ export function SimPage() {
         {!legs.length ? (
           <div className="empty">
             <p className="empty__title">Your slip is empty</p>
-            <p>Add two or more props from the board, then come back here to play them out.</p>
-            <Link className="btn btn--lime" to={sp(sport, '/props')}>
-              Find props
-            </Link>
+            <p>Add two or more props from the board, then come back here to play them out. Or let the parlay builder pick legs that fit together.</p>
+            <div className="row">
+              <Link className="btn btn--lime" to={sp(sport, '/props')}>
+                Find props
+              </Link>
+              <Link className="btn btn--quiet" to="/tools/builder">
+                Build a parlay
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="sim">

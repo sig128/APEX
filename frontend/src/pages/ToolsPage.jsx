@@ -135,6 +135,7 @@ function TwoWay() {
 const TOOLS = [
   { to: '/learn', title: 'Tips & Tricks', body: 'The words, the math and the habits behind betting props, each with a worked example: vig, implied probability, CLV, correlation, line shopping and more.', plan: 'Free and Pro' },
   { to: '/tools/breakdown', title: 'Bet breakdown', body: 'Why a settled bet won or lost, leg by leg, from the evidence: what each leg needed, what happened, and what the data can and can’t explain. Open the example.', plan: 'Pro' },
+  { to: '/tools/builder', title: 'Parlay builder', body: 'Pick safe, balanced or longshot, how many legs and what it should pay. It finds legs on the board that fit together, one per player and none that pull against each other, and plays them out.', plan: 'Pro' },
   { to: '/tools/sim', title: 'Parlay simulator', body: 'Play your parlay out 10,000 to 100,000 times: how often each leg hits, how often it all cashes, and what luck does to a bankroll.', plan: 'Pro' },
   { to: '/tools/check', title: 'Parlay check', body: 'Paste your legs or upload a screenshot of your betslip. The model says which legs to keep and which to cut, and why.', plan: 'Pro' },
   { to: '/kelly', title: 'Kelly calculator', body: 'How much to bet from your edge and your bankroll, and thousands of simulated seasons of betting it.', plan: 'Pro' },

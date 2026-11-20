@@ -14,6 +14,7 @@ import { signTicket, verifyTicket } from '../security/ticket.js'
 import { defaultAuthInstance, authMode } from '../security/auth.js'
 import { parsePropId } from './analytics/core.js'
 import { simulateSlip } from './analytics/sim.js'
+import { readRequest, profilesView, LEG_RANGE, TARGET_RANGE } from './analytics/builder.js'
 import { envInt } from '../lib/util.js'
 import { NO_AI } from '../ai/llm.js'
 
@@ -301,6 +302,42 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
       if (charge && !charge.free) await credits.refund(m.user, key).catch(() => {})
       throw e
     }
+  })
+
+  // Parlay builder: a risk profile, a leg count and target odds in; up to three parlays out, each
+  // played out in the simulation, with other legs that fit for every slot. Members, a credit a
+  // build (no charge when nothing fits). Swapping a leg is re-checked with the free quick sim.
+  const buildLimiter = createLimiter({ burst: 6, perSec: 1 / 5 })
+  r.get('/build/profiles', { tier: 'free', cache: C(600) }, () => ({ sport: home, profiles: profilesView(), legs: LEG_RANGE, target: TARGET_RANGE }))
+  r.post('/build', { tier: t('build') }, async (ctx) => {
+    ctx.cache = null
+    const m = await memberOf(ctx.req)
+    if (!m.paid) needMember(m, 'the parlay builder')
+    const q = readRequest(ctx.req.body || {})
+    if (q.error) throw new ApiError(400, 'bad_build', q.error)
+    if (q.keep.some((id) => !parsePropId(id)) || q.avoid.some((id) => !parsePropId(id))) throw new ApiError(400, 'bad_prop', 'One of those legs isn’t a prop id.')
+    const lim = buildLimiter.take(m.user?.uid || clientIp(ctx.req))
+    if (!lim.ok) throw new ApiError(429, 'rate', 'A few seconds between builds, please.', { retryAfter: lim.retryAfter })
+    // one charge per tap: a retry or a double tap with the same key is free
+    const runKey = /^[A-Za-z0-9_-]{8,40}$/.test(String(ctx.req.body?.runKey || '')) ? String(ctx.req.body.runKey) : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+    const key = `build:${runKey}`
+    const charge = credits ? await credits.spend(m.user, 'build', { key }) : null
+    const t0 = Date.now()
+    let out
+    try {
+      out = views.build(q)
+    } catch (e) {
+      if (charge && !charge.free && !charge.already) await credits.refund(m.user, key).catch(() => {})
+      throw e
+    }
+    if (out.status === 'error' || !out.builds.length) {
+      // nothing was built: the credit goes back
+      if (charge && !charge.free && !charge.already) await credits.refund(m.user, key).catch(() => {})
+      if (out.status === 'error') throw new ApiError(400, out.code || 'bad_build', out.reason)
+      return { sport: home, at: Date.now(), request: q, ...out, credits: charge ? { cost: 0, refunded: !charge.free, left: charge.left == null ? null : charge.left + (charge.free || charge.already ? 0 : charge.cost), free: Boolean(charge.free) } : null }
+    }
+    credits?.measure('build', { ms: Date.now() - t0, credits: charge?.cost || 0 })
+    return { sport: home, at: Date.now(), request: q, ...out, credits: charge ? { cost: charge.cost, left: charge.left, warn: charge.warn, free: Boolean(charge.free) } : null }
   })
 
   /**

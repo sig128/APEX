@@ -14,6 +14,7 @@ export const ROUTE_TIER = {
   rankings: 'free',
   insight: 'pro',
   sim: 'pro',
+  build: 'pro',
   check: 'pro',
   intel: 'pro',
   lock: 'pro',

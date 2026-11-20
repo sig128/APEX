@@ -26,6 +26,7 @@ const ContestsPage = page(() => import('./pages/ContestsPage.jsx'), 'ContestsPag
 const KellyPage = page(() => import('./pages/KellyPage.jsx'), 'KellyPage')
 const ToolsPage = page(() => import('./pages/ToolsPage.jsx'), 'ToolsPage')
 const SimPage = page(() => import('./pages/SimPage.jsx'), 'SimPage')
+const BuilderPage = page(() => import('./pages/BuilderPage.jsx'), 'BuilderPage')
 const CheckPage = page(() => import('./pages/CheckPage.jsx'), 'CheckPage')
 const LockPage = page(() => import('./pages/LockPage.jsx'), 'LockPage')
 const PricingPage = page(() => import('./pages/PricingPage.jsx'), 'PricingPage')
@@ -83,6 +84,7 @@ export function App() {
               <Route path="/kelly" element={<KellyPage />} />
               <Route path="/tools" element={<ToolsPage />} />
               <Route path="/tools/sim" element={<SimPage />} />
+              <Route path="/tools/builder" element={<BuilderPage />} />
               <Route path="/tools/check" element={<CheckPage />} />
               <Route path="/calibration" element={<CalibrationPage />} />
               <Route path="/pricing" element={<PricingPage />} />
