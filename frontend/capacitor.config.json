@@ -12,17 +12,24 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchAutoHide": false,
-      "launchShowDuration": 0,
+      "launchAutoHide": true,
+      "launchShowDuration": 1500,
       "backgroundColor": "#030605",
       "showSpinner": false
     },
     "PushNotifications": {
-      "presentationOptions": ["badge", "sound", "alert"]
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
     },
     "FirebaseAuthentication": {
       "skipNativeAuth": true,
-      "providers": ["google.com", "apple.com"]
+      "providers": [
+        "google.com",
+        "apple.com"
+      ]
     }
   },
   "experimental": {
@@ -30,10 +37,14 @@
       "spm": {
         "swiftToolsVersion": "6.1",
         "packageOptions": {
-          "@capacitor-firebase/authentication": { "symlink": true }
+          "@capacitor-firebase/authentication": {
+            "symlink": true
+          }
         },
         "packageTraits": {
-          "@capacitor-firebase/authentication": ["Google"]
+          "@capacitor-firebase/authentication": [
+            "Google"
+          ]
         }
       }
     }
