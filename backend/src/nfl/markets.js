@@ -2,6 +2,7 @@
 import { MARKETS as BASKETBALL_MARKETS } from '../sports/basketball.js'
 import { MARKETS as HOCKEY_MARKETS } from '../sports/hockey.js'
 import { MARKETS as BASEBALL_MARKETS } from '../sports/baseball.js'
+import { MARKETS as SOCCER_MARKETS } from '../sports/soccer.js'
 const n = (x) => (Number.isFinite(x) ? x : 0)
 
 /**
@@ -43,7 +44,7 @@ export const FOOTBALL_CORE = ['passYds', 'passAtt', 'passCmp', 'passTd', 'rushYd
 export const CORE_MARKETS = FOOTBALL_CORE
 
 /** Every sport's markets in one registry: keys are unique across sports. */
-export const MARKETS = { ...FOOTBALL_MARKETS, ...BASKETBALL_MARKETS, ...HOCKEY_MARKETS, ...BASEBALL_MARKETS }
+export const MARKETS = { ...FOOTBALL_MARKETS, ...BASKETBALL_MARKETS, ...HOCKEY_MARKETS, ...BASEBALL_MARKETS, ...SOCCER_MARKETS }
 export const MARKET_KEYS = Object.keys(MARKETS)
 
 export function marketOf(key) {

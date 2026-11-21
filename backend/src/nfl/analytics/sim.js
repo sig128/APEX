@@ -11,6 +11,7 @@ import * as football from '../../sports/football.js'
 import * as basketball from '../../sports/basketball.js'
 import * as hockey from '../../sports/hockey.js'
 import * as baseball from '../../sports/baseball.js'
+import * as soccer from '../../sports/soccer.js'
 
 // ---- math -----------------------------------------------------------------------------------
 export function mulberry32(seed) {
@@ -97,7 +98,7 @@ function lambdaFor(k, target) {
 // loadings on: G game pace, T team offense, P team pass tilt (+ pass, - run), U the player
 // factor loadings per market, from each sport family (pace G, team T, team style P, player U;
 // opp: the team factors are the opponent's, as for pitchers and goalies)
-const GROUPS = { ...football.SIM_GROUPS, ...basketball.SIM_GROUPS, ...hockey.SIM_GROUPS, ...baseball.SIM_GROUPS, teamPts: { G: 0.5, T: 0.65, P: 0, U: 0 } }
+const GROUPS = { ...football.SIM_GROUPS, ...basketball.SIM_GROUPS, ...hockey.SIM_GROUPS, ...baseball.SIM_GROUPS, ...soccer.SIM_GROUPS, teamPts: { G: 0.5, T: 0.65, P: 0, U: 0 } }
 const DEFAULT_GROUP = { G: 0.1, T: 0, P: 0, U: 0.55 }
 const loadings = (market) => GROUPS[market] || DEFAULT_GROUP
 const teamFor = (r, l) => (l.opp ? r.oppId || null : r.teamId)

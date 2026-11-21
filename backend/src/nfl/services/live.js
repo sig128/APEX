@@ -26,6 +26,12 @@ export function gameFraction(status, clock = { periods: 4, secs: 900 }) {
     return clamp((period - 1 + half) / periods, 0, 1)
   }
   if (status.halftime) return 0.5
+  if (clock.up) {
+    // soccer: the clock counts the minutes played ("67'", "45'+2'"); stoppage time is the half's end
+    const m = /^(\d{1,3})/.exec(String(status.clock || ''))
+    if (!m) return clamp((period - 0.5) / periods, 0, 1)
+    return clamp(Number(m[1]) / (periods * (clock.secs / 60)), 0, 1)
+  }
   const left = clockSecs(status.clock)
   const inPeriod = left == null ? 0.5 : clamp((clock.secs - left) / clock.secs, 0, 1)
   return clamp((period - 1 + inPeriod) / periods, 0, 1)

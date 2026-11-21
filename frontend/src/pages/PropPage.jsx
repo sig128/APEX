@@ -129,6 +129,7 @@ export function PropPage() {
       <div className="prop-read">
         <div className="prop-read__main">
           <p className="prop-read__label">{p.label}</p>
+          {p.standard && <p className="std-note">No sportsbook has posted this line yet. It’s the standard line nearest his usual output, here for research; it can go on your slip, and on your record once a book prices it.</p>}
           <p className="prop-read__prob">
             <span className="num">{pct(p.prob)}</span>
             <span className="prop-read__fair">

@@ -16,7 +16,8 @@ import { createNews } from './news.js'
 import { createStore } from '../lib/store.js'
 import { createViews } from './services/views.js'
 import { log, errText } from '../lib/log.js'
-import { mapLimit } from '../lib/util.js'
+import { mapLimit, mean } from '../lib/util.js'
+import { marketRows } from './analytics/core.js'
 import { sportOf } from '../sports/index.js'
 
 const MIN = 60_000
@@ -73,6 +74,12 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
    * morning ESPN still shows yesterday), and tomorrow.
    */
   async function fetchScoreboard(priority) {
+    if (S.calendar === 'matchweek') {
+      // soccer: yesterday through the next seven days in one call (matches bunch up on weekends)
+      const sb = await espn.scoreboard({ dates: `${etDay(now(), -1)}-${etDay(now(), 7)}`, limit: 200 }, { priority })
+      const t = now()
+      return { ...sb, games: sb.games.filter((g) => g.status.state !== 'post' || t - Date.parse(g.date) < 30 * HOUR) }
+    }
     const today = await espn.scoreboard({}, { priority })
     if (S.calendar !== 'day') return today
     const todayKey = etDay(now())
@@ -148,6 +155,8 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     wh.at.summaries = now()
   }
 
+  // soccer: how many logs the standard lines were made from, per game (more logs, new lines)
+  const modelBasis = new Map()
   async function linesTask() {
     const t = now()
     const pre = games().filter((g) => g.status.state === 'pre')
@@ -155,15 +164,69 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
       const cur = wh.lines.get(g.id)
       const until = Date.parse(g.date) - t
       const maxAge = until < 3 * HOUR ? 4 * MIN : 12 * MIN
-      if (cur && t - cur.at < maxAge) return
+      const newLogs = S.fam.MODEL_LINES && modelBasis.get(g.id) !== wh.logs.size
+      if (cur && t - cur.at < maxAge && !newLogs) return
+      if (S.fam.MODEL_LINES) modelBasis.set(g.id, wh.logs.size)
+      let props = []
       try {
-        const props = await espn.propBets(g.id, { priority: 'normal' })
-        if (wh.setLines(g.id, props, now(), { keepMissing: until < 45 * MIN })) publish(`props:${g.id}`, 'update', { gameId: g.id, at: now() })
+        props = await espn.propBets(g.id, { priority: 'normal' })
       } catch (e) {
-        log.warn('prop lines failed', { game: g.id, err: errText(e) })
+        // soccer games often have no prop feed at all: the standard lines stand in
+        if (!S.fam.MODEL_LINES) {
+          log.warn('prop lines failed', { game: g.id, err: errText(e) })
+          return
+        }
       }
+      if (S.fam.MODEL_LINES) props = withModelLines(g, props)
+      if (wh.setLines(g.id, props, now(), { keepMissing: until < 45 * MIN })) publish(`props:${g.id}`, 'update', { gameId: g.id, at: now() })
     })
     wh.at.lines = now()
+  }
+
+  /**
+   * Soccer: the standard lines for each likely starter on both teams (the line nearest his usual
+   * output in the last ten appearances), the anytime goal and assist for those with any, and each
+   * team's goals. Marked `model`: research lines, not posted by a book, unless a price arrives.
+   * A posted line from the feed always wins over a standard one.
+   */
+  function withModelLines(g, posted) {
+    const fam = S.fam
+    const out = [...posted]
+    const have = new Set(posted.map((p) => `${p.athleteId || `t${p.teamId}`}:${p.market}`))
+    const yr = season()
+    const near = (avg, lines) => lines.reduce((best, x) => (Math.abs(x - avg) < Math.abs(best - avg) - 1e-9 ? x : best), lines[0])
+    const at = new Date(now()).toISOString()
+    for (const team of [g.home, g.away]) {
+      if (!team?.id) continue
+      for (const p of wh.players.values()) {
+        if (p.teamId !== team.id || p.active === false) continue
+        const logs = wh.logs.get(p.id)
+        if (!logs || logs.length < 5 || fam.roleOf(p, logs, yr) < 0.6) continue
+        const group = fam.posGroup(p.pos || logs[logs.length - 1]?.pos)
+        for (const market of fam.BOARD_MARKETS[group] || []) {
+          if (have.has(`${p.id}:${market}`)) continue
+          const rows = marketRows(logs, market).slice(-10)
+          if (rows.length < 5) continue
+          const avg = mean(rows.map((r) => r.v))
+          const lines = fam.MODEL_LINES[market]
+          if (fam.MARKETS[market]?.oneSided) {
+            // an anytime goal or assist only for players who've had one lately
+            if (!marketRows(logs, market).slice(-20).some((r) => r.v > 0)) continue
+          } else if (avg < 0.25 && lines[0] === 0.5) continue
+          const line = near(avg, lines)
+          out.push({ athleteId: p.id, teamId: null, market, line, alts: lines.filter((x) => x !== line && Math.abs(x - line) <= 1), open: null, updated: at, book: null, prices: null, model: true })
+        }
+      }
+      // the team's goals: the standard line nearest its last ten
+      if (!have.has(`t${team.id}:teamPts`)) {
+        const sched = (wh.schedules.get(team.id)?.games || []).filter((x) => x.completed && Number.isFinite(x.pf)).slice(-10)
+        if (sched.length >= 5) {
+          const line = near(mean(sched.map((x) => x.pf)), fam.MODEL_LINES.teamPts)
+          out.push({ athleteId: null, teamId: team.id, market: 'teamPts', line, alts: fam.MODEL_LINES.teamPts.filter((x) => x !== line && Math.abs(x - line) <= 1), open: null, updated: at, book: null, prices: null, model: true })
+        }
+      }
+    }
+    return out
   }
 
   async function rostersTask() {
@@ -210,6 +273,8 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     const ids = new Set()
     for (const l of wh.lines.values()) for (const p of l.props) if (p.athleteId) ids.add(p.athleteId)
     const playing = new Set(games().flatMap((g) => [g.home?.id, g.away?.id]))
+    // soccer's lines come from the logs themselves: everyone on the teams playing is wanted
+    if (S.fam.MODEL_LINES) for (const p of wh.players.values()) if (playing.has(p.teamId) && p.active !== false) ids.add(p.id)
     for (const [tid, list] of wh.injuries) {
       if (!playing.has(tid)) continue
       for (const i of list) if (S.fam.KEY_POSITIONS.includes(i.pos)) ids.add(i.athleteId)
@@ -232,13 +297,14 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     return todo
   }
 
-  async function logsTask(limit = backfillBatch ?? (mode === 'lazy' ? 24 : 60)) {
+  // soccer logs come a team at a time from match lineups, so a batch can be much bigger
+  async function logsTask(limit = backfillBatch ?? (S.fam.LOGS_FROM_SUMMARIES ? 160 : mode === 'lazy' ? 24 : 60)) {
     const yr = season()
     const todo = logsTodo()
     const batch = todo.slice(0, limit)
     await mapLimit(batch, 6, async ([pid, yr2]) => {
       try {
-        const rows = await espn.gamelog(pid, yr2, { priority: 'background' })
+        const rows = await espn.gamelog(pid, yr2, { priority: 'background', teamId: wh.players.get(pid)?.teamId || null, current: yr2 === yr })
         wh.setLogs(pid, yr2, rows, now())
         if (yr2 === yr) staleLogs.delete(pid)
       } catch (e) {

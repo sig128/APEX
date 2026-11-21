@@ -4663,3 +4663,20 @@ a.tick__link:focus-visible {
   border-radius: var(--r-s);
   border: 1px solid var(--seat-2);
 }
+
+/* ---- soccer: standard lines no book has posted ------------------------------------------- */
+.std-tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--seat-2);
+  color: var(--chalk-3);
+  font-size: var(--t-xs);
+  white-space: nowrap;
+}
+.std-note {
+  margin: 4px 0 8px;
+  max-width: 60ch;
+  font-size: var(--t-s);
+  color: var(--chalk-3);
+}

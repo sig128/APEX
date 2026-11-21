@@ -349,7 +349,8 @@ export function normSummary(j, fam = football) {
     status,
     home,
     away,
-    players: normBoxPlayers(j?.boxscore, fam),
+    // soccer keeps each player's numbers on the lineups, not in a box score
+    players: typeof fam.summaryPlayers === 'function' ? fam.summaryPlayers(j) : normBoxPlayers(j?.boxscore, fam),
     teamStats,
     drive: normDrive(j?.drives?.current),
     lastDrive: normDrive((j?.drives?.previous || []).slice(-1)[0]),

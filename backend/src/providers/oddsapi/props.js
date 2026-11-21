@@ -61,8 +61,19 @@ const BASEBALL = {
   pitcher_hits_allowed: 'haP',
   pitcher_walks: 'bbP',
 }
+const SOCCER = {
+  player_shots: 'shots',
+  player_shots_on_target: 'sot',
+  player_goal_scorer_anytime: 'anyGoalS',
+  player_assists: 'anyAst',
+}
 /** PropPickz league -> The Odds API sport key and the player markets it carries there. */
 export const ODDS_SPORTS = {
+  epl: { key: 'soccer_epl', markets: SOCCER },
+  laliga: { key: 'soccer_spain_la_liga', markets: SOCCER },
+  seriea: { key: 'soccer_italy_serie_a', markets: SOCCER },
+  bundesliga: { key: 'soccer_germany_bundesliga', markets: SOCCER },
+  mls: { key: 'soccer_usa_mls', markets: SOCCER },
   nfl: { key: 'americanfootball_nfl', markets: FOOTBALL },
   ncaaf: { key: 'americanfootball_ncaaf', markets: FOOTBALL },
   nba: { key: 'basketball_nba', markets: BASKETBALL },
@@ -186,7 +197,9 @@ export function createOddsApi({ http, store, apiKey, sport = 'nfl', now = () => 
           if (!pid) continue
           // "yes only" markets (anytime TD, anytime goal) sit at their fixed line
           const one = APEX_MARKETS[market]?.oneSided
-          if (one && /^no$/i.test(o.name)) continue
+          if (one && /^(no|under)$/i.test(o.name)) continue
+          // an over/under feed for a yes-only market (soccer assists): only Over its fixed line is "yes"
+          if (one && o.point != null && Number(o.point) !== (APEX_MARKETS[market].fixedLine ?? 0.5)) continue
           const line = one ? APEX_MARKETS[market].fixedLine ?? 0.5 : Number(o.point)
           if (!Number.isFinite(line)) continue
           // the deepest link the book gives: the selection on its bet slip, then the market, then the event

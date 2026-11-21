@@ -15,6 +15,7 @@ export const RETURN_RULES = {
   basketball: { miss: 2, n: 5 },
   hockey: { miss: 2, n: 5 },
   baseball: { miss: 5, n: 5 },
+  soccer: { miss: 2, n: 4 },
 }
 const PITCHER = /^(SP|RP|P)$/i
 /** The return panel hides itself below this many games. */

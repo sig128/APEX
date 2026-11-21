@@ -19,11 +19,11 @@ import { serve, withEnv } from './support.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const S = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'nba-sample.json'), 'utf8'))
-const { basketball, hockey, baseball, football } = FAMILIES
+const { basketball, hockey, baseball, football, soccer } = FAMILIES
 
 test('every sport is registered, and market keys never collide', () => {
-  assert.deepEqual(SPORT_KEYS.sort(), ['mlb', 'nba', 'ncaab', 'ncaaf', 'nfl', 'nhl', 'wnba'])
-  const all = [football, basketball, hockey, baseball].flatMap((f) => Object.keys(f.MARKETS))
+  assert.deepEqual(SPORT_KEYS.sort(), ['bundesliga', 'epl', 'laliga', 'mlb', 'mls', 'nba', 'ncaab', 'ncaaf', 'nfl', 'nhl', 'seriea', 'wnba'])
+  const all = [football, basketball, hockey, baseball, soccer].flatMap((f) => Object.keys(f.MARKETS))
   assert.equal(new Set(all).size, all.length, 'one registry for every sport')
   assert.equal(Object.keys(MARKETS).length, all.length)
   assert.equal(sportOf('ncaab').fam, basketball)

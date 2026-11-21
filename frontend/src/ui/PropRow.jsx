@@ -45,7 +45,14 @@ export const PropRow = memo(function PropRow({ c, rank, showGame = false, win, l
               {showGame && c.kickoff ? `, ${clock(null, c.kickoff)}` : ''}
             </span>
           </span>
-          <span className="prop-row__label">{c.label}</span>
+          <span className="prop-row__label">
+            {c.label}
+            {c.standard && (
+              <span className="std-tag" title="No sportsbook has posted this line: it’s the standard line nearest his usual output, for research">
+                standard line
+              </span>
+            )}
+          </span>
         </span>
         )}
       </Link>

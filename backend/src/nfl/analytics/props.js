@@ -6,7 +6,7 @@ import { matchupFor, ordinal } from './defense.js'
 import { propNotes } from './notes.js'
 import { injurySeverity } from '../../providers/espn/normalize.js'
 import { noVig, americanToProb } from '../../lib/odds.js'
-import { normalOver } from '../../lib/stats.js'
+import { normalOver, poissonAtLeast } from '../../lib/stats.js'
 import { round, clamp, mean } from '../../lib/util.js'
 import { teamPointRows } from './teams.js'
 import * as football from '../../sports/football.js'
@@ -212,8 +212,10 @@ export function buildPropRow({ player, market, line, side, game, ctx, meta = {} 
     move,
     alts: meta.alts || [],
     main,
-    // 'main' and 'alt' are lines a sportsbook posted; null is a line typed in for research
-    posted: main == null ? null : line === main ? 'main' : (meta.alts || []).includes(line) ? 'alt' : null,
+    // 'main' and 'alt' are lines a sportsbook posted; null is a line typed in for research. A
+    // standard line (soccer) counts as posted once a book's price for it comes in.
+    posted: main == null ? (meta.model && price ? 'main' : null) : line === main ? 'main' : (meta.alts || []).includes(line) ? 'alt' : null,
+    standard: Boolean(meta.model) && !price,
     book: meta.book || null,
     price: price ? { over: price.over ?? null, under: price.under ?? null, yes: price.yes ?? null, book: price.book || null, books: price.books || null, best: price.best || null } : null,
     implied: implied != null ? round(implied, 4) : null,
@@ -230,8 +232,10 @@ export function buildTeamRow({ team, market = 'teamPts', line, side, game, sched
   if (rows.length < 3) return null
   const sub = rows.slice(-16)
   const m = 0.7 * sub.slice(-6).reduce((s, r) => s + r.v, 0) / Math.min(6, sub.length) + 0.3 * mean(sub.map((r) => r.v))
-  const sdv = Math.max(4, Math.sqrt(sub.reduce((s, r) => s + (r.v - m) ** 2, 0) / Math.max(1, sub.length - 1)))
-  const pOverModel = normalOver(m, sdv, line)
+  // goals are few and come one at a time (soccer, hockey): a count model, not a bell curve
+  const goals = ((ctx.fam || football).TEAM_LABEL || 'Points') === 'Goals'
+  const sdv = goals ? Math.sqrt(Math.max(0.2, m)) : Math.max(4, Math.sqrt(sub.reduce((s, r) => s + (r.v - m) ** 2, 0) / Math.max(1, sub.length - 1)))
+  const pOverModel = goals ? poissonAtLeast(Math.max(0.05, m), Math.floor(line) + 1) : normalOver(m, sdv, line)
   const hitsO = rows.slice(-20).filter((r) => r.v > line).length
   const nO = rows.slice(-20).filter((r) => r.v !== line).length
   const emp = (hitsO + pOverModel * 3) / (nO + 3)
@@ -240,7 +244,7 @@ export function buildTeamRow({ team, market = 'teamPts', line, side, game, sched
   const main = Number.isFinite(meta.main) ? meta.main : null
   let anchor = null
   if (line !== main) {
-    const over = main != null ? normalOver(main, sdv, line) : pOverModel
+    const over = main != null ? (goals ? poissonAtLeast(Math.max(0.05, main), Math.floor(line) + 1) : normalOver(main, sdv, line)) : pOverModel
     anchor = s === 'o' ? over : 1 - over
   }
   const p = calibrate(s === 'o' ? pOver : 1 - pOver, { anchor })
@@ -285,6 +289,8 @@ export function buildTeamRow({ team, market = 'teamPts', line, side, game, sched
     alts: meta.alts || [],
     main,
     posted: main == null ? null : line === main ? 'main' : (meta.alts || []).includes(line) ? 'alt' : null,
+    // a standard line (soccer) no sportsbook posted: research only
+    standard: Boolean(meta.model),
     updated: meta.updated || null,
   }
 }

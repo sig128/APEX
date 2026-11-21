@@ -4,8 +4,9 @@ import * as football from './football.js'
 import * as basketball from './basketball.js'
 import * as hockey from './hockey.js'
 import * as baseball from './baseball.js'
+import * as soccer from './soccer.js'
 
-export const FAMILIES = { football, basketball, hockey, baseball }
+export const FAMILIES = { football, basketball, hockey, baseball, soccer }
 
 /**
  * key: our URL and API prefix. espn: ESPN's sport/league path. calendar: 'week' slates (the
@@ -20,6 +21,12 @@ export const SPORTS = {
   ncaaf: { key: 'ncaaf', name: 'NCAAF', title: 'College Football', family: 'football', espn: { sport: 'football', league: 'college-football' }, calendar: 'week', headshots: 'college-football', offseason: [2, 3, 4, 5, 6, 7] },
   ncaab: { key: 'ncaab', name: 'NCAAB', title: 'College Basketball', family: 'basketball', espn: { sport: 'basketball', league: 'mens-college-basketball' }, calendar: 'day', headshots: 'mens-college-basketball', offseason: [5, 6, 7, 8, 9, 10] },
   wnba: { key: 'wnba', name: 'WNBA', title: 'WNBA', family: 'basketball', espn: { sport: 'basketball', league: 'wnba' }, calendar: 'day', headshots: 'wnba', offseason: [11, 12, 1, 2, 3, 4] },
+  // soccer: a matchweek slate (yesterday through the next seven days), since matches bunch up
+  epl: { key: 'epl', name: 'EPL', title: 'Premier League', family: 'soccer', espn: { sport: 'soccer', league: 'eng.1' }, calendar: 'matchweek', headshots: 'soccer', offseason: [6, 7] },
+  laliga: { key: 'laliga', name: 'LaLiga', title: 'LaLiga', family: 'soccer', espn: { sport: 'soccer', league: 'esp.1' }, calendar: 'matchweek', headshots: 'soccer', offseason: [6, 7] },
+  seriea: { key: 'seriea', name: 'Serie A', title: 'Serie A', family: 'soccer', espn: { sport: 'soccer', league: 'ita.1' }, calendar: 'matchweek', headshots: 'soccer', offseason: [6, 7] },
+  bundesliga: { key: 'bundesliga', name: 'Bundesliga', title: 'Bundesliga', family: 'soccer', espn: { sport: 'soccer', league: 'ger.1' }, calendar: 'matchweek', headshots: 'soccer', offseason: [6, 7] },
+  mls: { key: 'mls', name: 'MLS', title: 'MLS', family: 'soccer', espn: { sport: 'soccer', league: 'usa.1' }, calendar: 'matchweek', headshots: 'soccer', offseason: [12, 1] },
 }
 export const SPORT_KEYS = Object.keys(SPORTS)
 

@@ -10,6 +10,12 @@ export const SPORTS = [
   { key: 'ncaaf', name: 'NCAAF', title: 'College Football', calendar: 'week', unit: 'Week' },
   { key: 'ncaab', name: 'NCAAB', title: 'College Basketball', calendar: 'day' },
   { key: 'wnba', name: 'WNBA', title: 'WNBA', calendar: 'day' },
+  // soccer: each board is the matchweek (yesterday through the next seven days)
+  { key: 'epl', name: 'EPL', title: 'Premier League', calendar: 'matchweek', soccer: true },
+  { key: 'laliga', name: 'LaLiga', title: 'LaLiga', calendar: 'matchweek', soccer: true },
+  { key: 'seriea', name: 'Serie A', title: 'Serie A', calendar: 'matchweek', soccer: true },
+  { key: 'bundesliga', name: 'Bundesliga', title: 'Bundesliga', calendar: 'matchweek', soccer: true },
+  { key: 'mls', name: 'MLS', title: 'MLS', calendar: 'matchweek', soccer: true },
 ]
 export const SPORT_KEYS = SPORTS.map((s) => s.key)
 export const sportInfo = (key) => SPORTS.find((s) => s.key === key) || SPORTS[0]
@@ -41,7 +47,9 @@ export const slateLabel = (slate, style = 'short') => (isDaySlate(slate) ? slate
 
 /** ESPN names winter seasons by the year they end (NBA 2027 is 2026-27); show them the usual way. */
 const SPANS = new Set(['nba', 'nhl', 'ncaab'])
-export const seasonLabel = (sport, season) => (season && SPANS.has(sport) ? `${season - 1}-${String(season).slice(2)}` : season ? String(season) : '')
+// European soccer seasons run August to May and ESPN names them by the year they start
+const STARTS = new Set(['epl', 'laliga', 'seriea', 'bundesliga'])
+export const seasonLabel = (sport, season) => (season && SPANS.has(sport) ? `${season - 1}-${String(season).slice(2)}` : season && STARTS.has(sport) ? `${season}-${String(season + 1).slice(2)}` : season ? String(season) : '')
 
 /** "/api/nba" */
 export const apiOf = (sport) => `/api/${sport || 'nfl'}`

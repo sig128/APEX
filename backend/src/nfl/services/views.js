@@ -75,14 +75,15 @@ export function createViews(engine) {
         }
         const sev = injurySeverity(wh.injuryOf(player.id)?.status)
         if (sev === 'out') continue
-        const row = buildPropRow({ player, market: l.market, line: l.line, game: g, ctx: c, meta: { main: l.line, open: l.open, alts: l.alts, book: l.book, updated: l.updated } })
+        // a standard line (soccer, no book posted it) carries no main line: it's for research
+        const row = buildPropRow({ player, market: l.market, line: l.line, game: g, ctx: c, meta: { main: l.model ? null : l.line, model: Boolean(l.model), open: l.open, alts: l.alts, book: l.book, updated: l.updated } })
         if (row?.pending) pending++
         else if (row) rows.push(row)
       } else if (l.teamId && l.market === 'teamPts') {
         const team = wh.teams.get(l.teamId)
         const sched = wh.schedules.get(l.teamId)?.games
         if (!team || !sched) continue
-        const row = buildTeamRow({ team, line: l.line, game: g, schedule: sched, ctx: c, meta: { main: l.line, alts: l.alts, open: l.open } })
+        const row = buildTeamRow({ team, line: l.line, game: g, schedule: sched, ctx: c, meta: { main: l.model ? null : l.line, model: Boolean(l.model), alts: l.alts, open: l.open } })
         if (row) rows.push(row)
       }
     }
@@ -183,6 +184,8 @@ export function createViews(engine) {
       shop: r.price?.best?.[r.oneSided ? 'yes' : r.side === 'u' ? 'under' : 'over'] || null,
       edge: r.edge ?? null,
       posted: r.posted ?? null,
+      // a standard soccer line no sportsbook has posted (research only)
+      standard: Boolean(r.standard),
       // the bottom line and the most telling note, for lists (the prop page has them all)
       read: r.read || null,
       note: r.notes?.[0] || null,
@@ -488,13 +491,13 @@ export function createViews(engine) {
         if (!team || !sched) return null
         const tg = gameForTeam(p.teamId)
         const tl = tg ? (wh.lines.get(tg.id)?.props || []).find((x) => !x.athleteId && x.teamId === p.teamId && x.market === p.market) : null
-        return buildTeamRow({ team, line: p.line, side: p.side, game: tg, schedule: sched, ctx: ctx(), meta: tl ? { main: tl.line, alts: tl.alts, open: tl.line === p.line ? tl.open : null } : {} })
+        return buildTeamRow({ team, line: p.line, side: p.side, game: tg, schedule: sched, ctx: ctx(), meta: tl ? { main: tl.model ? null : tl.line, model: Boolean(tl.model), alts: tl.alts, open: tl.line === p.line ? tl.open : null } : {} })
       }
       const player = wh.players.get(p.playerId)
       if (!player) return null
       const g = gameForTeam(player.teamId)
       const l = g ? (wh.lines.get(g.id)?.props || []).find((x) => x.athleteId === player.id && x.market === p.market) : null
-      const row = buildPropRow({ player, market: p.market, line: p.line, side: p.side, game: g, ctx: ctx(), meta: l ? { main: l.line, open: l.line === p.line ? l.open : null, alts: l.alts, book: l.book, updated: l.updated } : {} })
+      const row = buildPropRow({ player, market: p.market, line: p.line, side: p.side, game: g, ctx: ctx(), meta: l ? { main: l.model ? null : l.line, model: Boolean(l.model), open: l.line === p.line ? l.open : null, alts: l.alts, book: l.book, updated: l.updated } : {} })
       return row && !row.pending ? row : null
     })
   }
