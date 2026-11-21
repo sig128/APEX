@@ -123,7 +123,7 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
 
   r.get('/status', { tier: t('status'), cache: C(5) }, () => {
     const s = engine.status()
-    return { season: s.season, week: s.week, games: s.games, live: s.live, props: s.props, players: s.players, logs: s.logs, wanted: s.wanted, at: s.at, mode: s.mode, version: s.version, odds: s.odds?.enabled || false }
+    return { season: s.season, week: s.week, games: s.games, live: s.live, props: s.props, players: s.players, logs: s.logs, wanted: s.wanted, at: s.at, failing: s.failing, mode: s.mode, version: s.version, odds: s.odds?.enabled || false }
   })
   r.get('/week', { tier: t('week'), cache: C(5, 5, 20) }, () => views.strip())
   // A fresh serverless instance has no game logs yet, so its board is empty. The request then

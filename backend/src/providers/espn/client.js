@@ -3,11 +3,60 @@
 import { normScoreboard, normSummary, normTeams, normRoster, normSchedule, normGamelog, normPropBets } from './normalize.js'
 import * as football from '../../sports/football.js'
 
+/** 'YYYYMMDD-YYYYMMDD' (or one day) -> every day in it, at most 14. */
+export function daysIn(range) {
+  const [a, b = a] = String(range).split('-')
+  const at = (s) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(4, 6)) - 1, Number(s.slice(6, 8)))
+  const out = []
+  for (let t = at(a); t <= at(b) && out.length < 14; t += 86_400_000) out.push(new Date(t).toISOString().slice(0, 10).replace(/-/g, ''))
+  return out
+}
+
+// A refusal (not a timeout, an outage or a rate limit): asking the same thing again won't help
+const refused = (e) => e?.status >= 400 && e?.status < 500 && e?.status !== 429
+
 export function createEspnClient({ http, sport = 'football', league = 'nfl', propProvider = 100, fam = football, headshots = 'nfl' } = {}) {
   const SITE = `https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}`
+  // the same scoreboards from ESPN's web host, which answers where the main one refuses
+  const SITE_WEB = `https://site.web.api.espn.com/apis/site/v2/sports/${sport}/${league}`
   const WEB = `https://site.web.api.espn.com/apis/common/v3/sports/${sport}/${league}`
   const CORE = `https://sports.core.api.espn.com/v2/sports/${sport}/leagues/${league}`
   const get = (url, opts) => http.getJson(url, opts)
+
+  // ESPN's main host has refused some leagues' scoreboards outright (HTTP 400 for the Premier
+  // League, Serie A and the Bundesliga in November 2026, whatever the query); its web host answers
+  // one day at a time. After a refusal this league reads day by day for an hour, then tries again.
+  let dayByDayUntil = 0
+  async function scoreboardJson(params, opts) {
+    const q = new URLSearchParams()
+    if (params.week) q.set('week', String(params.week))
+    if (params.seasonType) q.set('seasontype', String(params.seasonType))
+    if (params.dates) q.set('dates', String(params.dates))
+    if (params.limit) q.set('limit', String(params.limit))
+    const qs = q.toString()
+    if (Date.now() >= dayByDayUntil) {
+      try {
+        return await get(`${SITE}/scoreboard${qs ? `?${qs}` : ''}`, opts)
+      } catch (e) {
+        if (!refused(e) || params.week) throw e
+        dayByDayUntil = Date.now() + 60 * 60_000
+      }
+    }
+    const days = params.dates ? daysIn(params.dates) : [null]
+    const parts = await Promise.all(days.map((d) => get(`${SITE_WEB}/scoreboard${d ? `?dates=${d}` : ''}`, opts).catch((e) => ({ failed: e }))))
+    const ok = parts.filter((p) => !p.failed)
+    if (!ok.length) throw parts[0].failed
+    const seen = new Set()
+    const events = []
+    for (const p of ok) {
+      for (const ev of p.events || []) {
+        if (seen.has(ev.id)) continue
+        seen.add(ev.id)
+        events.push(ev)
+      }
+    }
+    return { ...ok[0], events }
+  }
 
   async function propBets(eventId, opts) {
     const base = `${CORE}/events/${eventId}/competitions/${eventId}/odds/${propProvider}/propBets?lang=en&region=us&limit=1000`
@@ -91,15 +140,7 @@ export function createEspnClient({ http, sport = 'football', league = 'nfl', pro
 
   return {
     urls: { SITE, WEB, CORE },
-    scoreboard: async (params = {}, opts) => {
-      const q = new URLSearchParams()
-      if (params.week) q.set('week', String(params.week))
-      if (params.seasonType) q.set('seasontype', String(params.seasonType))
-      if (params.dates) q.set('dates', String(params.dates))
-      if (params.limit) q.set('limit', String(params.limit))
-      const qs = q.toString()
-      return normScoreboard(await get(`${SITE}/scoreboard${qs ? `?${qs}` : ''}`, opts))
-    },
+    scoreboard: async (params = {}, opts) => normScoreboard(await scoreboardJson(params, opts)),
     summary: async (eventId, opts) => normSummary(await get(`${SITE}/summary?event=${eventId}`, opts), fam),
     teams: async (opts) => normTeams(await get(`${SITE}/teams`, opts)),
     roster: async (teamId, opts) => normRoster(await get(`${SITE}/teams/${teamId}/roster`, opts), teamId, headshots),

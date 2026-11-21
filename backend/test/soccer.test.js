@@ -11,8 +11,10 @@ import { simulateSlip } from '../src/nfl/analytics/sim.js'
 import { buildParlays } from '../src/nfl/analytics/builder.js'
 import { SPORTS, sportOf } from '../src/sports/index.js'
 import { ODDS_SPORTS } from '../src/providers/oddsapi/props.js'
-import { soccerFixtures, NOW, PLAYERS } from './fixtures/soccer.js'
+import { soccerFixtures, NOW, PLAYERS, SITE } from './fixtures/soccer.js'
 import { clock } from './support.js'
+import { etDay } from '../src/nfl/engine.js'
+import { daysIn } from '../src/providers/espn/client.js'
 
 test('five soccer leagues on ESPN, a matchweek slate each', () => {
   for (const k of ['epl', 'laliga', 'seriea', 'bundesliga', 'mls']) {
@@ -50,6 +52,60 @@ test('lineups: who played, their numbers, minutes from the substitutions', () =>
   assert.deepEqual(['CF', 'LW', 'CD-L', 'RB', 'CM', 'G', 'GK', 'SUB'].map(posGroup), ['F', 'F', 'D', 'D', 'M', 'G', 'G', 'M'])
   assert.equal(roleOf({}, [{ season: 2026, s: { gs: 1 } }, { season: 2026, s: { gs: 1 } }, { season: 2026, s: { gs: 1 } }], 2026), 1)
   assert.equal(roleOf({}, [{ season: 2026, s: { gs: 0 } }, { season: 2026, s: { gs: 0 } }, { season: 2026, s: { gs: 1 } }], 2026), 0.35)
+})
+
+test('minutes from each player’s own substitution plays when the key events don’t have them', () => {
+  const j = {
+    rosters: [
+      {
+        team: { id: '359' },
+        roster: [
+          { starter: true, subbedIn: false, subbedOut: true, athlete: { id: '10', displayName: 'Starter Off' }, plays: [{ clock: { displayValue: "76'" }, substitution: true }, { clock: { displayValue: "12'" }, yellowCard: true }], stats: [{ name: 'appearances', value: 1 }] },
+          { starter: false, subbedIn: true, subbedOut: false, athlete: { id: '11', displayName: 'On At 76' }, plays: [{ clock: { displayValue: "76'" }, substitution: true }], stats: [{ name: 'appearances', value: 1 }, { name: 'subIns', value: 1 }] },
+          { starter: false, subbedIn: true, subbedOut: true, athlete: { id: '12', displayName: 'On And Off' }, plays: [{ clock: { displayValue: "88'" }, substitution: true }, { clock: { displayValue: "46'" }, substitution: true }], stats: [{ name: 'appearances', value: 1 }] },
+          { starter: false, subbedIn: false, subbedOut: false, athlete: { id: '13', displayName: 'Unused' }, stats: [{ name: 'appearances', value: 0 }] },
+        ],
+      },
+    ],
+  }
+  const p = summaryPlayers(j)
+  assert.deepEqual(Object.keys(p).sort(), ['10', '11', '12'])
+  assert.equal(p['10'].stats.min, 76)
+  assert.equal(p['11'].stats.min, 14)
+  assert.equal(p['12'].stats.min, 42, 'on at 46, off at 88')
+})
+
+test('ESPN’s main host refuses the scoreboard: the web host answers a day at a time, and status says what failed', async () => {
+  const range = `${etDay(NOW, -1)}-${etDay(NOW, 7)}`
+  const f = soccerFixtures({ now: NOW })
+  const key = `${SITE}/scoreboard?dates=${range}&limit=200`
+  const sb = f[key]
+  delete f[key]
+  const web = SITE.replace('site.api.espn.com', 'site.web.api.espn.com')
+  for (const d of daysIn(range)) f[`${web}/scoreboard?dates=${d}`] = { ...sb, events: sb.events.filter((e) => etDay(Date.parse(e.date)) === d) }
+  assert.equal(daysIn(range).length, 9)
+  assert.deepEqual(daysIn('20261231-20270102'), ['20261231', '20270101', '20270102'])
+  const engine = createEngine({ mode: 'lazy', http: createHttp({ transport: createFixtureTransport(f), maxPerHost: 16 }), store: createStore({ driver: 'memory' }), sport: 'epl', now: clock(NOW) })
+  try {
+    await engine.ensureStarted()
+    const st = engine.status()
+    assert.equal(st.games, 2, 'both matches, from the web host')
+    assert.equal(st.season, 2026)
+    assert.equal(st.failing, undefined)
+  } finally {
+    engine.stop()
+  }
+  // nothing answers: the board stays empty and status names the task and the code
+  const dead = createEngine({ mode: 'lazy', http: createHttp({ transport: createFixtureTransport({}), maxPerHost: 16 }), store: createStore({ driver: 'memory' }), sport: 'epl', now: clock(NOW) })
+  try {
+    await dead.ensureStarted()
+    const st = dead.status()
+    assert.equal(st.games, 0)
+    assert.equal(st.failing.scoreboard.status, 404)
+    assert.ok(!JSON.stringify(st.failing).includes('espn'), 'a code, not a URL')
+  } finally {
+    dead.stop()
+  }
 })
 
 test('the clock counts up: minutes played out of 90, halftime, stoppage time', () => {

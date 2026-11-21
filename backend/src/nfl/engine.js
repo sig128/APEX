@@ -402,12 +402,16 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     ticker: { run: () => engine.ticker?.tick(), every: () => (hub?.hasSubscribers?.('ticker') ? 30_000 : 3 * MIN), runAtStart: false },
   }
 
+  // tasks whose last run failed, with the upstream status: shown on /status (a code, never a URL)
+  const failing = new Map()
   function runTask(name) {
     if (running.has(name)) return running.get(name)
     const p = (async () => {
       try {
         await TASKS[name].run()
+        failing.delete(name)
       } catch (e) {
+        failing.set(name, { at: now(), status: Number(e?.status) || null })
         log.warn('task error', { task: name, err: errText(e) })
       } finally {
         running.delete(name)
@@ -581,6 +585,7 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
         logs: wh.logs.size,
         wanted: wantedPlayers().length,
         at: wh.at,
+        failing: failing.size ? Object.fromEntries(failing) : undefined,
         tasks: mode === 'daemon' ? scheduler.status() : undefined,
         http: http.stats?.(),
         hub: hub?.stats?.(),

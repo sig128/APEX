@@ -141,8 +141,16 @@ export function summaryPlayers(j) {
         if (v != null) s[key] = v
       }
       const sub = subs.get(String(a.id)) || {}
-      const on = row.starter ? 0 : Number.isFinite(sub.on) ? sub.on : 70
-      const off = Number.isFinite(sub.off) ? sub.off : row.subbedOut ? (row.starter ? 70 : 90) : 90
+      // each player's own plays carry his substitutions too (a starter's first is going off, a
+      // substitute's first coming on and a second going off): used where the key events don't say
+      const own = (row.plays || [])
+        .filter((p) => p?.substitution)
+        .map((p) => minuteOf(p.clock))
+        .filter(Number.isFinite)
+        .sort((x, y) => x - y)
+      const on = row.starter ? 0 : Number.isFinite(sub.on) ? sub.on : (own[0] ?? 70)
+      const ownOff = row.starter ? own[0] : own[1]
+      const off = Number.isFinite(sub.off) ? sub.off : row.subbedOut ? (ownOff ?? (row.starter ? 70 : 90)) : 90
       s.min = Math.max(1, Math.min(90, off) - Math.min(89, on))
       players[String(a.id)] = { id: String(a.id), name: a.displayName || a.fullName || '', short: a.shortName || '', jersey: row.jersey || a.jersey || '', teamId, pos: row.position?.abbreviation || a.position?.abbreviation || '', stats: s }
     }
