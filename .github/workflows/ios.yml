@@ -41,6 +41,8 @@ jobs:
       VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET || 'apexdashai.firebasestorage.app' }}
       VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID || '239784293399' }}
       VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID || '1:239784293399:web:d01d5564a26c5afd171852' }}
+      # 1 once Sign in with Apple works on the website too (as on Vercel), so the app's Support page says so
+      VITE_APPLE_SIGNIN: ${{ vars.VITE_APPLE_SIGNIN }}
       APPLE_TEAM: ${{ vars.APPLE_TEAM_ID || secrets.APPLE_TEAM_ID }}
       UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.testflight }}
     steps:

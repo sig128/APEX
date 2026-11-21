@@ -346,13 +346,19 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
   }
 
   // ---- the iPhone app: Apple's in-app purchase (see apple.js) ----------------------------------
-  /** What the app needs to sell: whether Apple purchases count here, the products, the buyer's token. */
+  /**
+   * What the app needs to sell: whether Apple purchases count here, the products, the buyer's token,
+   * and the sign-ins the website offers (Google; Apple once its web settings are in Firebase and
+   * VITE_APPLE_SIGNIN=1), so the app only offers the website's checkout to someone who can sign in
+   * there as the same account.
+   */
   function appleInfo(user) {
     const cfg = appleConfig()
     return {
       enabled: cfg.enabled,
       products: Object.entries(cfg.products).map(([id, p]) => ({ id, kind: p.kind, plan: p.plan || null, days: p.days || null, credits: p.credits || null })),
       appAccountToken: user?.uid && user.uid !== 'admin' ? appAccountToken(user.uid) : null,
+      webSignIn: process.env.VITE_APPLE_SIGNIN === '1' ? ['google', 'apple'] : ['google'],
     }
   }
 

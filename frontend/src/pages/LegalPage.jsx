@@ -318,7 +318,13 @@ const SUPPORT = {
     {
       id: 'account',
       title: 'Signing in',
-      body: <p>Sign in with Google or Apple. Your picks, record, passes and credits live on your PropPickz account, so they’re the same on proppickz.com and in the app as long as you use the same sign-in.</p>,
+      // Apple sign-in on the website needs its web settings in Firebase first (frontend/ios/README.md)
+      body:
+        import.meta.env?.VITE_APPLE_SIGNIN === '1' ? (
+          <p>Sign in with Google or Apple. Your picks, record, passes and credits live on your PropPickz account, so they’re the same on proppickz.com and in the app as long as you use the same sign-in.</p>
+        ) : (
+          <p>Sign in with Google, or with Apple in the iPhone app. Your picks, record, passes and credits live on your PropPickz account, so with Google they’re the same on proppickz.com and in the app. An account made with Apple can’t sign in on the website yet.</p>
+        ),
     },
     {
       id: 'passes',

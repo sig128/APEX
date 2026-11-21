@@ -80,6 +80,13 @@ test('granting: a pass once (more days on top of a pass), credits once, refunds 
     assert.equal(info.enabled, true)
     assert.equal(info.appAccountToken, appAccountToken('u_buyer'))
     assert.deepEqual(info.products.map((p) => p.id), ['com.proppickz.app.pro30', 'com.proppickz.app.elite30', 'com.proppickz.app.credits50', 'com.proppickz.app.credits150', 'com.proppickz.app.credits500'])
+    // the website's checkout is offered only to accounts that can sign in there
+    const webApple = withEnv({ VITE_APPLE_SIGNIN: null })
+    assert.deepEqual(billing.appleInfo(buyer).webSignIn, ['google'])
+    webApple()
+    const webApple2 = withEnv({ VITE_APPLE_SIGNIN: '1' })
+    assert.deepEqual(billing.appleInfo(buyer).webSignIn, ['google', 'apple'])
+    webApple2()
 
     const first = await billing.applePurchase(buyer, sign(purchase()))
     assert.deepEqual([first.ok, first.already, first.kind, first.held.plan, first.held.status], [true, false, 'pass', 'pro', 'active'])

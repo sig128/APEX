@@ -139,3 +139,19 @@ test('a shared slip across leagues', () => {
   assert.deepEqual(back.prices, { '1.rec.o.4.5': -110, 'nba:101.pts.o.27.5': 120 })
 })
 
+
+test('the website checkout is offered in the app only when it can work for that account', async () => {
+  const { webCheckoutFits, providersOf } = await import('../src/lib/webSignIn.js')
+  const google = { providerData: [{ providerId: 'google.com' }] }
+  const apple = { providerData: [{ providerId: 'apple.com' }] }
+  assert.deepEqual(providersOf(apple), ['apple.com'])
+  assert.equal(providersOf(null).length, 0)
+  // the website doesn't sell yet: no link for anyone
+  assert.equal(webCheckoutFits({ user: google, webSignIn: ['google'], webSells: false }), false)
+  // it sells, and signs in with Google only
+  assert.equal(webCheckoutFits({ user: google, webSignIn: ['google'], webSells: true }), true)
+  assert.equal(webCheckoutFits({ user: apple, webSignIn: ['google'], webSells: true }), false)
+  // Apple on the website too
+  assert.equal(webCheckoutFits({ user: apple, webSignIn: ['google', 'apple'], webSells: true }), true)
+  assert.equal(webCheckoutFits({ user: null, webSignIn: ['google', 'apple'], webSells: true }), false)
+})

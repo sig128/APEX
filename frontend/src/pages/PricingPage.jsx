@@ -13,11 +13,13 @@ export function PricingPage() {
   useTitle('Plans')
   const plans = config?.plans || []
   const native = isNative()
+  // the website sells passes once its payment address is set
+  const webSells = Boolean(config?.treasury)
   return (
     <div className="container page">
       <header className="page-head">
         <h1 className="page-title">Plans</h1>
-        <p className="page-sub">{native ? 'The stats are free. Passes run 30 days and don’t renew on their own. Buy one here with your Apple account, or on proppickz.com.' : `The stats are free. Passes run 30 days, paid in USDC on ${config?.networkName || 'Base'}, with no card and no auto-renew.`}</p>
+        <p className="page-sub">{native ? `The stats are free. Passes run 30 days and don’t renew on their own. Buy one here with your Apple account${webSells ? ', or on proppickz.com' : ''}.` : `The stats are free. Passes run 30 days, paid in USDC on ${config?.networkName || 'Base'}, with no card and no auto-renew.`}</p>
       </header>
       {!paywall && config && <p className="notice">Passes aren't on sale yet, so everything but the model reads is open while PropPickz is in beta. Model reads (prop reads, the parlay check, game intel and the analyzer) are for members with a pass.</p>}
       <div className="plans">
@@ -69,7 +71,7 @@ export function PricingPage() {
           {native ? (
             <>
               <dt>How do I get a pass?</dt>
-              <dd>Tap Get Pro or Get Elite and confirm with Apple (Face ID or a double-click). It switches on as soon as Apple confirms. You can also buy on proppickz.com, signed in with the same account.</dd>
+              <dd>Tap Get Pro or Get Elite and confirm with Apple (Face ID or a double-click). It switches on as soon as Apple confirms.{webSells && ' You can also buy on proppickz.com, signed in with the same account.'}</dd>
             </>
           ) : (
             <>

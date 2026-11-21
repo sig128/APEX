@@ -51,6 +51,14 @@ Only the owner can do these: they're the company's accounts, and the keys are pr
    `com.proppickz.app`, then download `GoogleService-Info.plist`. In Authentication, Sign-in
    method, turn on **Apple**. If the Firebase browser key has website restrictions in Google Cloud,
    add `capacitor://localhost` to them.
+
+   **Sign in with Apple on the website too**, before launch, so someone who signed up with Apple in
+   the app can sign in on proppickz.com (and buy there): in Certificates, Identifiers & Profiles add
+   a Services ID (for example `com.proppickz.web`) with Sign in with Apple, the domain
+   `apexdashai.firebaseapp.com` and the return URL `https://apexdashai.firebaseapp.com/__/auth/handler`,
+   and a key with Sign in with Apple. Put the Services ID, Team ID, key ID and the key's text in
+   Firebase's Apple settings, then set `VITE_APPLE_SIGNIN` = `1` in Vercel (redeploy) and as a GitHub
+   variable. Until then the app offers the website's checkout only to people signed in with Google.
 6. **GitHub** (this repo, Settings, Secrets and variables, Actions, New repository secret). Six
    secrets, each pasted as it is:
    - `ASC_KEY_ID` and `ASC_ISSUER_ID` (from step 4), and `ASC_KEY_P8`: open the App Store

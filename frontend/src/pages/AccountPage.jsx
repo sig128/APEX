@@ -11,7 +11,8 @@ import { PushCard } from '../ui/PushCard.jsx'
 import { replayTour } from '../ui/Tour.jsx'
 import { api } from '../lib/api.js'
 import { isNative, openSite } from '../lib/native.js'
-import { appleProducts, productFor, buyWithApple, restoreApplePurchases } from '../lib/iap.js'
+import { appleInfo, appleProducts, productFor, buyWithApple, restoreApplePurchases } from '../lib/iap.js'
+import { webCheckoutFits } from '../lib/webSignIn.js'
 
 const fmtDay = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '')
 const PLAN = { free: 'Free', pro: 'Pro', elite: 'Elite' }
@@ -274,16 +275,21 @@ function DeleteAccount({ after }) {
 
 /**
  * In the app: buy with Apple (its own sheet, Face ID or a double-click), on as soon as Apple
- * confirms; or on proppickz.com in Safari (US apps may link to their own checkout).
+ * confirms; or on proppickz.com in Safari (US apps may link to their own checkout), offered only
+ * while the website sells and can sign this account in there.
  */
 function AppleBuy({ buy, onDone }) {
-  const { refresh } = useBilling()
+  const { refresh, config } = useBilling()
+  const { user } = useAuth()
   const [products, setProducts] = useState(null)
+  const [webSignIn, setWebSignIn] = useState([])
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
   useEffect(() => {
     appleProducts().then(setProducts, () => setProducts([]))
+    appleInfo().then((i) => setWebSignIn(i?.webSignIn || ['google']), () => setWebSignIn([]))
   }, [])
+  const web = webCheckoutFits({ user, webSignIn, webSells: Boolean(config?.treasury) })
   const product = products ? productFor(products, buy) : null
   const what = PLAN[buy] ? `${PLAN[buy]}, 30 days` : `${String(buy).slice(1)} credits`
   const go = async () => {
@@ -325,16 +331,18 @@ function AppleBuy({ buy, onDone }) {
           {msg.text}
         </p>
       )}
-      <button
-        type="button"
-        className="btn btn--quiet btn--block"
-        onClick={() => {
-          openSite(`/account?buy=${buy}`)
-          onDone()
-        }}
-      >
-        Buy on proppickz.com instead
-      </button>
+      {web && (
+        <button
+          type="button"
+          className="btn btn--quiet btn--block"
+          onClick={() => {
+            openSite(`/account?buy=${buy}`)
+            onDone()
+          }}
+        >
+          Buy on proppickz.com instead
+        </button>
+      )}
     </div>
   )
 }
