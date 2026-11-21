@@ -67,7 +67,7 @@ export function LoginPage() {
   return (
     <div className="container page login">
       <div className="login__card">
-        <Logo height={44} className="logo--login" />
+        <Logo height={36} className="logo--login" />
         <h1 className="login__title">Sign in</h1>
         <p className="muted">Your picks page, passes and model reads live on your account. Browsing props never needs one.</p>
         {!firebaseConfigured ? (

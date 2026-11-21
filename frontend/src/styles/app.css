@@ -3405,6 +3405,12 @@ code {
   gap: 10px;
   width: 100%;
 }
+/* small phones: the card keeps to the screen (the lockup is wider than its words) */
+@media (max-width: 420px) {
+  .login__card {
+    padding: 22px 20px;
+  }
+}
 /* Sign in with Apple: Apple's white style on a dark page, the same size as Google's */
 .btn--apple {
   background: #fff;
