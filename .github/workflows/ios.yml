@@ -32,13 +32,16 @@ jobs:
         shell: bash
         working-directory: frontend
     env:
-      # the website's Firebase settings, the same values as on Vercel (public in any build)
-      VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
-      VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
-      VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
-      VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
-      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-      VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+      # the website's Firebase settings, as on Vercel. The project's names and ids are fixed facts
+      # (public in every page of the website), so they're filled in here; the key comes from this
+      # repo's settings, as a secret or a variable.
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || vars.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN || 'apexdashai.firebaseapp.com' }}
+      VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID || 'apexdashai' }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET || 'apexdashai.firebasestorage.app' }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID || '239784293399' }}
+      VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID || '1:239784293399:web:d01d5564a26c5afd171852' }}
+      APPLE_TEAM: ${{ vars.APPLE_TEAM_ID || secrets.APPLE_TEAM_ID }}
       UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.testflight }}
     steps:
       - uses: actions/checkout@v5
@@ -59,15 +62,22 @@ jobs:
         run: npm ci
 
       - name: Build the app's screens into the iOS project
-        run: npm run build:native && npx cap sync ios
+        run: |
+          [ -n "$VITE_FIREBASE_API_KEY" ] || echo "::warning::No VITE_FIREBASE_API_KEY in this repo's settings: this build has no sign-in"
+          npm run build:native && npx cap sync ios
 
       - name: Firebase's app file
         env:
-          PLIST_B64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+          PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
         run: |
-          if [ -n "$PLIST_B64" ]; then
-            echo "$PLIST_B64" | base64 --decode > ios/App/App/GoogleService-Info.plist
-            REV=$(/usr/libexec/PlistBuddy -c 'Print :REVERSED_CLIENT_ID' ios/App/App/GoogleService-Info.plist)
+          F=ios/App/App/GoogleService-Info.plist
+          if [ -n "$PLIST" ]; then
+            # the file's text pasted as it is, or the same file in base64 (which has no "<")
+            case "$PLIST" in
+              *"<"*) printf '%s\n' "$PLIST" > "$F" ;;
+              *) printf '%s' "$PLIST" | base64 --decode > "$F" ;;
+            esac
+            REV=$(/usr/libexec/PlistBuddy -c 'Print :REVERSED_CLIENT_ID' "$F") || { echo "::error::GOOGLE_SERVICE_INFO_PLIST isn't a GoogleService-Info.plist from Firebase: paste the whole file's text"; exit 1; }
             echo "GOOGLE_REVERSED_CLIENT_ID=$REV" >> "$GITHUB_ENV"
             echo "Firebase app file in place"
           else
@@ -91,10 +101,10 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-          TEAM: ${{ vars.APPLE_TEAM_ID }}
         run: |
           missing=""
-          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 TEAM; do [ -z "${!v}" ] && missing="$missing $v"; done
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 VITE_FIREBASE_API_KEY; do [ -z "${!v}" ] && missing="$missing $v"; done
+          [ -n "$APPLE_TEAM" ] || missing="$missing APPLE_TEAM_ID"
           [ -f ios/App/App/GoogleService-Info.plist ] || missing="$missing GOOGLE_SERVICE_INFO_PLIST"
           if [ -n "$missing" ]; then echo "::error::Missing in the repo's Actions settings:$missing (see frontend/ios/README.md)"; exit 1; fi
 
@@ -104,7 +114,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-          TEAM: ${{ vars.APPLE_TEAM_ID }}
+          TEAM: ${{ env.APPLE_TEAM }}
         run: |
           set -o pipefail
           KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"

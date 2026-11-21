@@ -51,10 +51,15 @@ Only the owner can do these: they're the company's accounts, and the keys are pr
    `com.proppickz.app`, then download `GoogleService-Info.plist`. In Authentication, Sign-in
    method, turn on **Apple**. If the Firebase browser key has website restrictions in Google Cloud,
    add `capacitor://localhost` to them.
-6. **GitHub** (this repo, Settings, Secrets and variables, Actions):
-   - Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (the text of the App Store Connect
-     `.p8`), `GOOGLE_SERVICE_INFO_PLIST` (the plist in base64: `base64 -i GoogleService-Info.plist`).
-   - Variables: `APPLE_TEAM_ID`, and the six `VITE_FIREBASE_*` values from Vercel.
+6. **GitHub** (this repo, Settings, Secrets and variables, Actions, New repository secret). Six
+   secrets, each pasted as it is:
+   - `ASC_KEY_ID` and `ASC_ISSUER_ID` (from step 4), and `ASC_KEY_P8`: open the App Store
+     Connect `.p8` in a text editor and paste all of it.
+   - `APPLE_TEAM_ID` (the Team ID from step 4).
+   - `GOOGLE_SERVICE_INFO_PLIST`: open `GoogleService-Info.plist` in a text editor and paste all
+     of it.
+   - `VITE_FIREBASE_API_KEY`: the same value as on Vercel. The rest of the Firebase settings are
+     already in the build.
 7. **Vercel** (apex, Settings, Environment Variables), then redeploy:
    `APNS_KEY` (the text of the push `.p8`), `APNS_KEY_ID`, `APNS_TEAM_ID`. With the team set,
    proppickz.com also serves the file that lets links open in the app.
