@@ -11,6 +11,7 @@ import { PushCard } from '../ui/PushCard.jsx'
 import { replayTour } from '../ui/Tour.jsx'
 import { api } from '../lib/api.js'
 import { isNative, openSite } from '../lib/native.js'
+import { appleProducts, productFor, buyWithApple, restoreApplePurchases } from '../lib/iap.js'
 
 const fmtDay = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '')
 const PLAN = { free: 'Free', pro: 'Pro', elite: 'Elite' }
@@ -60,22 +61,17 @@ export function AccountPage() {
         </p>
         {paywall && <PlanLine ent={ent} />}
         {!paywall && !me?.ai?.allowed && <p className="muted small">Model reads (prop reads, the parlay check, game intel and the analyzer) take a Pro or Elite pass. Passes aren’t on sale yet; a plan code below works.</p>}
-        {paywall && ent.status !== 'admin' && native && (
-          <div className="row">
-            <button type="button" className="btn btn--lime" onClick={() => openSite(`/account?buy=${ent.paidPlan || 'elite'}`)}>
-              Get or renew a pass on proppickz.com
-            </button>
-          </div>
-        )}
-        {paywall && ent.status !== 'admin' && !native && (
+        {paywall && ent.status !== 'admin' && (
           <div className="row">
             {plans.map((p) => (
               <button key={p.id} type="button" className={`btn ${p.id === (ent.paidPlan || 'elite') ? 'btn--lime' : 'btn--quiet'}`} onClick={() => setBuy(p.id)}>
-                {ent.paidPlan === p.id && ent.status !== 'expired' ? `Add 30 days of ${p.name}` : ent.paidPlan === 'elite' && p.id === 'pro' ? 'Switch to Pro' : `Get ${p.name}`} (${p.priceUsd})
+                {ent.paidPlan === p.id && ent.status !== 'expired' ? `Add 30 days of ${p.name}` : ent.paidPlan === 'elite' && p.id === 'pro' ? 'Switch to Pro' : `Get ${p.name}`}
+                {native ? '' : ` ($${p.priceUsd})`}
               </button>
             ))}
           </div>
         )}
+        {native && paywall && <RestoreApple after={refresh} />}
       </section>
 
       {usage && me?.ai?.allowed && (
@@ -88,7 +84,7 @@ export function AccountPage() {
         </section>
       )}
 
-      <CreditsCard onBuy={native ? (id) => openSite(`/account?buy=${id}`) : setBuy} />
+      <CreditsCard onBuy={setBuy} />
       <PushCard />
 
       {!native && me?.open?.length > 0 && (
@@ -123,7 +119,7 @@ export function AccountPage() {
         </section>
       )}
 
-      {native && <p className="muted small">Passes, credit packs and receipts are on proppickz.com, under Account.</p>}
+      {native && <p className="muted small">Passes bought in the app are on your Apple account’s receipts; ones bought on proppickz.com are under Account there.</p>}
 
       <Redeem redeem={redeemInviteCode} after={refresh} />
 
@@ -145,19 +141,7 @@ export function AccountPage() {
 
       <Dialog open={Boolean(buy)} onClose={closeBuy} title={PLAN[buy] ? `Get ${PLAN[buy]}` : `Add ${String(buy || '').slice(1)} credits`}>
         {buy && native ? (
-          <div className="stack">
-            <p>Passes and credit packs are bought on proppickz.com. Sign in there with this account and they show up here as soon as they're paid.</p>
-            <button
-              type="button"
-              className="btn btn--lime btn--block"
-              onClick={() => {
-                openSite(`/account?buy=${buy}`)
-                closeBuy()
-              }}
-            >
-              Open proppickz.com
-            </button>
-          </div>
+          <AppleBuy buy={buy} onDone={closeBuy} />
         ) : (
           buy && <PayFlow plan={buy} onDone={closeBuy} />
         )}
@@ -285,5 +269,96 @@ function DeleteAccount({ after }) {
         </div>
       </Dialog>
     </section>
+  )
+}
+
+/**
+ * In the app: buy with Apple (its own sheet, Face ID or a double-click), on as soon as Apple
+ * confirms; or on proppickz.com in Safari (US apps may link to their own checkout).
+ */
+function AppleBuy({ buy, onDone }) {
+  const { refresh } = useBilling()
+  const [products, setProducts] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState(null)
+  useEffect(() => {
+    appleProducts().then(setProducts, () => setProducts([]))
+  }, [])
+  const product = products ? productFor(products, buy) : null
+  const what = PLAN[buy] ? `${PLAN[buy]}, 30 days` : `${String(buy).slice(1)} credits`
+  const go = async () => {
+    setBusy(true)
+    setMsg(null)
+    try {
+      const out = await buyWithApple(product)
+      if (out === null) return setBusy(false)
+      if (out.pending) {
+        setMsg({ ok: true, text: 'Waiting for approval. It switches on by itself once it’s approved.' })
+        return setBusy(false)
+      }
+      await refresh()
+      setMsg({ ok: true, text: out.kind === 'pass' ? `${PLAN[out.plan] || 'Your pass'} is on.` : `${out.credits} credits added.` })
+      setTimeout(onDone, 1100)
+    } catch (e) {
+      setMsg({ ok: false, text: e?.message || 'The purchase didn’t go through. You weren’t charged twice: try again.' })
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="stack apple-buy">
+      {products === null ? (
+        <p className="muted">Getting Apple’s price</p>
+      ) : product ? (
+        <>
+          <p>
+            <b>{what}</b>, paid with your Apple account. It switches on as soon as Apple confirms, and passes don’t renew on their own.
+          </p>
+          <button type="button" className="btn btn--lime btn--block" disabled={busy} onClick={go}>
+            {busy ? 'Waiting for Apple' : `Buy for ${product.price}`}
+          </button>
+        </>
+      ) : (
+        <p className="muted">Buying through Apple isn’t available right now.</p>
+      )}
+      {msg && (
+        <p className={msg.ok ? 'form-ok' : 'form-err'} role={msg.ok ? 'status' : 'alert'}>
+          {msg.text}
+        </p>
+      )}
+      <button
+        type="button"
+        className="btn btn--quiet btn--block"
+        onClick={() => {
+          openSite(`/account?buy=${buy}`)
+          onDone()
+        }}
+      >
+        Buy on proppickz.com instead
+      </button>
+    </div>
+  )
+}
+
+/** Restore purchases: anything bought through Apple on this Apple account, sent again (nothing doubles). */
+function RestoreApple({ after }) {
+  const [state, setState] = useState(null)
+  return (
+    <p className="muted small">
+      Bought in the app before?{' '}
+      <button
+        type="button"
+        className="linkish"
+        disabled={state === 'busy'}
+        onClick={async () => {
+          setState('busy')
+          const n = await restoreApplePurchases().catch(() => -1)
+          if (n > 0) await after()
+          setState(n > 0 ? `Restored ${n}.` : n === 0 ? 'Nothing new to restore.' : 'Couldn’t reach Apple. Try again.')
+        }}
+      >
+        Restore purchases
+      </button>
+      {state && state !== 'busy' && <span role="status"> {state}</span>}
+    </p>
   )
 }

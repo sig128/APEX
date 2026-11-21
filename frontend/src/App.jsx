@@ -93,6 +93,7 @@ export function App() {
               <Route path="/consent" element={<LegalPage doc="consent" />} />
               <Route path="/terms" element={<LegalPage doc="terms" />} />
               <Route path="/privacy" element={<LegalPage doc="privacy" />} />
+              <Route path="/support" element={<LegalPage doc="support" />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/apex" element={<AnalyzerPage />} />

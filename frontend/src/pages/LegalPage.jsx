@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { CONSENT_POINTS } from '../ui/ConsentGate.jsx'
 import { useTitle } from '../lib/hooks.js'
+import { openFeedback } from '../ui/Feedback.jsx'
 
-const UPDATED = 'November 20, 2026'
-const UPDATED_ISO = '2026-11-20'
+const UPDATED = 'November 21, 2026'
+const UPDATED_ISO = '2026-11-21'
 
 // What PropPickz keeps and why, said the same way on the Consent page and in the Privacy Policy.
 const DATA = [
@@ -262,7 +263,7 @@ const PRIVACY = {
     {
       id: 'browser',
       title: 'Kept in your browser',
-      body: <p>Your bet slip, league, state for sportsbook links, the books you used, the consent record and display preferences are kept in your browser’s storage, not on our servers, until you clear them.</p>,
+      body: <p>Your bet slip, league, state for sportsbook links, the books you used, the consent record and display preferences are kept in your browser’s storage (or the app’s), not on our servers, until you clear them.</p>,
     },
     {
       id: 'others',
@@ -272,7 +273,9 @@ const PRIVACY = {
           <ul className="legal-list">
             <li>Google Firebase (sign-in and database) and Vercel (hosting) run the service for us.</li>
             <li>An email service delivers your feedback to our inbox.</li>
-            <li>If you turn on alerts, your browser’s push service (Apple, Google or Mozilla) delivers them to your device.</li>
+            <li>If you turn on alerts, your browser’s push service (Apple, Google or Mozilla), or Apple’s push service in the iPhone app, delivers them to your device.</li>
+            <li>If you sign in with Apple or Google, they confirm who you are and give us your name and email (Apple can give a private relay address instead).</li>
+            <li>Purchases in the iPhone app are made with Apple, which handles the payment. We get the purchase record Apple signs (the product, the date and an account token), never your card.</li>
             <li>When you ask for a model read, the prop’s stats go to the model provider (OpenAI or Anthropic). Don’t put personal details in questions.</li>
             <li>Sportsbook logos load from Google’s site-icon service, which sees the request but not the page you’re on.</li>
             <li>A sportsbook you open sees you arrive from PropPickz. We don’t share your data with sportsbooks and aren’t paid by them.</li>
@@ -294,9 +297,65 @@ const PRIVACY = {
   ],
 }
 
-const DOCS = { consent: CONSENT, terms: TERMS, privacy: PRIVACY }
-const ORDER = ['consent', 'terms', 'privacy']
-const SHORT = { consent: 'Consent', terms: 'Terms', privacy: 'Privacy' }
+// Support: the page the App Store links to (and anyone stuck)
+const SUPPORT = {
+  title: 'Support',
+  lead: 'Help with your account, passes, alerts and the iPhone app, and how to reach us.',
+  sections: [
+    {
+      id: 'contact',
+      title: 'Contact us',
+      body: (
+        <p>
+          Send us a note with{' '}
+          <button type="button" className="linkish" onClick={() => openFeedback()}>
+            Feedback
+          </button>
+          , also at the bottom of every page and in the app. Say what happened and add a screenshot if something looks wrong; leave your email if you’d like an answer.
+        </p>
+      ),
+    },
+    {
+      id: 'account',
+      title: 'Signing in',
+      body: <p>Sign in with Google or Apple. Your picks, record, passes and credits live on your PropPickz account, so they’re the same on proppickz.com and in the app as long as you use the same sign-in.</p>,
+    },
+    {
+      id: 'passes',
+      title: 'Passes and credits',
+      body: (
+        <>
+          <p>Passes run 30 days and don’t renew on their own. In the iPhone app you buy with your Apple account (Face ID or a double-click), and the pass or credits switch on as soon as Apple confirms; refunds for those go through Apple at reportaproblem.apple.com. On proppickz.com passes are paid in USDC; write to us about those.</p>
+          <p>Bought in the app but don’t see it? Open Account and tap Restore purchases. It never charges you again.</p>
+        </>
+      ),
+    },
+    {
+      id: 'alerts',
+      title: 'Alerts',
+      body: <p>Turn them on under Account, then Alerts, and choose which ones you want. In the iPhone app, if you told iOS no, turn them back on in Settings, then Notifications, then PropPickz.</p>,
+    },
+    {
+      id: 'delete',
+      title: 'Deleting your account',
+      body: <p>Open Account, then Delete account, and type DELETE. Your picks, record, picks page, groups, alerts, credits and pass time are deleted and you’re signed out. Payment records are kept, as the law requires.</p>,
+    },
+    {
+      id: 'help',
+      title: 'Gambling help',
+      body: (
+        <>
+          <p>PropPickz is research: stats and probabilities. It doesn’t take bets. If betting stops being fun, help is free and confidential, and you can set limits or take a break on your picks page at any time.</p>
+          <Helplines />
+        </>
+      ),
+    },
+  ],
+}
+
+const DOCS = { consent: CONSENT, terms: TERMS, privacy: PRIVACY, support: SUPPORT }
+const ORDER = ['consent', 'terms', 'privacy', 'support']
+const SHORT = { consent: 'Consent', terms: 'Terms', privacy: 'Privacy', support: 'Support' }
 
 /** The section in view, for the contents list. */
 function useInView(ids) {

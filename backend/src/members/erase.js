@@ -6,7 +6,7 @@
 // feedback notes and fair-play notes stay with the team.
 import { ApiError } from '../lib/router.js'
 
-export const USER_DOCS = ['alerts', 'rg', 'credits', 'subscriptions', 'billingUsers', 'users', 'inviteAttempts']
+export const USER_DOCS = ['alerts', 'rg', 'credits', 'subscriptions', 'billingUsers', 'users', 'inviteAttempts', 'blocks']
 
 /** Firebase Auth's own record of the person (default: the Admin SDK). */
 export async function deleteFirebaseUser(uid) {

@@ -9,6 +9,7 @@ const KINDS = [
   { key: 'bug', label: 'Something’s broken' },
   { key: 'feature', label: 'An idea' },
   { key: 'pick', label: 'A pick or a number' },
+  { key: 'report', label: 'Report a pick or a page' },
   { key: 'general', label: 'Anything else' },
 ]
 

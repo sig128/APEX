@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useAuth } from './AuthContext.jsx'
 import { api } from '../lib/api.js'
+import { isNative } from '../lib/native.js'
+import { appleInfo, watchApplePurchases } from '../lib/iap.js'
 
 const BillingContext = createContext(null)
 const RANK = { free: 0, pro: 1, elite: 2 }
@@ -13,8 +15,11 @@ export function BillingProvider({ children }) {
   const [config, setConfig] = useState(null)
   const [me, setMe] = useState(null)
   const [loading, setLoading] = useState(true)
+  // the iPhone app sells passes and credit packs through Apple when the server takes them
+  const [apple, setApple] = useState(false)
 
   useEffect(() => {
+    if (isNative()) appleInfo().then((i) => setApple(Boolean(i.enabled)), () => {})
     api('/api/billing/config', { auth: false })
       .then(setConfig)
       .catch(() => setConfig({ paywall: false, plans: [] }))
@@ -44,12 +49,21 @@ export function BillingProvider({ children }) {
     refresh()
   }, [authLoading, refresh])
 
+  // in the app, once signed in: purchases Apple took that never reached the server go through now
+  useEffect(() => {
+    if (!user || !isNative()) return
+    watchApplePurchases(() => refresh()).catch(() => {})
+  }, [user, refresh])
+
   const value = useMemo(() => {
-    const paywall = Boolean(config?.paywall)
-    const ent = me?.entitlement || (paywall ? { plan: 'free', status: user ? 'none' : 'anonymous' } : { plan: 'elite', status: 'open' })
+    // in the app with Apple selling, the pass actually held is what shows (the website may not be selling yet)
+    const viaApple = apple && isNative()
+    const paywall = Boolean(config?.paywall) || viaApple
+    const ent = (viaApple && me?.held) || me?.entitlement || (paywall ? { plan: 'free', status: user ? 'none' : 'anonymous' } : { plan: 'elite', status: 'open' })
     return {
       config,
       paywall,
+      apple: viaApple,
       me,
       ent,
       plan: ent.plan,
@@ -63,7 +77,7 @@ export function BillingProvider({ children }) {
       has: (need) => (RANK[ent.plan] ?? 0) >= (RANK[need] ?? 0),
       refresh,
     }
-  }, [config, me, loading, authLoading, user, refresh])
+  }, [config, me, loading, authLoading, user, refresh, apple])
   return <BillingContext.Provider value={value}>{children}</BillingContext.Provider>
 }
 

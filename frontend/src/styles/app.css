@@ -3268,6 +3268,15 @@ code {
   margin: 0;
   max-width: 60ch;
 }
+/* in the app: the result of a purchase through Apple */
+.form-ok {
+  margin: 0;
+  color: var(--lime);
+  font-weight: 600;
+}
+.apple-buy b {
+  color: var(--chalk);
+}
 .btn--danger {
   background: transparent;
   border-color: var(--flag);

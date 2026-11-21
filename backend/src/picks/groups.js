@@ -3,6 +3,7 @@
 // group's members by the same graded record their page shows, over the window picked, so a group
 // is a smaller, private view of records that can't be edited after kickoff.
 import crypto from 'node:crypto'
+import { mustBeClean } from '../lib/clean.js'
 import { ApiError } from '../lib/router.js'
 
 export const MAX_MEMBERS = 50
@@ -60,6 +61,7 @@ export function createGroups({ docs, picks, isMember = async () => false, now = 
     await needPage(user)
     if (!(await isMember(user))) throw new ApiError(402, 'upgrade', 'Starting a group is for members with a Pro or Elite pass. Anyone with a picks page can join one.', { need: 'pro' })
     const n = cleanName(name)
+    mustBeClean({ 'group name': n })
     if (n.length < 3) throw new ApiError(400, 'bad_name', 'Give the group a name of 3 to 40 characters.')
     const t = now()
     const id = `g_${crypto.randomBytes(8).toString('hex')}`
@@ -170,6 +172,7 @@ export function createGroups({ docs, picks, isMember = async () => false, now = 
   async function rename(user, id, { name } = {}) {
     const g = await load(user, id, { owner: true })
     const n = cleanName(name)
+    mustBeClean({ 'group name': n })
     if (n.length < 3) throw new ApiError(400, 'bad_name', 'Give the group a name of 3 to 40 characters.')
     await docs.merge('groups', g.id, { name: n, updatedAt: now() })
     return { group: view({ ...g, name: n }, user.uid) }

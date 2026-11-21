@@ -6,6 +6,7 @@ import { createChain } from './chain.js'
 import { createDocs } from './docs.js'
 import { ApiError } from '../lib/router.js'
 import { packOf, applyTopup } from './credits.js'
+import { appleConfig, appAccountToken, verifyAppleJws, checkTransaction } from './apple.js'
 import { log, errText } from '../lib/log.js'
 
 export const LIFETIME = Date.UTC(2100, 0, 1)
@@ -72,7 +73,7 @@ export function nextReset(at, tz) {
 
 const invId = () => `inv_${crypto.randomBytes(12).toString('hex')}`
 
-export function createBilling({ docs, getFirestore, store, chainFor, now = () => Date.now(), lookupUid, onChange } = {}) {
+export function createBilling({ docs, getFirestore, store, chainFor, now = () => Date.now(), lookupUid, onChange, appleRootSha256 } = {}) {
   const d = docs || createDocs({ getFirestore, store })
   const chains = new Map()
   const subCache = new Map() // uid -> { sub, until }
@@ -344,6 +345,88 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     return { uid: target, subscription: next, entitlement: entitlementOf(next, t, cfg) }
   }
 
+  // ---- the iPhone app: Apple's in-app purchase (see apple.js) ----------------------------------
+  /** What the app needs to sell: whether Apple purchases count here, the products, the buyer's token. */
+  function appleInfo(user) {
+    const cfg = appleConfig()
+    return {
+      enabled: cfg.enabled,
+      products: Object.entries(cfg.products).map(([id, p]) => ({ id, kind: p.kind, plan: p.plan || null, days: p.days || null, credits: p.credits || null })),
+      appAccountToken: user?.uid && user.uid !== 'admin' ? appAccountToken(user.uid) : null,
+    }
+  }
+
+  /**
+   * A purchase the app made through Apple, exactly as Apple signed it. Grants once: a 30-day pass
+   * (on top of time left, like a renewal) or a credit pack. The same purchase again just answers
+   * with where things stand, so the app can safely resend after a dropped connection.
+   */
+  async function applePurchase(user, jws, { rootSha256 } = {}) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    const acfg = appleConfig()
+    if (!acfg.enabled) throw new ApiError(409, 'apple_off', 'Purchases in the app are switched off right now.')
+    const root = rootSha256 || appleRootSha256
+    const tx = verifyAppleJws(jws, root ? { rootSha256: root } : {})
+    const product = checkTransaction(tx, { cfg: acfg, uid: user.uid })
+    const cfg = billingConfig()
+    const t = now()
+    const id = String(tx.transactionId)
+    const out = await d.tx(async (txn) => {
+      const seen = await txn.get('appleTx', id)
+      if (seen) return { already: true, uid: seen.uid }
+      const sub = product.kind === 'pass' ? await txn.get('subscriptions', user.uid) : null
+      const creds = product.kind === 'credits' ? await txn.get('credits', user.uid) : null
+      const u = (await txn.get('billingUsers', user.uid)) || {}
+      txn.set('appleTx', id, { uid: user.uid, productId: tx.productId, kind: product.kind, plan: product.plan || null, days: product.days || null, credits: product.credits || null, env: tx.environment, purchasedAt: Number(tx.purchaseDate) || t, at: t, refunded: false })
+      if (product.kind === 'pass') {
+        const next = applyPurchase(sub, product.plan, t, cfg, product.days * DAY_MS)
+        txn.set('subscriptions', user.uid, { ...next, revoked: false, source: 'apple', lastPayment: `apple:${id}`, updatedAt: t, email: user.email || sub?.email || null })
+      } else {
+        txn.set('credits', user.uid, applyTopup(creds, { id: `apple:${id}`, credits: product.credits }, t))
+      }
+      txn.merge('billingUsers', user.uid, { apple: [{ id, productId: tx.productId, at: t, env: tx.environment }, ...(u.apple || [])].slice(0, 30), updatedAt: t })
+      return { granted: true }
+    })
+    if (out.already && out.uid !== user.uid) throw new ApiError(403, 'not_yours', 'That purchase already counted for another PropPickz account.')
+    changed(user.uid)
+    return { ok: true, already: Boolean(out.already), kind: product.kind, plan: product.plan || null, credits: product.credits || null, held: await heldPlan(user) }
+  }
+
+  /**
+   * Apple's server notices (App Store Server Notifications V2). A refund or a revoked purchase
+   * takes back what it granted: the pass loses its days (never below today), the credits come
+   * off the balance (never below zero). Everything else is acknowledged and ignored.
+   */
+  async function appleNotice(signedPayload, { rootSha256 } = {}) {
+    const root = rootSha256 || appleRootSha256
+    const opts = root ? { rootSha256: root } : {}
+    const n = verifyAppleJws(signedPayload, opts)
+    const type = String(n.notificationType || '')
+    if (!['REFUND', 'REVOKE'].includes(type) || !n.data?.signedTransactionInfo) return { ok: true, handled: false, type }
+    const acfg = appleConfig()
+    if (n.data.bundleId && n.data.bundleId !== acfg.bundleId) return { ok: true, handled: false, type }
+    const info = verifyAppleJws(n.data.signedTransactionInfo, opts)
+    const id = String(info.transactionId || '')
+    const t = now()
+    const done = await d.tx(async (txn) => {
+      const rec = id ? await txn.get('appleTx', id) : null
+      if (!rec || rec.refunded) return null
+      const sub = rec.kind === 'pass' ? await txn.get('subscriptions', rec.uid) : null
+      const creds = rec.kind === 'credits' ? await txn.get('credits', rec.uid) : null
+      txn.set('appleTx', id, { ...rec, refunded: true, refundedAt: t, refundType: type })
+      if (rec.kind === 'pass' && sub && !sub.lifetime) {
+        txn.set('subscriptions', rec.uid, { ...sub, paidUntil: Math.max(t, sub.paidUntil - (rec.days || 30) * DAY_MS), updatedAt: t, note: `Apple ${type.toLowerCase()} of ${id}` })
+      }
+      if (rec.kind === 'credits' && creds) {
+        const take = Math.min(creds.topup || 0, rec.credits || 0)
+        txn.set('credits', rec.uid, { ...creds, topup: (creds.topup || 0) - take, log: [{ at: t, kind: 'refund', action: 'refund', credits: -take, ref: `apple:${id}` }, ...(creds.log || [])].slice(0, 60), updatedAt: t })
+      }
+      return rec.uid
+    })
+    if (done) changed(done)
+    return { ok: true, handled: Boolean(done), type }
+  }
+
   async function revoke(admin, { uid, email }) {
     if (!admin?.admin) throw new ApiError(403, 'admin', 'Admins only.')
     const target = await resolveUid({ uid, email })
@@ -432,6 +515,7 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     return {
       user: { uid: user.uid, email: user.email, name: user.name, picture: user.picture, admin: Boolean(user.admin) },
       entitlement: ent,
+      held,
       // the AI follows the pass actually held, never the open site
       ai: { allowed: atLeast(held.plan, 'pro'), plan: held.plan, status: held.status },
       usage: await usage(user, held),
@@ -470,6 +554,9 @@ export function createBilling({ docs, getFirestore, store, chainFor, now = () =>
     grant,
     revoke,
     clearRevoke,
+    appleInfo,
+    applePurchase,
+    appleNotice,
     useQuota,
     refundQuota,
     usage,

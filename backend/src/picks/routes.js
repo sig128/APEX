@@ -61,11 +61,24 @@ export function picksRoutes({ picks, access, billing = null, groups = null }) {
     if (!t.ok) throw new ApiError(429, 'slow_down', 'Slow down a little.', { retryAfter: t.retryAfter })
   }
 
+  // the handles this reader has blocked (none for a signed-out reader): their picks drop out of
+  // what this reader sees, and the answer is then private to them
+  const blockedFor = async (req, res) => {
+    if (!req.get('authorization')) return null
+    const v = await viewer(req).catch(() => null)
+    const set = v ? await picks.blockedHandles(v) : null
+    if (!set?.size) return null
+    res.set('Cache-Control', 'private, no-store')
+    return set
+  }
+
   // older pages miss the CDN and cost real reads, so they count for more
   const pageCost = (req) => (req.query.before ? 4 : 1)
-  r.get('/feed', wrap(async (req) => {
+  r.get('/feed', wrap(async (req, res) => {
     throttle(readLimit, clientIp(req), pageCost(req))
-    return picks.feed({ before: req.query.before })
+    const out = await picks.feed({ before: req.query.before })
+    const blocked = await blockedFor(req, res)
+    return blocked ? { ...out, picks: out.picks.filter((x) => !blocked.has(x.profile?.handle || x.handle)) } : out
   }, 'public, max-age=10, s-maxage=20, stale-while-revalidate=60'))
 
   // The full leaderboard is for members; a free visitor gets the podium and how many are behind
@@ -73,11 +86,13 @@ export function picksRoutes({ picks, access, billing = null, groups = null }) {
   r.get('/leaderboard', wrap(async (req, res) => {
     throttle(readLimit, clientIp(req))
     const q = req.query
-    const out = await picks.leaderboard({ range: String(q.range || '30d'), sport: String(q.sport || 'all'), legs: String(q.legs || 'all'), sort: String(q.sort || 'roi') })
+    const board = await picks.leaderboard({ range: String(q.range || '30d'), sport: String(q.sport || 'all'), legs: String(q.legs || 'all'), sort: String(q.sort || 'roi') })
     const paid = await isMember(req)
+    const blocked = await blockedFor(req, res)
+    const out = blocked ? { ...board, rows: board.rows.filter((x) => !blocked.has(x.profile?.handle)) } : board
     res.set('Vary', 'Authorization')
     // anyone signed in gets their own answer; the anonymous one is the same for everybody
-    res.set('Cache-Control', req.get('authorization') ? 'private, max-age=30' : 'public, max-age=30, s-maxage=60, stale-while-revalidate=180')
+    if (!blocked) res.set('Cache-Control', req.get('authorization') ? 'private, max-age=30' : 'public, max-age=30, s-maxage=60, stale-while-revalidate=180')
     return paid ? { ...out, locked: false, total: out.rows.length } : { ...out, rows: out.rows.slice(0, 3), total: out.rows.length, locked: true }
   }))
 
@@ -91,6 +106,13 @@ export function picksRoutes({ picks, access, billing = null, groups = null }) {
   }, 'public, max-age=10, s-maxage=15, stale-while-revalidate=60'))
 
   r.get('/me', wrap(async (req) => picks.me(await signedIn(req))))
+  // blocking someone, and the list of who you've blocked
+  r.get('/blocks', wrap(async (req) => ({ blocked: (await picks.blocks(await signedIn(req))).map((b) => ({ handle: b.handle, at: b.at })) })))
+  r.post('/blocks', wrap(async (req) => {
+    const u = await signedIn(req)
+    throttle(writeLimit, u.uid)
+    return picks.block(u, { handle: req.body?.handle, on: req.body?.on !== false })
+  }))
   r.put('/me', wrap(async (req) => {
     needDb()
     const u = await signedIn(req)
@@ -126,6 +148,11 @@ export function picksRoutes({ picks, access, billing = null, groups = null }) {
   // ---- private groups: their own boards ---------------------------------------------------
   if (groups) {
     const groupLimit = createLimiter({ burst: 20, perSec: 1 / 3 })
+    // a group board without the people this member blocked
+    const filterBoard = async (u, out) => {
+      const blocked = await picks.blockedHandles(u)
+      return blocked.size ? { ...out, rows: out.rows.filter((r) => r.you || !blocked.has(r.profile?.handle)) } : out
+    }
     const g = (fn) =>
       wrap(async (req) => {
         needDb()
@@ -141,7 +168,10 @@ export function picksRoutes({ picks, access, billing = null, groups = null }) {
       throttle(readLimit, clientIp(req), 4)
       return groups.preview(req.params.code)
     }))
-    r.get('/groups/:id', g((u, req) => groups.board(u, req.params.id, { range: String(req.query.range || '30d'), sport: String(req.query.sport || 'all'), legs: String(req.query.legs || 'all'), sort: String(req.query.sort || 'roi') })))
+    r.get(
+      '/groups/:id',
+      g(async (u, req) => filterBoard(u, await groups.board(u, req.params.id, { range: String(req.query.range || '30d'), sport: String(req.query.sport || 'all'), legs: String(req.query.legs || 'all'), sort: String(req.query.sort || 'roi') }))),
+    )
     r.post('/groups/:id/leave', g((u, req) => groups.leave(u, req.params.id)))
     r.post('/groups/:id/remove', g((u, req) => groups.removeMember(u, req.params.id, req.body || {})))
     r.post('/groups/:id/rename', g((u, req) => groups.rename(u, req.params.id, req.body || {})))

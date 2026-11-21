@@ -12,6 +12,7 @@ import { SendToBook } from './Books.jsx'
 import { api } from '../lib/api.js'
 import { invalidate } from '../lib/useApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { openFeedback } from './Feedback.jsx'
 
 const RESULT = { win: 'Won', loss: 'Lost', push: 'Push', void: 'Void' }
 
@@ -160,6 +161,11 @@ function OpenPick({ pick, showProfile = false, onDelete, owner = false }) {
           <a className="linkish" href={`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(pageUrl)}`} target="_blank" rel="noopener noreferrer">
             Post on X
           </a>
+          {!owner && user && (
+            <button type="button" className="linkish" onClick={() => openFeedback({ kind: 'report', about: `pick:${pick.id}${pick.handle || pick.profile?.handle ? ` @${pick.handle || pick.profile?.handle}` : ''}` })}>
+              Report
+            </button>
+          )}
           {owner && pick.status === 'graded' && (
             <Link to={`/me/breakdown/${pick.id}`} className="btn btn--quiet btn--s pick__analyze">
               Analyze this bet

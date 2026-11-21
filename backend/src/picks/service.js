@@ -1,6 +1,7 @@
 // User pages and the picks showcase. Anyone signed in gets a page and a graded record;
 // Elite adds the public feed, the leaderboard, the badge and links to X and Instagram.
 import crypto from 'node:crypto'
+import { mustBeClean } from '../lib/clean.js'
 import { ApiError } from '../lib/router.js'
 import { MARKETS, marketOf } from '../nfl/markets.js'
 import { outcome, parsePropId } from '../nfl/analytics/core.js'
@@ -453,6 +454,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     const bio = cleanText(body.bio, 160)
     const x = socialHandle(body.x, 'x')
     const ig = socialHandle(body.ig, 'ig')
+    mustBeClean({ handle, name, bio, 'X handle': x, 'Instagram handle': ig })
     const avatar = body.avatar === null ? null : avatarOk(body.avatar) ? body.avatar : avatarOk(user.picture) ? user.picture : null
     const held = await billing.heldPlan(user)
     const t = now()
@@ -597,6 +599,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     const separate = body.mode === 'separate' && legs.length > 1
     const units = Math.min(10, Math.max(0.1, Math.round((Number(body.units) || 1) * 10) / 10))
     const note = cleanText(body.note, 280)
+    mustBeClean({ note })
     const t = now()
     const tz = billingConfig().usageTz
     const day = dayKey(t, tz)
@@ -1141,6 +1144,37 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     return { picks: n, page: Boolean(prof) }
   }
 
+  // ---- blocking: someone you block drops out of your feed, leaderboard and group boards ------
+  async function blocks(user) {
+    if (!user?.uid) return []
+    return (await d.get('blocks', user.uid))?.list || []
+  }
+  /** The handles this account has blocked, as they're called now (handles can change). */
+  async function blockedHandles(user) {
+    const out = new Set()
+    for (const b of await blocks(user)) {
+      const p = await profileCached(b.uid).catch(() => null)
+      out.add(p?.handle || b.handle)
+    }
+    return out
+  }
+  async function block(user, { handle, on = true } = {}) {
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
+    const h = String(handle || '').trim().toLowerCase().replace(/^@/, '')
+    const owner = HANDLE_RE.test(h) ? await d.get('profileHandles', h) : null
+    if (!owner) throw new ApiError(404, 'not_found', 'No page with that handle.')
+    if (owner.uid === user.uid) throw new ApiError(400, 'self', 'That’s your own page.')
+    const t = now()
+    const list = await d.tx(async (tx) => {
+      const cur = (await tx.get('blocks', user.uid))?.list || []
+      const rest = cur.filter((b) => b.uid !== owner.uid)
+      const next = on ? [{ uid: owner.uid, handle: h, at: t }, ...rest].slice(0, 500) : rest
+      tx.set('blocks', user.uid, { list: next, updatedAt: t })
+      return next
+    })
+    return { blocked: list.map((b) => ({ handle: b.handle, at: b.at })) }
+  }
+
   async function mustProfile(user) {
     if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in first.')
     const p = await profileOf(user.uid)
@@ -1290,5 +1324,5 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     return { picks: out, at: at || null, refreshMs: 20_000, now: t }
   }
 
-  return { me, saveProfile, post, check, remove, eraseUser, tail, track, rowsFor, profileOf, page, feed, leaderboard, gradeOpen, watchOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, pickFor, subscribers, setSubscriber, alertsFor, seenAlerts, coachFor, trackingFor, rgGet, rgLimits, rgPause, pauseOf, liveFor, _atLeast: atLeast }
+  return { me, saveProfile, post, check, remove, eraseUser, tail, track, rowsFor, blocks, blockedHandles, block, profileOf, page, feed, leaderboard, gradeOpen, watchOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, pickFor, subscribers, setSubscriber, alertsFor, seenAlerts, coachFor, trackingFor, rgGet, rgLimits, rgPause, pauseOf, liveFor, _atLeast: atLeast }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useApi, invalidate } from '../lib/useApi.js'
 import { api } from '../lib/api.js'
@@ -6,6 +6,8 @@ import { useTitle, useCopy } from '../lib/hooks.js'
 import { SITE_URL } from '../lib/config.js'
 import { PickCard, Avatar, RecordPanel } from '../ui/PickCard.jsx'
 import { Skeleton, Empty, ErrorBox, EliteBadge, Section } from '../ui/Bits.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { openFeedback } from '../ui/Feedback.jsx'
 
 /** /u/:handle: someone's page, their verified record, and every pick they've posted. */
 export function UserPage() {
@@ -15,6 +17,28 @@ export function UserPage() {
   const [more, setMore] = useState([])
   const [next, setNext] = useState(undefined)
   const [copy, copied] = useCopy()
+  const { user } = useAuth()
+  // blocking: their picks drop out of your feed, leaderboard and group boards, and this page
+  // shows them only if you ask
+  const [blocked, setBlocked] = useState(false)
+  const [peek, setPeek] = useState(false)
+  useEffect(() => {
+    if (!user) return
+    api('/api/picks/blocks')
+      .then((r) => setBlocked(r.blocked.some((b) => b.handle === String(h).toLowerCase().replace(/^@/, ''))))
+      .catch(() => {})
+  }, [user, h])
+  const setBlock = async (on) => {
+    if (on && !window.confirm(`Block @${String(h).replace(/^@/, '')}? Their picks leave your feed, leaderboard and group boards. You can unblock them here any time.`)) return
+    try {
+      const r = await api('/api/picks/blocks', { method: 'POST', body: { handle: h, on } })
+      setBlocked(r.blocked.some((b) => b.handle === String(h).toLowerCase().replace(/^@/, '')))
+      setPeek(false)
+      invalidate('/api/picks')
+    } catch {
+      /* the button stays as it was */
+    }
+  }
   const prof = data?.profile
   useTitle(prof ? `${prof.name} (@${prof.handle}) picks` : `@${h}`)
   if (error && !data) {
@@ -86,7 +110,25 @@ export function UserPage() {
                 Edit page
               </Link>
             )}
+            {!data.owner && user && (
+              <>
+                <button type="button" className="linkish" onClick={() => openFeedback({ kind: 'report', about: `user:${prof.handle}` })}>
+                  Report
+                </button>
+                <button type="button" className="linkish" onClick={() => setBlock(!blocked)}>
+                  {blocked ? 'Unblock' : 'Block'}
+                </button>
+              </>
+            )}
           </p>
+          {blocked && !peek && (
+            <p className="muted small">
+              You blocked @{prof.handle}. Their picks are hidden from your feed, leaderboard and group boards.{' '}
+              <button type="button" className="linkish" onClick={() => setPeek(true)}>
+                Show their picks here
+              </button>
+            </p>
+          )}
           {data.owner && prof.hidden && <p className="form-err">Your page is hidden from everyone else. Contact support if you think that's a mistake.</p>}
         </div>
       </header>
@@ -109,7 +151,7 @@ export function UserPage() {
       ) : (
         <p className="muted">No graded picks yet. The record starts with the first pick that finishes.</p>
       )}
-      {data.open.length > 0 && (
+      {(!blocked || peek) && data.open.length > 0 && (
         <Section id="open" title="Open picks">
           <div className="picks">
             {data.open.map((p) => (
@@ -119,7 +161,9 @@ export function UserPage() {
         </Section>
       )}
       <Section id="history" title="History">
-        {data.history.length || more.length ? (
+        {blocked && !peek ? (
+          <p className="muted">Hidden because you blocked this person.</p>
+        ) : data.history.length || more.length ? (
           <div className="picks">
             {[...data.history, ...more].map((p) => (
               <PickCard key={p.id} pick={p} owner={data.owner} />

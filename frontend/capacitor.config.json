@@ -30,6 +30,9 @@
         "google.com",
         "apple.com"
       ]
+    },
+    "NativePurchases": {
+      "autoFinishTransactions": false
     }
   },
   "experimental": {

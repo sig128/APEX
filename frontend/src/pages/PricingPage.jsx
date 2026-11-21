@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useBilling } from '../context/BillingContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useTitle } from '../lib/hooks.js'
-import { isNative, openSite } from '../lib/native.js'
+import { isNative } from '../lib/native.js'
 
 const FREE = ['Every prop with hit rates over the last 5, 10 and 20 games, this season, vs the opponent and home/away', 'Cheatsheets, streaks, matchups and line moves', 'Live tracking for every prop and your slip', 'Bet slip with fair odds, copy and share', 'Your own picks page with an auto-graded record']
 
@@ -17,7 +17,7 @@ export function PricingPage() {
     <div className="container page">
       <header className="page-head">
         <h1 className="page-title">Plans</h1>
-        <p className="page-sub">{native ? 'The stats are free. Passes run 30 days with no auto-renew, and are bought on proppickz.com: sign in there with this account and they show up here.' : `The stats are free. Passes run 30 days, paid in USDC on ${config?.networkName || 'Base'}, with no card and no auto-renew.`}</p>
+        <p className="page-sub">{native ? 'The stats are free. Passes run 30 days and don’t renew on their own. Buy one here with your Apple account, or on proppickz.com.' : `The stats are free. Passes run 30 days, paid in USDC on ${config?.networkName || 'Base'}, with no card and no auto-renew.`}</p>
       </header>
       {!paywall && config && <p className="notice">Passes aren't on sale yet, so everything but the model reads is open while PropPickz is in beta. Model reads (prop reads, the parlay check, game intel and the analyzer) are for members with a pass.</p>}
       <div className="plans">
@@ -38,9 +38,7 @@ export function PricingPage() {
           return (
             <section key={p.id} className={`plan plan--${p.id}`}>
               <h2 className="plan__name">{p.name}</h2>
-              <p className="plan__price">
-                <span className="num">${p.priceUsd}</span> per 30 days
-              </p>
+              <p className="plan__price">{native ? <span className="num">30 days</span> : <><span className="num">${p.priceUsd}</span> per 30 days</>}</p>
               <ul className="plan__list">
                 {p.features.map((f) => (
                   <li key={f}>{f}</li>
@@ -56,10 +54,6 @@ export function PricingPage() {
                   <Link to="/account" className="btn btn--quiet btn--block">
                     {ent.status === 'grace' ? 'Renew now' : `Active, ${ent.daysLeft ?? ''} days left`}
                   </Link>
-                ) : native ? (
-                  <button type="button" className={`btn btn--block ${p.id === 'elite' ? 'btn--lime' : 'btn--quiet'}`} onClick={() => openSite(`/account?buy=${p.id}`)}>
-                    Get {p.name} on proppickz.com
-                  </button>
                 ) : (
                   <Link to={user ? `/account?buy=${p.id}` : `/login?next=${encodeURIComponent(`/account?buy=${p.id}`)}`} className={`btn btn--block ${p.id === 'elite' ? 'btn--lime' : 'btn--quiet'}`}>
                     Get {p.name}
@@ -75,7 +69,7 @@ export function PricingPage() {
           {native ? (
             <>
               <dt>How do I get a pass?</dt>
-              <dd>On proppickz.com, signed in with the same account as here. The pass shows up in the app as soon as it's paid.</dd>
+              <dd>Tap Get Pro or Get Elite and confirm with Apple (Face ID or a double-click). It switches on as soon as Apple confirms. You can also buy on proppickz.com, signed in with the same account.</dd>
             </>
           ) : (
             <>

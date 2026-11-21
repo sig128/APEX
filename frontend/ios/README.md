@@ -7,16 +7,17 @@ calls the same API as the website, so everything on proppickz.com is in it.
 
 What's different inside the app, because of Apple's rules:
 
-- **Buying a pass or credits opens proppickz.com in Safari.** Apps can't sell digital content any
-  other way than Apple's in-app purchase, and can't unlock anything with crypto; US apps may link
-  to their own website's checkout (App Review Guideline 3.1.1(a)). A pass bought there shows up in
-  the app as soon as it's paid. Guideline 3.1.3(b) also says passes bought elsewhere should be on
-  sale in the app too, so App Review may ask for in-app purchases as well (Apple keeps 15% under
-  the Small Business Program); that's the open decision in the dev meeting sheet.
+- **Passes and credit packs are bought with Apple** (in-app purchase: Apple's sheet, Face ID or a
+  double-click, on as soon as Apple confirms). The server checks each purchase as Apple signed it,
+  up to Apple's root certificate, grants it once and takes it back if Apple refunds it
+  (`backend/src/billing/apple.js`). US users also get a link to buy on proppickz.com
+  (Guideline 3.1.1(a)); crypto never unlocks anything inside the app (3.1.1).
 - **No prize contests** in the first version (Apple has rejected free prediction contests with
   prizes as gambling).
 - **Delete account** is on the Account page (Guideline 5.1.1(v)); the website has it too.
 - **Sign in with Apple** sits next to Google (Guideline 4.8).
+- **What people post is moderated** (Guideline 1.2): a word filter on pick notes, page names,
+  bios and group names; Report on any pick or page; Block on any page; the admin can hide a page.
 
 ## Building
 
@@ -37,8 +38,10 @@ Only the owner can do these: they're the company's accounts, and the keys are pr
 2. **The app's ID.** In Certificates, Identifiers & Profiles, add an App ID `com.proppickz.app` with
    Push Notifications, Sign in with Apple and Associated Domains turned on.
 3. **The app in App Store Connect.** Apps, then New App: name PropPickz, bundle ID
-   `com.proppickz.app`, iOS. Sign the Paid Applications agreement too if passes will ever be sold
-   in the app.
+   `com.proppickz.app`, iOS. In Business, sign the Paid Applications agreement and add the bank
+   and tax details (purchases can't go on sale without them), and apply for the Small Business
+   Program (15% instead of 30%). Then create the five in-app purchases and the refund
+   notifications URL listed in `appstore/listing.md`.
 4. **Two keys from Apple** (each downloads once as a `.p8` file; keep them safe):
    - Users and Access, Integrations, App Store Connect API: a **Team key with the Admin role**.
      Note its Key ID and the Issuer ID.
@@ -58,9 +61,10 @@ Only the owner can do these: they're the company's accounts, and the keys are pr
 8. **TestFlight.** GitHub, Actions, iPhone app, Run workflow, tick the upload box. About 20 minutes
    later the build is in App Store Connect; add yourself as a tester and install it with the
    TestFlight app.
-9. **App Review.** In App Store Connect: screenshots (6.9-inch iPhone), description, support URL,
-   privacy policy `https://proppickz.com/privacy`, the age questions answered as they are (betting
-   content rates 18+), App Privacy (email, name, user ID, picks you post, feedback you send),
-   availability United States, and in the review notes a demo account plus: "PropPickz is sports
-   research: stats, probabilities and picks. It takes no bets and holds no money. Passes are sold
-   on proppickz.com (US storefront link, 3.1.1(a))."
+9. **A pass code for Apple's reviewers.** In Firebase, Firestore, collection `inviteCodes`, add a
+   document with the id `APPREVIEW-PROPPICKZ` and the fields `plan` = `elite`, `days` = 30 and
+   `usesRemaining` = 20 (the review notes give the reviewer this code).
+10. **App Review.** Everything App Store Connect asks for is in `appstore/listing.md`: name,
+   subtitle, description, keywords, URLs, the age and privacy answers and the review notes; the
+   pictures are in `appstore/screenshots-6.3/` and `appstore/screenshots-6.9/`. Then pick the
+   TestFlight build and submit.

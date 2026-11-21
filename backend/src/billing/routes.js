@@ -12,6 +12,8 @@ export function billingRoutes({ billing, access, credits = null, getDb = null, n
   const confirmLimit = createLimiter({ burst: 20, perSec: 1 / 3 })
   const scanLimit = createLimiter({ burst: 4, perSec: 1 / 15 })
   const invoiceLimit = createLimiter({ burst: 6, perSec: 1 / 20 })
+  const appleLimit = createLimiter({ burst: 20, perSec: 1 / 2 })
+  const noticeLimit = createLimiter({ burst: 60, perSec: 5 })
 
   const wrap = (fn) => async (req, res) => {
     res.set('Cache-Control', 'no-store')
@@ -58,6 +60,37 @@ export function billingRoutes({ billing, access, credits = null, getDb = null, n
     }),
   )
   r.get('/me', wrap(async (req) => billing.me(await who(req))))
+  // The iPhone app: what it sells through Apple (and the buyer's account token), a purchase
+  // exactly as Apple signed it, and Apple's own refund notices (set as the App Store Server
+  // Notifications URL in App Store Connect, version 2)
+  r.get(
+    '/apple',
+    wrap(async (req) => {
+      const a = await access.resolve(req).catch(() => ({ user: null }))
+      return billing.appleInfo(a.user)
+    }),
+  )
+  r.post(
+    '/apple',
+    wrap(async (req) => {
+      const u = await who(req)
+      limited(appleLimit, u.uid)
+      const jws = String(req.body?.jws || '')
+      if (!jws || jws.length > 20_000) throw new ApiError(400, 'bad_purchase', 'Send the purchase as Apple signed it.')
+      return billing.applePurchase(u, jws)
+    }),
+  )
+  r.post(
+    '/apple/notifications',
+    wrap(async (req) => {
+      limited(noticeLimit, 'apple')
+      const signed = String(req.body?.signedPayload || '')
+      if (!signed || signed.length > 50_000) throw new ApiError(400, 'bad_notice', 'Expected a signedPayload.')
+      const out = await billing.appleNotice(signed)
+      log.info('apple notice', { type: out.type, handled: out.handled })
+      return { ok: true }
+    }),
+  )
   // your credits: this month's allotment, what's left, top-ups, what things cost, recent uses
   r.get('/credits', wrap(async (req) => (credits ? credits.status(await who(req)) : { left: null, unlimited: true })))
   r.post(

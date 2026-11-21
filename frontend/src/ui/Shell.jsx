@@ -303,6 +303,7 @@ function Footer() {
           <Link to="/consent">Consent</Link>
           <Link to="/terms">Terms</Link>
           <Link to="/privacy">Privacy</Link>
+          <Link to="/support">Support</Link>
           {isAdmin && !isNative() && <Link to="/admin">Admin</Link>}
           <button type="button" className="linkish" onClick={() => playIntro({ force: true, chipText: sportInfo(sport).name })}>
             Replay intro
