@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useBilling } from '../context/BillingContext.jsx'
 import { useTitle } from '../lib/hooks.js'
@@ -9,6 +9,8 @@ import { Skeleton } from '../ui/Bits.jsx'
 import { CreditsCard } from '../ui/Credits.jsx'
 import { PushCard } from '../ui/PushCard.jsx'
 import { replayTour } from '../ui/Tour.jsx'
+import { api } from '../lib/api.js'
+import { isNative, openSite } from '../lib/native.js'
 
 const fmtDay = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '')
 const PLAN = { free: 'Free', pro: 'Pro', elite: 'Elite' }
@@ -36,6 +38,7 @@ export function AccountPage() {
     }
   }
   const plans = config?.plans || []
+  const native = isNative()
   return (
     <div className="container page narrow">
       <header className="page-head page-head--row">
@@ -57,7 +60,14 @@ export function AccountPage() {
         </p>
         {paywall && <PlanLine ent={ent} />}
         {!paywall && !me?.ai?.allowed && <p className="muted small">Model reads (prop reads, the parlay check, game intel and the analyzer) take a Pro or Elite pass. Passes aren’t on sale yet; a plan code below works.</p>}
-        {paywall && ent.status !== 'admin' && (
+        {paywall && ent.status !== 'admin' && native && (
+          <div className="row">
+            <button type="button" className="btn btn--lime" onClick={() => openSite(`/account?buy=${ent.paidPlan || 'elite'}`)}>
+              Get or renew a pass on proppickz.com
+            </button>
+          </div>
+        )}
+        {paywall && ent.status !== 'admin' && !native && (
           <div className="row">
             {plans.map((p) => (
               <button key={p.id} type="button" className={`btn ${p.id === (ent.paidPlan || 'elite') ? 'btn--lime' : 'btn--quiet'}`} onClick={() => setBuy(p.id)}>
@@ -78,10 +88,10 @@ export function AccountPage() {
         </section>
       )}
 
-      <CreditsCard onBuy={setBuy} />
+      <CreditsCard onBuy={native ? (id) => openSite(`/account?buy=${id}`) : setBuy} />
       <PushCard />
 
-      {me?.open?.length > 0 && (
+      {!native && me?.open?.length > 0 && (
         <section className="acct-list">
           <p className="acct-plan__k">Payment requests waiting</p>
           <ul>
@@ -97,7 +107,7 @@ export function AccountPage() {
         </section>
       )}
 
-      {me?.payments?.length > 0 && (
+      {!native && me?.payments?.length > 0 && (
         <section className="acct-list">
           <p className="acct-plan__k">Payments</p>
           <ul>
@@ -113,6 +123,8 @@ export function AccountPage() {
         </section>
       )}
 
+      {native && <p className="muted small">Passes, credit packs and receipts are on proppickz.com, under Account.</p>}
+
       <Redeem redeem={redeemInviteCode} after={refresh} />
 
       <nav className="acct-links">
@@ -122,15 +134,33 @@ export function AccountPage() {
         <button type="button" className="linkish" onClick={replayTour}>
           Replay the tour
         </button>
-        {isAdmin && (
+        {isAdmin && !native && (
           <Link to="/admin" className="link">
             Admin
           </Link>
         )}
       </nav>
 
+      <DeleteAccount after={signOutUser} />
+
       <Dialog open={Boolean(buy)} onClose={closeBuy} title={PLAN[buy] ? `Get ${PLAN[buy]}` : `Add ${String(buy || '').slice(1)} credits`}>
-        {buy && <PayFlow plan={buy} onDone={closeBuy} />}
+        {buy && native ? (
+          <div className="stack">
+            <p>Passes and credit packs are bought on proppickz.com. Sign in there with this account and they show up here as soon as they're paid.</p>
+            <button
+              type="button"
+              className="btn btn--lime btn--block"
+              onClick={() => {
+                openSite(`/account?buy=${buy}`)
+                closeBuy()
+              }}
+            >
+              Open proppickz.com
+            </button>
+          </div>
+        ) : (
+          buy && <PayFlow plan={buy} onDone={closeBuy} />
+        )}
       </Dialog>
     </div>
   )
@@ -190,6 +220,70 @@ function Redeem({ redeem, after }) {
         </button>
       </form>
       {msg && <p className={msg.ok ? 'form-ok' : 'form-err'}>{msg.text}</p>}
+    </section>
+  )
+}
+
+/**
+ * Delete account: everything goes (picks and record, the picks page and its handle, groups,
+ * alerts, limits, credits and passes), then the sign-in. Typing DELETE makes it deliberate.
+ */
+function DeleteAccount({ after }) {
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const ready = typed.trim().toUpperCase() === 'DELETE'
+  const close = () => {
+    if (busy) return
+    setOpen(false)
+    setTyped('')
+    setErr(null)
+  }
+  const go = async () => {
+    setBusy(true)
+    setErr(null)
+    try {
+      await api('/api/account/delete', { method: 'POST', body: { confirm: 'DELETE' } })
+      await after().catch(() => {})
+      navigate('/?deleted=1', { replace: true })
+    } catch (e) {
+      setErr(e?.message || 'Deleting the account failed. Try again in a minute.')
+      setBusy(false)
+    }
+  }
+  return (
+    <section className="acct-danger" aria-labelledby="del-h">
+      <h2 id="del-h" className="acct-plan__k">
+        Delete account
+      </h2>
+      <p className="muted small">Deletes your picks and record, your picks page and handle, your groups, alerts and limits, and any credits or pass time left. It can’t be undone.</p>
+      <button type="button" className="btn btn--danger btn--s" onClick={() => setOpen(true)}>
+        Delete my account
+      </button>
+      <Dialog open={open} onClose={close} title="Delete your account?">
+        <div className="stack">
+          <p>Your picks, record, picks page, groups, alerts, credits and pass time go for good, and you’re signed out. Payment records are kept, as the law requires.</p>
+          <label className="field">
+            <span>Type DELETE to confirm</span>
+            <input value={typed} onChange={(e) => setTyped(e.target.value)} autoCapitalize="characters" autoComplete="off" spellCheck="false" disabled={busy} />
+          </label>
+          {err && (
+            <p className="form-err" role="alert">
+              {err}
+            </p>
+          )}
+          <div className="row">
+            <button type="button" className="btn btn--danger" disabled={!ready || busy} onClick={go}>
+              {busy ? 'Deleting' : 'Delete my account'}
+            </button>
+            <button type="button" className="btn btn--quiet" onClick={close} disabled={busy}>
+              Keep it
+            </button>
+          </div>
+        </div>
+      </Dialog>
     </section>
   )
 }

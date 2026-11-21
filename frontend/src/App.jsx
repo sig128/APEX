@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { isSport } from './lib/sport.js'
+import { isNative } from './lib/native.js'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { BillingProvider } from './context/BillingContext.jsx'
 import { SportsConfigProvider } from './context/SportsConfigContext.jsx'
@@ -81,7 +82,7 @@ export function App() {
               <Route path="/me/breakdown/:id" element={<BreakdownPage />} />
               <Route path="/tools/breakdown" element={<BreakdownDemoPage />} />
               <Route path="/learn" element={<LearnPage />} />
-              <Route path="/contests" element={<ContestsPage />} />
+              <Route path="/contests" element={isNative() ? <Navigate to="/" replace /> : <ContestsPage />} />
               <Route path="/kelly" element={<KellyPage />} />
               <Route path="/tools" element={<ToolsPage />} />
               <Route path="/tools/sim" element={<SimPage />} />

@@ -780,5 +780,44 @@ export function createContests({ docs, engines = {}, now = () => Date.now() }) {
     return gradeActive()
   }
 
-  return { list, view, enter, gradeActive, maybeGrade, create, update, publish, close, cancel, adminList, adminView, gradeNow }
+  /**
+   * Deleting an account: entries come off open standings, and finished contests keep their
+   * places with the name taken off ("Deleted account").
+   */
+  async function eraseUser(uid) {
+    const list = await d.recent('contests', { field: 'createdAt', limit: 100 })
+    const anon = (r) => (r?.uid === uid ? { ...r, uid: null, name: 'Deleted account', handle: null } : r)
+    let n = 0
+    for (const c of list) {
+      const eid = `${c.id}_${uid}`
+      const hit = await d.tx(async (tx) => {
+        const entry = await tx.get('contestEntries', eid)
+        const board = await tx.get('contestBoards', c.id)
+        const cur = await tx.get('contests', c.id)
+        let changed = false
+        if (entry) {
+          tx.del('contestEntries', eid)
+          changed = true
+        }
+        if (board?.rows?.some((r) => r.u === uid)) {
+          const rows = board.rows.filter((r) => r.u !== uid)
+          tx.set('contestBoards', c.id, { ...board, rows, updatedAt: now() })
+          if (cur && cur.status !== 'final') tx.patch('contests', c.id, { entries: rows.length })
+          changed = true
+        }
+        if (cur?.final && [...(cur.final.winners || []), ...(cur.final.top || [])].some((r) => r?.uid === uid)) {
+          tx.patch('contests', c.id, { final: { ...cur.final, winners: (cur.final.winners || []).map(anon), top: (cur.final.top || []).map(anon) } })
+          changed = true
+        }
+        return changed
+      })
+      if (hit) {
+        bust(c.id)
+        n++
+      }
+    }
+    return n
+  }
+
+  return { list, view, enter, gradeActive, maybeGrade, create, update, publish, close, cancel, adminList, adminView, gradeNow, eraseUser }
 }

@@ -1,12 +1,13 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter, useNavigate } from 'react-router-dom'
 import { App } from './App.jsx'
 import { maybePlayIntro, playIntro, introWanted } from './intro/intro.js'
 import { hasConsented } from './lib/consent.js'
 import { api } from './lib/api.js'
 import { mutate } from './lib/useApi.js'
 import { sportFromPath, sportInfo, isSport, apiOf } from './lib/sport.js'
+import { isNative, startNative } from './lib/native.js'
 import './styles/tokens.css'
 import './styles/app.css'
 import './styles/tools.css'
@@ -41,9 +42,21 @@ const stats = Promise.race([home, new Promise((r) => setTimeout(() => r(null), 1
   return { week: d.calendar === 'day' ? null : d.week, games: d.counts?.games, live: d.counts?.live, props: d.counts?.props, chips }
 })
 
+/** In the iPhone app: status bar, launch screen, links and alert taps that open a page. */
+function NativeBridge() {
+  const navigate = useNavigate()
+  const nav = useRef(navigate)
+  nav.current = navigate
+  useEffect(() => {
+    startNative((to) => nav.current(to)).catch(() => {})
+  }, [])
+  return null
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
+      {isNative() && <NativeBridge />}
       <App />
     </BrowserRouter>
   </StrictMode>,

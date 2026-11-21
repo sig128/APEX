@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useBilling } from '../context/BillingContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useTitle } from '../lib/hooks.js'
+import { isNative, openSite } from '../lib/native.js'
 
 const FREE = ['Every prop with hit rates over the last 5, 10 and 20 games, this season, vs the opponent and home/away', 'Cheatsheets, streaks, matchups and line moves', 'Live tracking for every prop and your slip', 'Bet slip with fair odds, copy and share', 'Your own picks page with an auto-graded record']
 
@@ -11,11 +12,12 @@ export function PricingPage() {
   const { user } = useAuth()
   useTitle('Plans')
   const plans = config?.plans || []
+  const native = isNative()
   return (
     <div className="container page">
       <header className="page-head">
         <h1 className="page-title">Plans</h1>
-        <p className="page-sub">The stats are free. Passes run 30 days, paid in USDC on {config?.networkName || 'Base'}, with no card and no auto-renew.</p>
+        <p className="page-sub">{native ? 'The stats are free. Passes run 30 days with no auto-renew, and are bought on proppickz.com: sign in there with this account and they show up here.' : `The stats are free. Passes run 30 days, paid in USDC on ${config?.networkName || 'Base'}, with no card and no auto-renew.`}</p>
       </header>
       {!paywall && config && <p className="notice">Passes aren't on sale yet, so everything but the model reads is open while PropPickz is in beta. Model reads (prop reads, the parlay check, game intel and the analyzer) are for members with a pass.</p>}
       <div className="plans">
@@ -54,6 +56,10 @@ export function PricingPage() {
                   <Link to="/account" className="btn btn--quiet btn--block">
                     {ent.status === 'grace' ? 'Renew now' : `Active, ${ent.daysLeft ?? ''} days left`}
                   </Link>
+                ) : native ? (
+                  <button type="button" className={`btn btn--block ${p.id === 'elite' ? 'btn--lime' : 'btn--quiet'}`} onClick={() => openSite(`/account?buy=${p.id}`)}>
+                    Get {p.name} on proppickz.com
+                  </button>
                 ) : (
                   <Link to={user ? `/account?buy=${p.id}` : `/login?next=${encodeURIComponent(`/account?buy=${p.id}`)}`} className={`btn btn--block ${p.id === 'elite' ? 'btn--lime' : 'btn--quiet'}`}>
                     Get {p.name}
@@ -66,8 +72,17 @@ export function PricingPage() {
       <section className="faq">
         <h2 className="section__title">How passes work</h2>
         <dl>
-          <dt>How do I pay?</dt>
-          <dd>Each payment request has an exact USDC amount, down to the last digit, so it can only match your payment. Send it from any wallet or exchange on Base, or connect a wallet and approve it there. PropPickz confirms it on-chain, usually within a minute.</dd>
+          {native ? (
+            <>
+              <dt>How do I get a pass?</dt>
+              <dd>On proppickz.com, signed in with the same account as here. The pass shows up in the app as soon as it's paid.</dd>
+            </>
+          ) : (
+            <>
+              <dt>How do I pay?</dt>
+              <dd>Each payment request has an exact USDC amount, down to the last digit, so it can only match your payment. Send it from any wallet or exchange on Base, or connect a wallet and approve it there. PropPickz confirms it on-chain, usually within a minute.</dd>
+            </>
+          )}
           <dt>What happens when 30 days are up?</dt>
           <dd>You get 7 days of grace with everything still on. Renew during those days and the new 30 start where your pass ended. After that, model reads and Kelly tools lock (and Elite showcase features hide) until you renew. Stats, your picks and your record stay.</dd>
           <dt>Can I renew early or switch plans?</dt>

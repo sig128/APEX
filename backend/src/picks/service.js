@@ -1078,6 +1078,8 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     const t = now()
     const out = await d.tx(async (tx) => {
       const cur = await tx.get('profiles', user.uid)
+      // the pages each person is a subscriber on, so deleting their account can clear them
+      const of = (await tx.get('subsOf', who.uid)) || { creators: [] }
       const list = (cur?.subscribers || []).filter((x) => x.uid !== who.uid)
       if (drop) tx.del('subs', `${user.uid}_${who.uid}`)
       else {
@@ -1085,11 +1087,58 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
         list.unshift({ uid: who.uid, handle: h, since: t })
         tx.set('subs', `${user.uid}_${who.uid}`, { creator: user.uid, sub: who.uid, handle: h, since: t })
       }
+      const creators = of.creators.filter((c) => c !== user.uid)
+      tx.set('subsOf', who.uid, { creators: drop ? creators : [user.uid, ...creators].slice(0, 2000) })
       tx.patch('profiles', user.uid, { subscribers: list, updatedAt: t })
       return list
     })
     bust()
     return { subscribers: out.map((x) => ({ handle: x.handle, since: x.since })) }
+  }
+
+  /**
+   * Deleting an account: every pick (graded ones too, so the record goes with it), the page and
+   * its handle (free for someone else), its subscriber list, the person's place on other pages'
+   * subscriber lists, their alerts and their betting limits.
+   */
+  async function eraseUser(uid) {
+    if (!uid || uid === 'admin') throw new ApiError(400, 'bad_user', 'No such account.')
+    let n = 0
+    for (let round = 0; round < 100; round++) {
+      const batch = await d.recent('picks', { field: 'createdAt', limit: 200, where: [['uid', '==', uid]] })
+      if (!batch.length) break
+      for (const p of batch) await d.del('picks', p.id)
+      n += batch.length
+      if (batch.length < 200) break
+    }
+    const prof = await d.get('profiles', uid)
+    if (prof) {
+      for (const s of prof.subscribers || []) {
+        await d.del('subs', `${uid}_${s.uid}`).catch(() => null)
+        await d.tx(async (tx) => {
+          const of = await tx.get('subsOf', s.uid)
+          if (of?.creators?.includes(uid)) tx.set('subsOf', s.uid, { creators: of.creators.filter((c) => c !== uid) })
+        })
+      }
+      if (prof.handle) {
+        const owner = await d.get('profileHandles', prof.handle)
+        if (owner?.uid === uid) await d.del('profileHandles', prof.handle)
+      }
+      await d.del('profiles', uid)
+    }
+    const of = await d.get('subsOf', uid)
+    for (const creator of of?.creators || []) {
+      await d.del('subs', `${creator}_${uid}`).catch(() => null)
+      await d.tx(async (tx) => {
+        const cur = await tx.get('profiles', creator)
+        if (!cur?.subscribers?.some((x) => x.uid === uid)) return
+        tx.patch('profiles', creator, { subscribers: cur.subscribers.filter((x) => x.uid !== uid), updatedAt: now() })
+      })
+    }
+    if (of) await d.del('subsOf', uid)
+    for (const col of ['alerts', 'rg']) await d.del(col, uid).catch(() => null)
+    bust()
+    return { picks: n, page: Boolean(prof) }
   }
 
   async function mustProfile(user) {
@@ -1241,5 +1290,5 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
     return { picks: out, at: at || null, refreshMs: 20_000, now: t }
   }
 
-  return { me, saveProfile, post, check, remove, tail, track, rowsFor, profileOf, page, feed, leaderboard, gradeOpen, watchOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, pickFor, subscribers, setSubscriber, alertsFor, seenAlerts, coachFor, trackingFor, rgGet, rgLimits, rgPause, pauseOf, liveFor, _atLeast: atLeast }
+  return { me, saveProfile, post, check, remove, eraseUser, tail, track, rowsFor, profileOf, page, feed, leaderboard, gradeOpen, watchOpen, maybeGrade, syncPlan, setHidden, rebuildRecord, eliteUntilFor, publicProfile, pickFor, subscribers, setSubscriber, alertsFor, seenAlerts, coachFor, trackingFor, rgGet, rgLimits, rgPause, pauseOf, liveFor, _atLeast: atLeast }
 }

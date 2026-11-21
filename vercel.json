@@ -15,6 +15,7 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" },
     { "source": "/u/:handle", "destination": "/api/index" },
+    { "source": "/.well-known/apple-app-site-association", "destination": "/api/index" },
     { "source": "/((?!assets/|fonts/|teams/).*)", "destination": "/index.html" }
   ],
   "headers": [

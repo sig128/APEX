@@ -1,9 +1,24 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signInWithCredential, signOut, GoogleAuthProvider, OAuthProvider } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { auth, db, firebaseConfigured, googleProvider } from '../firebase.js'
 import { api, setTokenGetter } from '../lib/api.js'
 import { invalidate } from '../lib/useApi.js'
+import { isNative, nativeCredential, nativeSignOut } from '../lib/native.js'
+
+// Sign in with Apple shows in the app always (Apple asks for it next to Google) and on the website
+// once the owner has set it up in Firebase (VITE_APPLE_SIGNIN=1).
+export const appleSignInAvailable = () => isNative() || import.meta.env?.VITE_APPLE_SIGNIN === '1'
+
+/** iOS's own sheet hands back a credential; Firebase signs in with it. A sheet that never opens (the app's Firebase file is missing) times out. */
+async function signInNative(provider) {
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('Sign-in didn’t open. It isn’t set up in this version of the app yet.'), { code: 'app/not-set-up' })), 120_000))
+  const c = await Promise.race([nativeCredential(provider), timeout])
+  if (!c?.idToken) throw Object.assign(new Error('Sign-in was cancelled.'), { code: 'auth/popup-closed-by-user' })
+  const cred = provider === 'apple' ? new OAuthProvider('apple.com').credential({ idToken: c.idToken, rawNonce: c.rawNonce }) : GoogleAuthProvider.credential(c.idToken, c.accessToken)
+  await signInWithCredential(auth, cred)
+}
+const cancelled = (e) => ['auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(e?.code) || /cancel|1001|-5/i.test(String(e?.code || '')) || /cancel/i.test(String(e?.message || ''))
 
 // Requests made while Firebase is still restoring a saved session wait for it (briefly), so a
 // signed-in visitor's first requests already carry their token.
@@ -49,6 +64,14 @@ export function AuthProvider({ children }) {
 
   const signInGoogle = useCallback(async () => {
     if (!auth) throw new Error('Sign-in is not set up on this site yet (Firebase config missing).')
+    if (isNative()) {
+      try {
+        await signInNative('google')
+      } catch (e) {
+        if (!cancelled(e)) throw e
+      }
+      return
+    }
     try {
       await signInWithPopup(auth, googleProvider)
     } catch (e) {
@@ -58,8 +81,24 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  const signInApple = useCallback(async () => {
+    if (!auth) throw new Error('Sign-in is not set up on this site yet (Firebase config missing).')
+    try {
+      if (isNative()) await signInNative('apple')
+      else {
+        const apple = new OAuthProvider('apple.com')
+        apple.addScope('email')
+        apple.addScope('name')
+        await signInWithPopup(auth, apple)
+      }
+    } catch (e) {
+      if (!cancelled(e)) throw e
+    }
+  }, [])
+
   const signOutUser = useCallback(async () => {
     if (auth) await signOut(auth)
+    await nativeSignOut()
   }, [])
 
   const redeemInviteCode = useCallback(async (code) => {
@@ -73,6 +112,7 @@ export function AuthProvider({ children }) {
       loading,
       firebaseConfigured,
       signInGoogle,
+      signInApple,
       signOutUser,
       redeemInviteCode,
       inviteLoading: Boolean(user) && inviteAccess === null,
@@ -80,7 +120,7 @@ export function AuthProvider({ children }) {
       // kept for the analyzer's older code paths; there is no client-side admin login any more
       adminDevSession: false,
     }),
-    [user, loading, inviteAccess, signInGoogle, signOutUser, redeemInviteCode],
+    [user, loading, inviteAccess, signInGoogle, signInApple, signOutUser, redeemInviteCode],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

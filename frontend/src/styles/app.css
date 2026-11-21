@@ -3255,6 +3255,27 @@ code {
   gap: 18px;
   margin-top: 8px;
 }
+/* Delete account: last on the page, set apart, the only red button */
+.acct-danger {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--seat);
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.acct-danger p {
+  margin: 0;
+  max-width: 60ch;
+}
+.btn--danger {
+  background: transparent;
+  border-color: var(--flag);
+  color: var(--flag);
+}
+.btn--danger:hover:not(:disabled) {
+  background: var(--flag-dim);
+}
 .meter {
   display: grid;
   grid-template-columns: 170px 1fr auto;
@@ -3378,6 +3399,43 @@ code {
 }
 .login__card p {
   margin: 0;
+}
+.login__ways {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+/* Sign in with Apple: Apple's white style on a dark page, the same size as Google's */
+.btn--apple {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+  font-weight: 600;
+}
+.btn--apple:hover:not(:disabled) {
+  background: #f2f2f2;
+}
+.btn--apple__logo {
+  font: 500 19px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  margin-top: -3px;
+}
+
+/* the iPhone app: the page runs under the status bar, so the header starts below it, and
+   everything pinned under the header (sticky tabs, menus) moves down with it */
+html.is-native {
+  --header: calc(56px + env(safe-area-inset-top, 0px));
+}
+.is-native .header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.is-native .header__inner {
+  height: 56px;
+}
+.is-native .dialog {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.is-native img {
+  -webkit-touch-callout: none;
 }
 .admin-box {
   margin-bottom: 28px;

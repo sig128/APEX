@@ -5,10 +5,12 @@ import { useApi } from '../lib/useApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useBilling } from '../context/BillingContext.jsx'
 import { pushEnv, enablePush, disablePush, currentSubscription, snoozed, snooze } from '../lib/push.js'
+import { isNative, enableNativePush, nativePushState, forgetNativePush } from '../lib/native.js'
 
 // Alerts on this device: our own short ask first ("Get alerts when your picks move?"), and only a
 // tap on "Turn on alerts" brings up the browser's question. Blocked, unsupported and iPhone each
-// get plain directions instead of a button that can't work.
+// get plain directions instead of a button that can't work. In the iPhone app the question is
+// iOS's own and alerts come through Apple's push service.
 
 const LEVELS = [
   ['big', 'Big moves'],
@@ -44,12 +46,19 @@ export function PushCard() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
   const [later, setLater] = useState(snoozed)
+  const native = isNative()
+  const [nativeState, setNativeState] = useState({ permission: 'default', token: null })
 
   useEffect(() => {
     if (!user) return
     api('/api/push/status').then(setStatus, () => {})
-    currentSubscription().then((s) => setHere(Boolean(s)), () => {})
-  }, [user])
+    if (native)
+      nativePushState().then((st) => {
+        setNativeState(st)
+        setHere(Boolean(st.token))
+      }, () => {})
+    else currentSubscription().then((s) => setHere(Boolean(s)), () => {})
+  }, [user, native])
 
   if (!user) return null
   const prefs = status?.prefs || { results: true, injuries: true, ticker: 'big' }
@@ -62,8 +71,11 @@ export function PushCard() {
     setBusy(true)
     setMsg(null)
     try {
-      const out = await enablePush({ publicKey: cfg.publicKey, prefs })
-      setEnv(pushEnv())
+      const out = native
+        ? await enableNativePush({ prefs, register: (token, p) => api('/api/push/native/subscribe', { method: 'POST', body: { token, prefs: p, device: 'iPhone app' } }) })
+        : await enablePush({ publicKey: cfg.publicKey, prefs })
+      if (native) setNativeState(await nativePushState())
+      else setEnv(pushEnv())
       if (out.ok) {
         setStatus(out.status)
         setHere(true)
@@ -77,7 +89,11 @@ export function PushCard() {
   }
   const turnOff = async () => {
     setBusy(true)
-    await disablePush()
+    if (native) {
+      if (nativeState.token) await api('/api/push/native/unsubscribe', { method: 'POST', body: { token: nativeState.token } }).catch(() => null)
+      await forgetNativePush()
+      setNativeState(await nativePushState())
+    } else await disablePush()
     setHere(false)
     setBusy(false)
     setMsg('Alerts are off for this device.')
@@ -85,11 +101,21 @@ export function PushCard() {
   }
 
   let body
-  if (cfg && !cfg.enabled) body = <p className="muted small">Alerts on phones and browsers aren’t switched on for PropPickz yet.</p>
+  if (native) {
+    if (cfg && !cfg.native) body = <p className="muted small">Alerts in the app aren’t switched on for PropPickz yet.</p>
+    else if (nativeState.permission === 'denied')
+      body = (
+        <div className="push-help">
+          <p>
+            <b>Alerts are off for PropPickz in iOS.</b> Open Settings, then Notifications, then PropPickz, and turn on Allow Notifications.
+          </p>
+        </div>
+      )
+  } else if (cfg && !cfg.enabled) body = <p className="muted small">Alerts on phones and browsers aren’t switched on for PropPickz yet.</p>
   else if (env.ios && !env.standalone) body = <p className="small">On iPhone and iPad, alerts come through the PropPickz app. In Safari they only work after adding the site to your Home Screen (Share, then Add to Home Screen, iOS 16.4 or later).</p>
   else if (!env.supported) body = <p className="muted small">This browser can’t show alerts. Chrome, Edge, Firefox and Safari can.</p>
   else if (env.permission === 'denied') body = <Blocked env={env} />
-  else if (!here)
+  if (body === undefined && !here)
     body = later ? (
       <button type="button" className="btn btn--quiet btn--s" onClick={() => setLater(false)}>
         Set up alerts on this device
@@ -102,9 +128,9 @@ export function PushCard() {
           <li>Injury news on players in your open picks</li>
           {member && <li>Line moves on PropPickz picks, past the level you choose</li>}
         </ul>
-        <p className="muted small">Your browser will ask you to allow notifications next. You can turn them off here, or in the browser, any time.</p>
+        <p className="muted small">{native ? 'iPhone will ask you to allow notifications next. You can turn them off here, or in Settings, any time.' : 'Your browser will ask you to allow notifications next. You can turn them off here, or in the browser, any time.'}</p>
         <div className="row">
-          <button type="button" className="btn btn--lime" onClick={turnOn} disabled={busy || !cfg?.publicKey}>
+          <button type="button" className="btn btn--lime" onClick={turnOn} disabled={busy || (native ? !cfg?.native : !cfg?.publicKey)}>
             {busy ? 'One moment' : 'Turn on alerts'}
           </button>
           <button
@@ -120,7 +146,7 @@ export function PushCard() {
         </div>
       </div>
     )
-  else
+  else if (body === undefined)
     body = (
       <div className="push-on">
         <label className="check">

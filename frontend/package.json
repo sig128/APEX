@@ -10,15 +10,27 @@
     "prebuild": "cp src/assets/logo.png public/logo.png",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "build:native": "VITE_NATIVE=1 VITE_DATA_BASE=https://proppickz.com VITE_API_BASE=https://proppickz.com VITE_PUBLIC_SITE_URL=https://proppickz.com vite build --outDir build-native",
+    "ios:sync": "npm run build:native && cap sync ios"
   },
   "dependencies": {
-    "firebase": "^11.6.0",
+    "@capacitor-firebase/authentication": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.6.2",
+    "@capacitor/push-notifications": "^8.1.3",
+    "@capacitor/share": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
+    "firebase": "^12.19.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.6.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
     "@vitejs/plugin-react": "^4.4.1",
     "vite": "^6.2.0"
   },

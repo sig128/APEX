@@ -201,5 +201,21 @@ export function createGroups({ docs, picks, isMember = async () => false, now = 
     return { ok: true }
   }
 
-  return { mine, create, preview, join, board, leave, removeMember, rename, resetCode, remove }
+  /** Deleting an account: out of every group (a group they started passes to its longest member). */
+  async function eraseUser(user) {
+    const idx = await docs.get('groupsOf', user.uid)
+    let n = 0
+    for (const id of idx?.ids || []) {
+      try {
+        await leave(user, id)
+        n++
+      } catch {
+        /* gone already */
+      }
+    }
+    await docs.del('groupsOf', user.uid).catch(() => null)
+    return n
+  }
+
+  return { mine, create, preview, join, board, leave, removeMember, rename, resetCode, remove, eraseUser }
 }

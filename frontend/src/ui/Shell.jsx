@@ -17,6 +17,7 @@ import { PickNudge } from './PickNudge.jsx'
 import { playIntro } from '../intro/intro.js'
 import { DAY } from './time.js'
 import { Headshot } from './Img.jsx'
+import { isNative } from '../lib/native.js'
 
 /** The PropPickz lockup at a given mark height (kept under this name for older imports). */
 export function Wordmark({ height = 28 }) {
@@ -294,7 +295,7 @@ function Footer() {
         </p>
         <nav className="footer__links" aria-label="More">
           <Link to="/pricing">Plans</Link>
-          <Link to="/contests">Weekly contest</Link>
+          {!isNative() && <Link to="/contests">Weekly contest</Link>}
           <Link to={sp(sport, '/dvp')}>Defense vs position</Link>
           <Link to="/apex">Game analyzer</Link>
           <Link to="/calibration">Calibration</Link>
@@ -302,7 +303,7 @@ function Footer() {
           <Link to="/consent">Consent</Link>
           <Link to="/terms">Terms</Link>
           <Link to="/privacy">Privacy</Link>
-          {isAdmin && <Link to="/admin">Admin</Link>}
+          {isAdmin && !isNative() && <Link to="/admin">Admin</Link>}
           <button type="button" className="linkish" onClick={() => playIntro({ force: true, chipText: sportInfo(sport).name })}>
             Replay intro
           </button>

@@ -284,7 +284,7 @@ const PRIVACY = {
     {
       id: 'choices',
       title: 'Your choices',
-      body: <p>You can stop posting picks, delete picks before they lock, and ask us to delete your account and data using Feedback at the bottom of any page. PropPickz is not for anyone under the legal betting age.</p>,
+      body: <p>You can stop posting picks, delete picks before they lock, and delete your account and its data yourself under Account, then Delete account (on the website and in the app). PropPickz is not for anyone under the legal betting age.</p>,
     },
     {
       id: 'changes',

@@ -181,5 +181,10 @@ export function createMembers({ store, mail = null, now = () => Date.now() }) {
     return items.filter(Boolean)
   }
 
-  return { consent, consentOf, tour, tourStats, nudges, nudgeStats, feedback, feedbackList, feedbackShot }
+  /** Deleting an account: the account's consent record goes (feedback notes stay with the team). */
+  async function eraseUser(uid) {
+    if (uid) await store.del(NS, `consent-u-${uid}`).catch(() => null)
+  }
+
+  return { consent, consentOf, tour, tourStats, nudges, nudgeStats, feedback, feedbackList, feedbackShot, eraseUser }
 }

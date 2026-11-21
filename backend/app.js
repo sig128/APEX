@@ -18,6 +18,8 @@ import { billingRoutes } from './src/billing/routes.js'
 import { createCredits } from './src/billing/credits.js'
 import { createBreakdowns } from './src/breakdown/service.js'
 import { createPush, pushConfig } from './src/push/service.js'
+import { apnsConfig } from './src/push/apns.js'
+import { createEraser, deleteFirebaseUser } from './src/members/erase.js'
 import { legendFor } from './src/learn/content.js'
 import { breakdownRoutes } from './src/breakdown/routes.js'
 import { createPicks } from './src/picks/service.js'
@@ -117,10 +119,20 @@ async function listAuthUsers(max = 5000) {
 function corsOptions() {
   const extra = String(process.env.APEX_ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean)
   const dev = [/^https?:\/\/localhost(:\d+)?$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/]
+  // the iPhone app's screens load from inside the app (capacitor://localhost) and call the API
+  // on proppickz.com; requests carry a Bearer token, never cookies, so allowing it opens nothing
+  const app = ['capacitor://localhost', 'ionic://localhost']
   return {
     origin(origin, cb) {
       if (!origin) return cb(null, true) // same-origin (Hosting rewrites) and server-to-server
-      if (dev.some((re) => re.test(origin)) || extra.includes(origin) || /\.web\.app$|\.firebaseapp\.com$/.test(new URL(origin).hostname)) return cb(null, true)
+      if (app.includes(origin)) return cb(null, true)
+      let host = ''
+      try {
+        host = new URL(origin).hostname
+      } catch {
+        return cb(null, false)
+      }
+      if (dev.some((re) => re.test(origin)) || extra.includes(origin) || /\.web\.app$|\.firebaseapp\.com$/.test(host)) return cb(null, true)
       cb(null, false)
     },
     exposedHeaders: ['ETag', 'Retry-After', 'X-Apex-Usage'],
@@ -172,6 +184,8 @@ export function createApexApp({
   adminKey = () => process.env.ADMIN_SPORTS_KEY,
   // who has signed in, for the admin page (tests pass their own)
   listUsers = listAuthUsers,
+  // deleting an account removes the Firebase sign-in last (tests pass their own)
+  deleteAuthUser = deleteFirebaseUser,
   // THE_ODDS_API_KEY, then THE_ODDS_API_KEY_BACKUP for when the first is refused or out of credits
   oddsKey = () => oddsKeys().join(','),
   now,
@@ -255,7 +269,7 @@ export function createApexApp({
   // push notifications: the public key for the browser, and each person's devices and choices
   app.get('/api/push/config', (req, res) => {
     const c = pushConfig()
-    res.set('Cache-Control', 'public, max-age=300').json({ enabled: c.enabled, publicKey: c.publicKey })
+    res.set('Cache-Control', 'public, max-age=300').json({ enabled: c.enabled, publicKey: c.publicKey, native: apnsConfig().enabled })
   })
   const pushUser = async (req) => {
     const a = await access.resolve(req).catch(() => null)
@@ -275,6 +289,35 @@ export function createApexApp({
   app.post('/api/push/unsubscribe', pushWrap((u, b) => push.unsubscribe(u, { endpoint: b.endpoint, all: b.all === true })))
   app.post('/api/push/prefs', pushWrap((u, b) => push.setPrefs(u, b.prefs)))
   app.post('/api/push/test', pushWrap(async (u) => ({ sent: await push.test(u) })))
+  // the iPhone app's devices (Apple's push service)
+  app.post('/api/push/native/subscribe', pushWrap((u, b) => push.subscribeNative(u, { token: b.token, prefs: b.prefs, device: b.device })))
+  app.post('/api/push/native/unsubscribe', pushWrap((u, b) => push.unsubscribeNative(u, { token: b.token })))
+
+  // Deleting an account (Account → Delete account, on the website and in the app)
+  const eraseAccount = createEraser({ docs: billing.docs, picks, groups, contests, push, members, deleteAuthUser })
+  app.post('/api/account/delete', async (req, res) => {
+    res.set('Cache-Control', 'no-store')
+    try {
+      const a = await access.resolve(req).catch(() => null)
+      if (!a?.user || a.user.uid === 'admin') return res.status(401).json({ error: 'Sign in to delete your account.', code: 'signin' })
+      if (String(req.body?.confirm || '').trim().toUpperCase() !== 'DELETE') return res.status(400).json({ error: 'Type DELETE to confirm.', code: 'confirm' })
+      const out = await eraseAccount(a.user)
+      log.info('account deleted', { picks: out.deleted.picks, groups: out.deleted.groups })
+      res.json(out)
+    } catch (e) {
+      log.warn('account delete failed', { err: errText(e) })
+      res.status(e.status || 500).json({ error: e.status ? e.message : 'Deleting the account failed. Try again in a minute.', code: e.code || 'server' })
+    }
+  })
+
+  // The iPhone app opens proppickz.com links itself once Apple knows the team (APPLE_TEAM_ID)
+  app.get(['/.well-known/apple-app-site-association', '/apple-app-site-association'], (req, res) => {
+    const team = String(process.env.APPLE_TEAM_ID || process.env.APNS_TEAM_ID || '').trim()
+    const bundle = String(process.env.APNS_TOPIC || 'com.proppickz.app').trim()
+    if (!/^[A-Z0-9]{10}$/.test(team)) return res.status(404).json({ error: 'Not set up.' })
+    res.set('Cache-Control', 'public, max-age=3600').type('application/json')
+    res.send(JSON.stringify({ applinks: { details: [{ appIDs: [`${team}.${bundle}`], components: [{ '/': '/api/*', exclude: true }, { '/': '/admin*', exclude: true }, { '/': '/*' }] }] }, webcredentials: { apps: [`${team}.${bundle}`] } }))
+  })
 
   // Tips & Tricks: the basics for everyone, the math and strategy entries in full for members
   app.get('/api/learn', async (req, res) => {

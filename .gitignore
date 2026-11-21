@@ -49,3 +49,6 @@ claudeapi.txt
 
 # Vercel CLI
 .vercel/
+
+# the iPhone app's bundled screens (rebuilt for each build; the iOS project ignores its own)
+build-native/

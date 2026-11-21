@@ -3,9 +3,12 @@
 // they chose: their picks' results, injury news on their open picks, and live line moves past
 // their threshold (members). A cap per day and a gap per pick keep it from turning into noise.
 // Needs VAPID keys (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT); without them it's off.
+// The iPhone app's devices are on the same list, delivered through Apple's push service instead
+// (see apns.js): the same choices, the same daily cap and gaps.
 import webpush from 'web-push'
 import { ApiError } from '../lib/router.js'
 import { log, errText } from '../lib/log.js'
+import { createApns, cleanToken } from './apns.js'
 
 export function pushConfig(env = process.env) {
   const publicKey = env.VAPID_PUBLIC_KEY || null
@@ -47,12 +50,15 @@ function cleanPrefs(p = {}, base = DEFAULT_PREFS) {
   }
 }
 
-export function createPush({ docs, now = () => Date.now(), isMember = async () => false, sender = null, config = pushConfig }) {
+export function createPush({ docs, now = () => Date.now(), isMember = async () => false, sender = null, config = pushConfig, apns = createApns({ now }) }) {
   const send =
     sender ||
     ((sub, payload, cfg) =>
       webpush.sendNotification(sub, JSON.stringify(payload), { vapidDetails: { subject: cfg.subject, publicKey: cfg.publicKey, privateKey: cfg.privateKey }, TTL: 6 * 3600, urgency: 'normal' }))
   const day = (t) => new Date(t).toISOString().slice(0, 10)
+  // a device on the list: a browser by its endpoint, the app by its Apple token
+  const keyOf = (s) => (s.apns ? `apns:${s.apns}` : s.endpoint)
+  const anyOn = () => config().enabled || apns.enabled()
 
   async function indexAdd(uid) {
     await docs.tx(async (tx) => {
@@ -73,7 +79,44 @@ export function createPush({ docs, now = () => Date.now(), isMember = async () =
     if (!user?.uid) throw new ApiError(401, 'signin', 'Sign in to set up alerts.')
     const cfg = config()
     const d = await docs.get(NS, user.uid)
-    return { enabled: cfg.enabled, publicKey: cfg.publicKey, devices: d?.subs?.length || 0, prefs: cleanPrefs(d?.prefs) }
+    return { enabled: cfg.enabled, native: apns.enabled(), publicKey: cfg.publicKey, devices: d?.subs?.length || 0, prefs: cleanPrefs(d?.prefs) }
+  }
+
+  /** The iPhone app turned alerts on: its Apple device token joins this person's devices. */
+  async function subscribeNative(user, { token, prefs, device } = {}) {
+    if (!user?.uid) throw new ApiError(401, 'signin', 'Sign in to set up alerts.')
+    if (!apns.enabled()) throw new ApiError(503, 'push_off', 'Alerts in the app aren’t set up on the server yet.')
+    const tok = cleanToken(token)
+    if (!tok) throw new ApiError(400, 'bad_token', 'That device token isn’t valid.')
+    const t = now()
+    await docs.tx(async (tx) => {
+      const cur = (await tx.get(NS, user.uid)) || { subs: [], prefs: DEFAULT_PREFS }
+      const subs = [{ apns: tok, env: 'production', device: String(device || 'iPhone app').slice(0, 80), at: t }, ...(cur.subs || []).filter((s) => s.apns !== tok)].slice(0, MAX_DEVICES)
+      tx.set(NS, user.uid, { ...cur, subs, prefs: cleanPrefs(prefs, cleanPrefs(cur.prefs)), updatedAt: t })
+    })
+    await indexAdd(user.uid)
+    return status(user)
+  }
+
+  async function unsubscribeNative(user, { token } = {}) {
+    if (!user?.uid) throw new ApiError(401, 'signin', 'Sign in first.')
+    const tok = cleanToken(token)
+    let left = 0
+    await docs.tx(async (tx) => {
+      const cur = await tx.get(NS, user.uid)
+      if (!cur) return
+      const subs = (cur.subs || []).filter((s) => s.apns !== tok)
+      left = subs.length
+      tx.set(NS, user.uid, { ...cur, subs, updatedAt: now() })
+    })
+    if (!left) await indexDrop(user.uid)
+    return status(user)
+  }
+
+  /** Deleting an account: every device and choice goes. */
+  async function eraseUser(uid) {
+    await docs.del(NS, uid).catch(() => null)
+    await indexDrop(uid).catch(() => null)
   }
 
   async function subscribe(user, { subscription, prefs, device } = {}) {
@@ -120,7 +163,7 @@ export function createPush({ docs, now = () => Date.now(), isMember = async () =
    */
   async function notify(uid, kind, payload) {
     const cfg = config()
-    if (!cfg.enabled || !KINDS.includes(kind)) return 0
+    if (!anyOn() || !KINDS.includes(kind)) return 0
     const t = now()
     const d = await docs.get(NS, uid)
     if (!d?.subs?.length) return 0
@@ -132,13 +175,26 @@ export function createPush({ docs, now = () => Date.now(), isMember = async () =
     if (kind !== 'test' && sent.n >= MAX_PER_DAY) return 0
     if (payload.tag && sent.tags[payload.tag] && t - sent.tags[payload.tag] < TAG_GAP_MS) return 0
     const dead = []
+    const moved = new Map() // app tokens that turned out to be the sandbox's (builds run from Xcode)
     let ok = 0
+    const msg = { title: payload.title, body: payload.body, url: payload.url || '/', tag: payload.tag || kind }
     for (const s of d.subs) {
+      if (s.apns) {
+        if (!apns.enabled()) continue
+        const r = await apns.send(s.apns, msg, { env: s.env || 'production' })
+        if (r.ok) {
+          ok++
+          if (r.env !== (s.env || 'production')) moved.set(s.apns, r.env)
+        } else if (r.gone) dead.push(keyOf(s))
+        else log.warn('app push failed', { uid, status: r.status, reason: r.reason })
+        continue
+      }
+      if (!cfg.enabled) continue
       try {
-        await send({ endpoint: s.endpoint, keys: s.keys }, { title: payload.title, body: payload.body, url: payload.url || '/', tag: payload.tag || kind }, cfg)
+        await send({ endpoint: s.endpoint, keys: s.keys }, msg, cfg)
         ok++
       } catch (e) {
-        if (e?.statusCode === 404 || e?.statusCode === 410) dead.push(s.endpoint)
+        if (e?.statusCode === 404 || e?.statusCode === 410) dead.push(keyOf(s))
         else log.warn('push failed', { uid, err: errText(e), status: e?.statusCode })
       }
     }
@@ -146,7 +202,8 @@ export function createPush({ docs, now = () => Date.now(), isMember = async () =
       const cur = await tx.get(NS, uid)
       if (!cur) return
       const s2 = cur.sent?.day === day(t) ? cur.sent : { day: day(t), n: 0, tags: {} }
-      tx.set(NS, uid, { ...cur, subs: (cur.subs || []).filter((x) => !dead.includes(x.endpoint)), sent: { ...s2, n: s2.n + (ok ? 1 : 0), tags: payload.tag ? { ...s2.tags, [payload.tag]: t } : s2.tags } })
+      const subs = (cur.subs || []).filter((x) => !dead.includes(keyOf(x))).map((x) => (x.apns && moved.has(x.apns) ? { ...x, env: moved.get(x.apns) } : x))
+      tx.set(NS, uid, { ...cur, subs, sent: { ...s2, n: s2.n + (ok ? 1 : 0), tags: payload.tag ? { ...s2.tags, [payload.tag]: t } : s2.tags } })
     })
     return ok
   }
@@ -155,7 +212,7 @@ export function createPush({ docs, now = () => Date.now(), isMember = async () =
 
   /** New ticker changes: to every member who wants them, at their threshold (a few at most). */
   async function tickerEvents(sport, events) {
-    if (!config().enabled || !events.length) return 0
+    if (!anyOn() || !events.length) return 0
     const idx = (await docs.get('pushIndex', 'all'))?.uids || []
     let n = 0
     for (const uid of idx) {
@@ -169,5 +226,5 @@ export function createPush({ docs, now = () => Date.now(), isMember = async () =
     return n
   }
 
-  return { status, subscribe, unsubscribe, setPrefs, notify, test, tickerEvents }
+  return { status, subscribe, unsubscribe, subscribeNative, unsubscribeNative, setPrefs, notify, test, tickerEvents, eraseUser }
 }
