@@ -159,6 +159,11 @@ test('deleting an account: picks, page, handle, groups, alerts and limits go, th
   assert.equal((await api.post('/api/push/native/subscribe', { token: TOKEN, device: 'iPhone app' }, { headers: bearer('u_free') })).status, 200)
   await docs.set('rg', 'u_free', { dailyUnits: 5 })
   assert.ok(await docs.get('pushSubs', 'u_free'))
+  // the fair-play trail: when they posted, and the fingerprint of the network they posted from
+  const trail = await docs.get('integrity', 'who-u_free')
+  assert.ok(trail?.nets?.length, 'posting noted the network')
+  const fp = trail.nets[0].fp
+  assert.ok((await docs.get('integrity', `net-${fp}`)).seen.some((x) => x.uid === 'u_free'))
 
   // signed out, or without typing DELETE: nothing happens
   assert.equal((await api.post('/api/account/delete', { confirm: 'DELETE' })).status, 401)
@@ -178,6 +183,8 @@ test('deleting an account: picks, page, handle, groups, alerts and limits go, th
   assert.ok(!((await docs.get('pushIndex', 'all'))?.uids || []).includes('u_free'))
   assert.equal(await docs.get('groupsOf', 'u_free'), null)
   assert.equal(await docs.get('rg', 'u_free'), null)
+  assert.equal(await docs.get('integrity', 'who-u_free'), null, 'the fair-play trail goes')
+  assert.ok(!((await docs.get('integrity', `net-${fp}`))?.seen || []).some((x) => x.uid === 'u_free'), 'and the network forgets them')
   // the group is still there for the person who started it, one member fewer
   const mine = await api.get('/api/picks/groups', { headers: bearer('u_pro') })
   assert.deepEqual([mine.body.groups.length, mine.body.groups[0].members], [1, 1])

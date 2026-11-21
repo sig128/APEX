@@ -294,7 +294,7 @@ export function createApexApp({
   app.post('/api/push/native/unsubscribe', pushWrap((u, b) => push.unsubscribeNative(u, { token: b.token })))
 
   // Deleting an account (Account → Delete account, on the website and in the app)
-  const eraseAccount = createEraser({ docs: billing.docs, picks, groups, contests, push, members, deleteAuthUser })
+  const eraseAccount = createEraser({ docs: billing.docs, picks, groups, contests, push, members, integrity, deleteAuthUser })
   app.post('/api/account/delete', async (req, res) => {
     res.set('Cache-Control', 'no-store')
     try {

@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import { getAuth, initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
@@ -24,6 +24,17 @@ function getOrCreateApp() {
 }
 
 export const app = firebaseConfigured ? getOrCreateApp() : null
-export const auth = firebaseConfigured ? getAuth(app) : null
+// In the iPhone app, sign-in comes from Apple's and Google's own sheets (signInWithCredential), so
+// the web pop-up helper is left out: inside the app's web view it waits on a page that never
+// loads, and the app would never learn who's signed in.
+function makeAuth(a) {
+  if (import.meta.env.VITE_NATIVE !== '1') return getAuth(a)
+  try {
+    return initializeAuth(a, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] })
+  } catch {
+    return getAuth(a) // already set up (a hot reload)
+  }
+}
+export const auth = firebaseConfigured ? makeAuth(app) : null
 export const googleProvider = new GoogleAuthProvider()
 export const db = firebaseConfigured ? getFirestore(app) : null

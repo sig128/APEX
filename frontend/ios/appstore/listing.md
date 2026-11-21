@@ -70,6 +70,10 @@ Under App Information, set the App Store Server Notifications URL (version 2) to
 `https://proppickz.com/api/billing/apple/notifications` for both production and sandbox, so
 refunds take back what they bought.
 
+The first purchases are reviewed together with the app: on the 1.0.0 version page, under In-App
+Purchases and Subscriptions, add all five before pressing Submit. They can be bought in TestFlight
+(sandbox, nothing charged) once the Paid Applications agreement is active.
+
 ## Age rating answers
 
 - Gambling (real money): No. The app takes no bets and holds no money; sportsbook links open in Safari.
@@ -83,17 +87,18 @@ Expect 18+.
 
 ## App Privacy answers
 
-No data is used to track anyone, and none is sold. Everything below is linked to the account and used for App Functionality.
+No data is used to track anyone, and none is sold. The same answers are in the app's privacy
+manifest (`App/App/PrivacyInfo.xcprivacy`); change both together.
 
-| Data type | What it is |
-| --- | --- |
-| Contact info: name, email address | From Sign in with Apple or Google (Apple can give a relay address) |
-| Identifiers: user ID | The account id |
-| Purchases: purchase history | Passes and credit packs, and Apple's purchase record |
-| User content: other user content | Picks, notes, the picks page, group names |
-| User content: customer support | Feedback and its screenshot, when sent |
-| Usage data: product interaction | "Was this helpful?" taps and the first-visit tour, to improve the tools |
-| Other data | A scrambled network fingerprint for fair-play checks, kept 30 days |
+| Data type | What it is | Linked to the person | Purpose |
+| --- | --- | --- | --- |
+| Contact info: name, email address | From Sign in with Apple or Google (Apple can give a relay address) | Yes | App Functionality |
+| Identifiers: user ID | The account id | Yes | App Functionality |
+| Purchases: purchase history | Passes and credit packs, and Apple's purchase record | Yes | App Functionality |
+| User content: other user content | Picks, notes, the picks page, group names | Yes | App Functionality |
+| User content: customer support | Feedback and its screenshot, when sent | Yes | App Functionality |
+| Usage data: product interaction | "Was this helpful?" taps and how far people get in the first-visit tour, counted by day | No | Analytics |
+| Other data | A scrambled network fingerprint for fair-play checks, kept 30 days | Yes | App Functionality |
 
 ## Review notes
 

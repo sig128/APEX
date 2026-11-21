@@ -338,7 +338,7 @@ const SUPPORT = {
     {
       id: 'delete',
       title: 'Deleting your account',
-      body: <p>Open Account, then Delete account, and type DELETE. Your picks, record, picks page, groups, alerts, credits and pass time are deleted and you’re signed out. Payment records are kept, as the law requires.</p>,
+      body: <p>Open Account, then Delete account, and type DELETE. Your picks, record, picks page, groups, alerts, credits, pass time and fair-play record are deleted and you’re signed out. Payment records are kept, as the law requires.</p>,
     },
     {
       id: 'help',

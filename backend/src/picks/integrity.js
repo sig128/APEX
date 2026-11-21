@@ -232,5 +232,30 @@ export function createIntegrity({ docs, now = () => Date.now(), env = process.en
     return { posted: s.posted, deleted: s.deleted, days: 30 }
   }
 
-  return { notePost, noteDelete, walletLinks, list, holds, clear, statsFor, fingerprint: (ip) => fingerprint(ip, env) }
+  /**
+   * Deleting an account: its trail goes (when it posted and deleted picks, and the fingerprints of
+   * the networks it posted from), and it comes off those networks' lists. Flags already raised
+   * stay for the admin until cleared, since they name the other account too.
+   */
+  async function eraseUser(uid) {
+    if (!uid) return
+    const who = await docs.get(NS, `who-${uid}`).catch(() => null)
+    for (const n of who?.nets || []) {
+      const fp = String(n?.fp || '')
+      if (!/^[0-9a-f]{24}$/.test(fp)) continue
+      await docs
+        .tx(async (tx) => {
+          const net = await tx.get(NS, `net-${fp}`)
+          if (!net) return
+          const seen = (net.seen || []).filter((x) => x.uid !== uid)
+          if (seen.length) tx.set(NS, `net-${fp}`, { ...net, seen, updatedAt: now() })
+          else tx.del(NS, `net-${fp}`)
+        })
+        .catch((e) => log.warn('integrity erase failed', { err: errText(e) }))
+    }
+    await docs.del(NS, `who-${uid}`).catch(() => null)
+    holdMemo = null
+  }
+
+  return { notePost, noteDelete, walletLinks, list, holds, clear, statsFor, eraseUser, fingerprint: (ip) => fingerprint(ip, env) }
 }
