@@ -427,7 +427,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
   }
 
   async function me(user) {
-    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in with Google to make your page.')
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in to make your page.')
     const ent = await billing.entitlement(user)
     const p = await refreshElite(user, await profileOf(user.uid))
     // a fair-play hold keeps a page off the public leaderboard until the admin has looked
@@ -446,7 +446,7 @@ export function createPicks({ docs, engine, engines = null, billing, now = () =>
   }
 
   async function saveProfile(user, body = {}) {
-    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in with Google to make your page.')
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in to make your page.')
     const handle = String(body.handle || '').trim().toLowerCase().replace(/^@/, '')
     if (!HANDLE_RE.test(handle)) throw new ApiError(400, 'bad_handle', 'Handles are 3-20 letters, numbers or underscores.')
     if (RESERVED.has(handle)) throw new ApiError(400, 'reserved', 'That handle is reserved.')

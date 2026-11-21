@@ -47,7 +47,7 @@ async function giveBackTry(db, uid, t) {
  * (Admin SDK) instance. Returns { ok, alreadyVerified, plan, entitlement }.
  */
 export async function redeemInvite(db, user, rawCode, { now = Date.now, cfg = billingConfig() } = {}) {
-  if (!user?.uid || user.viaKey) throw new ApiError(401, 'signin', 'Sign in with Google first.')
+  if (!user?.uid || user.viaKey) throw new ApiError(401, 'signin', 'Sign in first.')
   const code = normalizeCode(rawCode)
   if (code.length < 4 || code.length > 48 || !/^[A-Z0-9-]+$/.test(code)) throw new ApiError(400, 'bad_code', 'Enter the code exactly as you got it.')
   const uid = user.uid

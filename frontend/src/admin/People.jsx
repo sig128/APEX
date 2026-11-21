@@ -26,7 +26,7 @@ export function Members({ users }) {
   return (
     <div className="adm-people">
       <div className="adm-strip adm-strip--4">
-        <Cell label="Members" value={compact(users.total)} sub={users.source === 'auth' ? 'signed in with Google' : 'with a picks page'} />
+        <Cell label="Members" value={compact(users.total)} sub={users.source === 'auth' ? 'signed in' : 'with a picks page'} />
         <Cell label="New this week" value={`+${users.new7}`} sub={`+${users.new30} in 30 days`} />
         <Cell label="Active this week" value={compact(users.active7)} sub={users.total ? `${Math.round((users.active7 / users.total) * 100)}% of members` : ''} />
         <Cell label="Paying" value={users.paid} sub={`${users.plans.pro || 0} Pro, ${users.plans.elite || 0} Elite · ${users.comps} free passes`} />

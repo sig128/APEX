@@ -423,7 +423,7 @@ export function createContests({ docs, engines = {}, now = () => Date.now() }) {
    * game starts and never after; the first save needs confirm: true (21+ and read the rules).
    */
   async function enter(user, id, body = {}) {
-    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in with Google to enter.')
+    if (!user?.uid || user.uid === 'admin') throw new ApiError(401, 'signin', 'Sign in to enter.')
     if (!ID_RE.test(String(id))) throw new ApiError(404, 'not_found', 'No such contest.')
     const want = picksIn(body.picks)
     const t = now()

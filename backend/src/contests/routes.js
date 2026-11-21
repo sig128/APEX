@@ -34,7 +34,7 @@ export function contestsRoutes({ contests, access, lock }) {
   const viewer = async (req) => (await access.resolve(req)).user
   const signedIn = async (req) => {
     const u = await viewer(req)
-    if (!u) throw new ApiError(401, 'signin', 'Sign in with Google to enter.')
+    if (!u) throw new ApiError(401, 'signin', 'Sign in to enter.')
     return u
   }
   // without a database (a Vercel deploy with no service account) entries can't be kept

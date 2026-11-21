@@ -605,7 +605,7 @@ function renderPastGamesList(root, rows, uid) {
   const hint = root.querySelector('#past-games-hint')
   if (!list || !hint) return
   if (!uid) {
-    hint.textContent = 'Sign in with Google to save analyses and reopen them here.'
+    hint.textContent = 'Sign in to save analyses and reopen them here.'
     list.replaceChildren()
     return
   }
@@ -619,7 +619,7 @@ function renderPastGamesList(root, rows, uid) {
   }
   hint.textContent =
     uid === '__admin_session__'
-      ? 'Session-only — games clear when you refresh. Sign in with Google to save permanently.'
+      ? 'Session-only — games clear when you refresh. Sign in to save permanently.'
       : 'Tap a saved game to view the recommended bets that were saved for that analysis.'
   list.replaceChildren()
   /** @type {Array<{ awayImg: HTMLImageElement, awayLogoWrap: HTMLDivElement, awayFallback: HTMLSpanElement, awayTeam: string, homeImg: HTMLImageElement, homeLogoWrap: HTMLDivElement, homeFallback: HTMLSpanElement, homeTeam: string, sportKey: string | null }>} */
