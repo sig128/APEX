@@ -6,7 +6,8 @@
  * First deploy:
  * 1. Blaze plan on the Firebase project; enable the Secret Manager API.
  * 2. firebase functions:secrets:set ANTHROPIC_API_KEY
- *    firebase functions:secrets:set ADMIN_SPORTS_KEY   (random string, 12+ characters)
+ *    firebase functions:secrets:set ADMIN_SPORTS_KEY   (the /admin password: 24+ random characters,
+ *    e.g. openssl rand -base64 24; a shorter one leaves the admin page "not set up")
  *    firebase functions:secrets:set THE_ODDS_API_KEY   (optional: sportsbook prices)
  * 3. cp functions/.env.example functions/.env and set APEX_TREASURY_ADDRESS (your Base wallet)
  *    and APEX_ADMIN_EMAILS. Without a treasury the paywall stays off.
