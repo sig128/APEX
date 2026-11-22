@@ -66,10 +66,23 @@ export function otherLineQuotes(row, index, skip = new Set()) {
         const dc = Math.abs(cur.line - want)
         if (dc < d || (dc === d && !kinder(line, cur.line))) continue
       }
-      pick.set(book, { book, price, line, link: b.links?.[side] || null, deep: Boolean(b.deep?.[side]) })
+      pick.set(book, { book, price, line, link: cleanLink(b.links?.[side]), deep: Boolean(b.deep?.[side]) })
     }
   }
   return [...pick.values()]
+}
+
+/**
+ * A book's link ready to open, but for the state: the feed's links carry placeholders. {state}
+ * stays (the slip fills in the bettor's state; an older snapshot may hold it escaped as
+ * %7Bstate%7D); BetRivers' coupon wants a bet type and a stake: a single, no stake set.
+ */
+export function cleanLink(link) {
+  if (!link) return null
+  return String(link)
+    .replace(/%7Bstate%7D/gi, '{state}')
+    .replace(/\{pickType\}/g, 'single')
+    .replace(/\{wagerAmount\}/g, '')
 }
 
 /** Every book's price for the side this leg bets, best first. */
@@ -79,24 +92,52 @@ export function legQuotes(row) {
   for (const [book, b] of Object.entries(row.price?.books || {})) {
     const price = b?.[side]
     if (!Number.isFinite(price) || Math.abs(price) < 100) continue
-    out.push({ book, price, link: b.links?.[side] || null, deep: Boolean(b.deep?.[side]) })
+    out.push({ book, price, link: cleanLink(b.links?.[side]), deep: Boolean(b.deep?.[side]) })
   }
   return out.sort((a, b) => americanToDecimal(b.price) - americanToDecimal(a.price))
 }
 
-const FD_RE = /^https:\/\/sportsbook\.fanduel\.com\/addToBetslip\?marketId=([^&]+)&selectionId=([^&]+)$/
+// The bet slip links of the books whose slips take several selections in one link, and how each
+// joins them. The odds feed gives one link per selection; these put a whole parlay on the slip.
+//   FanDuel:    addToBetslip?marketId[0]=…&selectionId[0]=…&marketId[1]=…  (indexed pairs)
+//   DraftKings: ?outcomes=id1+id2  (each id as given, its '#' kept as %23)
+//   BetMGM:     /en/sports?options=f-m-o,f-m-o&type=combo  (BetMGM's deep-link guide)
+//   Caesars:    /us/{state}/bet?selectionIds=a,b&dl=betslip
+// BetRivers (and anything else) has no several-selection form: a link per leg.
+const FD_RE = /^https:\/\/sportsbook\.fanduel\.com\/addToBetslip\?marketId=([^&#]+)&selectionId=([^&#]+)$/
+const DK_RE = /^https:\/\/sportsbook\.draftkings\.com\/[^?#]*\?outcomes=([^&#]+)$/
+const MGM_RE = /^(https:\/\/sports\.[^/?#]+\.betmgm\.com\/en\/sports)\?options=([^&#]+)(?:&type=[A-Za-z]+)?$/
+const CZR_RE = /^(https:\/\/sportsbook\.caesars\.com\/us\/[^/?#]+\/bet)\?selectionIds=([^&#]+)&dl=betslip$/
 
 /**
- * One link that puts every leg on the book's slip, when its links allow it (FanDuel's bet slip
- * takes indexed selections). Other books get a link per leg: each tap adds one selection.
+ * One link that puts every leg on the book's slip, when the book's links allow it (see above).
+ * Other books get a link per leg: each tap adds one selection.
  */
 export function parlayLink(book, quotes) {
   if (!quotes.length || quotes.some((q) => !q?.deep || !q.link)) return null
-  if (quotes.length === 1) return quotes[0].link
+  const links = quotes.map((q) => cleanLink(q.link))
+  if (links.length === 1) return links[0]
+  const all = (re) => {
+    const parts = links.map((l) => re.exec(l))
+    return parts.some((m) => !m) ? null : parts
+  }
   if (book === 'fanduel') {
-    const parts = quotes.map((q) => FD_RE.exec(q.link))
-    if (parts.some((m) => !m)) return null
-    return `https://sportsbook.fanduel.com/addToBetslip?${parts.map((m, i) => `marketId[${i}]=${m[1]}&selectionId[${i}]=${m[2]}`).join('&')}`
+    const parts = all(FD_RE)
+    return parts && `https://sportsbook.fanduel.com/addToBetslip?${parts.map((m, i) => `marketId[${i}]=${m[1]}&selectionId[${i}]=${m[2]}`).join('&')}`
+  }
+  if (book === 'draftkings') {
+    const parts = all(DK_RE)
+    return parts && `https://sportsbook.draftkings.com/?outcomes=${parts.map((m) => m[1]).join('+')}`
+  }
+  if (book === 'betmgm') {
+    const parts = all(MGM_RE)
+    if (!parts || parts.some((m) => m[1] !== parts[0][1])) return null
+    return `${parts[0][1]}?options=${parts.map((m) => m[2]).join(',')}&type=combo`
+  }
+  if (book === 'williamhill_us') {
+    const parts = all(CZR_RE)
+    if (!parts || parts.some((m) => m[1] !== parts[0][1])) return null
+    return `${parts[0][1]}?selectionIds=${parts.map((m) => m[2]).join(',')}&dl=betslip`
   }
   return null
 }

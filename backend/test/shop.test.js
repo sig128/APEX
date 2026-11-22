@@ -1,6 +1,39 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { shop, legQuotes, parlayLink, linesIndex, otherLineQuotes } from '../src/nfl/shop.js'
+import { shop, legQuotes, parlayLink, linesIndex, otherLineQuotes, cleanLink } from '../src/nfl/shop.js'
+import { safeLink } from '../src/providers/oddsapi/props.js'
+
+// links as the odds feed sends them (Nov 22, 2026), ids shortened
+const DK = (id) => `https://sportsbook.draftkings.com/?outcomes=${id}`
+const MGM = (o) => `https://sports.{state}.betmgm.com/en/sports?options=${o}&type=Single`
+const CZR = (id) => `https://sportsbook.caesars.com/us/{state}/bet?selectionIds=${id}&dl=betslip`
+const BR = (id) => `https://{state}.betrivers.com/?page=sportsbook#event/1028824836?coupon={pickType}|${id}|{wagerAmount}`
+
+test('one link puts the whole parlay on the slip at DraftKings, BetMGM and Caesars too', () => {
+  const q = (link) => ({ deep: true, link })
+  assert.equal(parlayLink('draftkings', [q(DK('0QA1%232_13L88808Q1-3Q20')), q(DK('0QA4%235_13L88808Q1-6Q20'))]), 'https://sportsbook.draftkings.com/?outcomes=0QA1%232_13L88808Q1-3Q20+0QA4%235_13L88808Q1-6Q20', "ids joined by '+', each '#' kept as %23")
+  assert.equal(parlayLink('betmgm', [q(MGM('6:44014-4597301-7577032')), q(MGM('6:44015-11-22'))]), 'https://sports.{state}.betmgm.com/en/sports?options=6:44014-4597301-7577032,6:44015-11-22&type=combo')
+  assert.equal(parlayLink('williamhill_us', [q(CZR('b5bc9ee1')), q(CZR('c6cd0ff2'))]), 'https://sportsbook.caesars.com/us/{state}/bet?selectionIds=b5bc9ee1,c6cd0ff2&dl=betslip')
+  // BetRivers has no several-selection link; a single gets its bet type and an open stake
+  assert.equal(parlayLink('betrivers', [q(BR('4420456148'))]), 'https://{state}.betrivers.com/?page=sportsbook#event/1028824836?coupon=single|4420456148|')
+  assert.equal(parlayLink('betrivers', [q(BR('1')), q(BR('2'))]), null)
+  // a leg without its own selection link: no all-in-one link
+  assert.equal(parlayLink('draftkings', [q(DK('a')), { deep: false, link: 'https://sportsbook.draftkings.com/' }]), null)
+  // through shop(): DraftKings adds every leg in one tap
+  const a = row('a', { draftkings: { over: -110, links: { over: DK('0QA1%232') }, deep: { over: true } } })
+  const b = row('b', { draftkings: { over: -115, links: { over: DK('0QA3%234') }, deep: { over: true } } })
+  const dk = shop([a, b]).books.find((x) => x.book === 'draftkings')
+  assert.equal(dk.allOnSlip, true)
+  assert.equal(dk.link, 'https://sportsbook.draftkings.com/?outcomes=0QA1%232+0QA3%234')
+})
+
+test("the feed's {state} placeholder survives, so the slip can fill in the bettor's state", () => {
+  const raw = 'https://sportsbook.caesars.com/us/{state}/bet?selectionIds=b5bc9ee1&dl=betslip'
+  assert.equal(safeLink(raw), raw, 'kept as written, not escaped to %7Bstate%7D')
+  assert.equal(safeLink('https://evil.example.com/{state}'), null, 'only sportsbooks')
+  // a snapshot saved before the fix holds it escaped: read back as {state}
+  assert.equal(cleanLink('https://sportsbook.caesars.com/us/%7Bstate%7D/bet?selectionIds=x&dl=betslip'), raw.replace('b5bc9ee1', 'x'))
+})
 
 const fd = (m, s) => `https://sportsbook.fanduel.com/addToBetslip?marketId=${m}&selectionId=${s}`
 const row = (id, books, side = 'o') => ({ id, name: id, short: id, label: 'Over', side, prob: 0.7, price: { books } })

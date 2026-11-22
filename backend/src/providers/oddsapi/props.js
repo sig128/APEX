@@ -97,7 +97,9 @@ export function safeLink(u) {
     if (url.protocol !== 'https:') return null
     const h = url.hostname.toLowerCase()
     const ok = /(^|\.)(draftkings|fanduel|betmgm|caesars|williamhill|fanatics|betrivers|rushstreetinteractive|thescore|espnbet|bet365)\.(com|bet|us)$/.test(h) || h === 'thescore.bet'
-    return ok ? url.toString() : null
+    // the link as the feed wrote it: re-serializing would escape its {state} placeholder in a path
+    // (Caesars' /us/{state}/bet), which the slip then can't fill in
+    return ok ? u.trim() : null
   } catch {
     return null
   }

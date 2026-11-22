@@ -17,7 +17,9 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "firebase-admin": "^13.0.2",
-    "firebase-functions": "^6.3.0"
+    "firebase-functions": "^6.3.0",
+    "obscenity": "^0.4.6",
+    "web-push": "^3.6.7"
   },
   "private": true
 }

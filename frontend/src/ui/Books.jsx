@@ -25,8 +25,18 @@ const sideWord = (leg) => (leg?.side === 'u' ? 'Under' : 'Over')
 /** "BetMGM’s", "BetRivers’" */
 const owner = (name) => (/s$/i.test(name) ? `${name}’` : `${name}’s`)
 
-/** Some books' links carry the state in the address. */
-const withState = (url, st) => (url && url.includes('{state}') ? url.replaceAll('{state}', st.toLowerCase()) : url)
+/**
+ * Some books' links carry the state in the address (an answer saved before a fix may hold it
+ * escaped, %7Bstate%7D), and BetRivers' a bet type and a stake: a single, no stake set.
+ */
+const HAS_STATE = /\{state\}|%7Bstate%7D/i
+const withState = (url, st) =>
+  url
+    ? url
+        .replace(/\{state\}|%7Bstate%7D/gi, st.toLowerCase())
+        .replace(/\{pickType\}/g, 'single')
+        .replace(/\{wagerAmount\}/g, '')
+    : url
 
 // ---- the slip at every book: one shared store per slip --------------------------------------
 // Phones pause or reload a page while you're in a sportsbook's app. So the last answer for a slip
@@ -353,7 +363,7 @@ export function SendToBook({ open, onClose, legs, p = null, title = 'Send to spo
   const [state, setState] = useState(() => read('apex_state', 'NJ'))
   const [unfolded, setUnfolded] = useState(null)
   const mine = read('apex_book', '')
-  const needsState = data?.books?.some((b) => [b.link, ...(b.legLinks || [])].some((u) => u && u.includes('{state}')))
+  const needsState = data?.books?.some((b) => [b.link, ...(b.legLinks || [])].some((u) => u && HAS_STATE.test(u)))
   const go = (book) => {
     write('apex_book', book)
     markAway()
