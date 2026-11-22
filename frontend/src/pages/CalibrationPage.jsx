@@ -1,9 +1,10 @@
 // The calibration page, open to everyone: every graded prop on file, grouped by the probability
 // the model gave it before the game, against how often it hit. On the diagonal, a 70% rating
-// hits 70% of the time. Each closed day's rows are public and fingerprinted, so anyone can check
-// the record hasn't been touched since.
+// hits 70% of the time. Each closed day's rows are fingerprinted so the record can be checked
+// against later edits; that list is for admins only (the owner's call, Nov 22).
 import { useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useBilling } from '../context/BillingContext.jsx'
 import { useApi } from '../lib/useApi.js'
 import { useTitle, useWidth, useCopy } from '../lib/hooks.js'
 import { DATA_BASE, SITE_URL, dataUrl } from '../lib/config.js'
@@ -34,6 +35,7 @@ const plural = (n, one, many = `${one}s`) => `${count(n)} ${n === 1 ? one : many
 
 export function CalibrationPage() {
   useTitle('Calibration: the model’s ratings against results')
+  const { isAdmin } = useBilling()
   const [q, setQ] = useSearchParams()
   const league = q.get('league') || 'all'
   const market = q.get('market') || 'all'
@@ -108,7 +110,7 @@ export function CalibrationPage() {
         </div>
       )}
 
-      <Fingerprints scope={scope.toString()} leagueName={leagueName} win={win} />
+      {isAdmin && <Fingerprints scope={scope.toString()} leagueName={leagueName} win={win} />}
     </div>
   )
 }
