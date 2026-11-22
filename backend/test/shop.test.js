@@ -14,6 +14,8 @@ test('one link puts the whole parlay on the slip at DraftKings, BetMGM and Caesa
   assert.equal(parlayLink('draftkings', [q(DK('0QA1%232_13L88808Q1-3Q20')), q(DK('0QA4%235_13L88808Q1-6Q20'))]), 'https://sportsbook.draftkings.com/?outcomes=0QA1%232_13L88808Q1-3Q20+0QA4%235_13L88808Q1-6Q20', "ids joined by '+', each '#' kept as %23")
   assert.equal(parlayLink('betmgm', [q(MGM('6:44014-4597301-7577032')), q(MGM('6:44015-11-22'))]), 'https://sports.{state}.betmgm.com/en/sports?options=6:44014-4597301-7577032,6:44015-11-22&type=combo')
   assert.equal(parlayLink('williamhill_us', [q(CZR('b5bc9ee1')), q(CZR('c6cd0ff2'))]), 'https://sportsbook.caesars.com/us/{state}/bet?selectionIds=b5bc9ee1,c6cd0ff2&dl=betslip')
+  const SCORE = (id, n, d) => `https://sportsbook.thescore.bet/?market_selection_id[0]=${id}&odds_numerator[0]=${n}&odds_denominator[0]=${d}`
+  assert.equal(parlayLink('espnbet', [q(SCORE('45c4a13d', 2, 1)), q(SCORE('9f00e2aa', 5, 6))]), 'https://sportsbook.thescore.bet/?market_selection_id[0]=45c4a13d&odds_numerator[0]=2&odds_denominator[0]=1&market_selection_id[1]=9f00e2aa&odds_numerator[1]=5&odds_denominator[1]=6')
   // BetRivers has no several-selection link; a single gets its bet type and an open stake
   assert.equal(parlayLink('betrivers', [q(BR('4420456148'))]), 'https://{state}.betrivers.com/?page=sportsbook#event/1028824836?coupon=single|4420456148|')
   assert.equal(parlayLink('betrivers', [q(BR('1')), q(BR('2'))]), null)

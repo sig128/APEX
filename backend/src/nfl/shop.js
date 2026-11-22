@@ -103,11 +103,14 @@ export function legQuotes(row) {
 //   DraftKings: ?outcomes=id1+id2  (each id as given, its '#' kept as %23)
 //   BetMGM:     /en/sports?options=f-m-o,f-m-o&type=combo  (BetMGM's deep-link guide)
 //   Caesars:    /us/{state}/bet?selectionIds=a,b&dl=betslip
+//   theScore:   ?market_selection_id[0]=…&odds_numerator[0]=…&odds_denominator[0]=…, [1]…  (re-indexed)
 // BetRivers (and anything else) has no several-selection form: a link per leg.
 const FD_RE = /^https:\/\/sportsbook\.fanduel\.com\/addToBetslip\?marketId=([^&#]+)&selectionId=([^&#]+)$/
 const DK_RE = /^https:\/\/sportsbook\.draftkings\.com\/[^?#]*\?outcomes=([^&#]+)$/
 const MGM_RE = /^(https:\/\/sports\.[^/?#]+\.betmgm\.com\/en\/sports)\?options=([^&#]+)(?:&type=[A-Za-z]+)?$/
 const CZR_RE = /^(https:\/\/sportsbook\.caesars\.com\/us\/[^/?#]+\/bet)\?selectionIds=([^&#]+)&dl=betslip$/
+const I0 = '(?:\\[|%5B)0(?:\\]|%5D)'
+const SCORE_RE = new RegExp(`^https://sportsbook\\.thescore\\.bet/\\?market_selection_id${I0}=([^&#]+)&odds_numerator${I0}=([^&#]+)&odds_denominator${I0}=([^&#]+)$`, 'i')
 
 /**
  * One link that puts every leg on the book's slip, when the book's links allow it (see above).
@@ -138,6 +141,10 @@ export function parlayLink(book, quotes) {
     const parts = all(CZR_RE)
     if (!parts || parts.some((m) => m[1] !== parts[0][1])) return null
     return `${parts[0][1]}?selectionIds=${parts.map((m) => m[2]).join(',')}&dl=betslip`
+  }
+  if (book === 'espnbet') {
+    const parts = all(SCORE_RE)
+    return parts && `https://sportsbook.thescore.bet/?${parts.map((m, i) => `market_selection_id[${i}]=${m[1]}&odds_numerator[${i}]=${m[2]}&odds_denominator[${i}]=${m[3]}`).join('&')}`
   }
   return null
 }
