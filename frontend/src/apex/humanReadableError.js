@@ -149,28 +149,26 @@ function mapAiErrorType(type, message) {
       return 'Too many requests right now. Wait a minute and try again.'
     case 'authentication_error':
     case 'invalid_api_key':
-      return 'The analysis service key was refused or is missing. Check OPENAI_API_KEY on the server.'
     case 'billing_error':
     case 'insufficient_quota':
-      return 'The analysis service account is out of credit or over its quota. Check its plan and billing.'
     case 'permission_error':
-      return 'This API key is not allowed to perform that action.'
     case 'not_found_error':
     case 'model_not_found':
-      return 'That model is not available. Check OPENAI_MODEL if you set one.'
+      // the service's own setup: nothing the member can fix, so no setting names on the page
+      return 'The analyzer isn’t available right now. Try again later.'
     case 'invalid_request_error':
-      return msg ? `Invalid request: ${msg}` : 'The request was invalid. Check inputs and try again.'
+      return 'That request didn’t go through. Check the teams and the date, then try again.'
     case 'api_error':
-      return msg ? `Analysis service error: ${msg}` : 'The analysis service returned an error. Try again in a moment.'
+      return 'The analyzer hit an error. Try again in a moment.'
     case 'request_too_large':
-      return 'Request or context is too large. Shorten the conversation or game details and try again.'
+      return 'That was too much to analyze in one go. Try again.'
     default:
       break
   }
   if (msg && msg !== 'Overloaded') return msg
   if (type && type.endsWith('_error')) {
     const short = type.replace(/_error$/, '').replace(/_/g, ' ')
-    return `The analysis service reported an error (${short}). Try again.`
+    return 'The analyzer hit an error. Try again in a moment.'
   }
   return msg || null
 }
@@ -185,7 +183,7 @@ function mapKnownPhrases(raw) {
     return 'Too many requests right now. Wait a minute and try again.'
   }
   if (lower.includes('401') || lower.includes('unauthorized')) {
-    return 'The analysis service key was refused or is missing. Check OPENAI_API_KEY on the server.'
+    return 'Sign in again, then try once more.'
   }
   if (lower.includes('503') && lower.includes('service unavailable')) {
     return 'The analysis service is temporarily unavailable. Try again shortly.'

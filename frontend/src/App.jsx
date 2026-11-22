@@ -96,7 +96,8 @@ export function App() {
               <Route path="/support" element={<LegalPage doc="support" />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/apex" element={<AnalyzerPage />} />
+              {/* the analyzer's pages: /apex, /apex/games, /apex/today */}
+              <Route path="/apex/*" element={<AnalyzerPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route
                 path="/adminn"

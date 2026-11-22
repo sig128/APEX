@@ -3,7 +3,6 @@
  */
 
 import { loadEspnTeamLogos, resolveTeamLogoUrl } from './espnTeamLogos.js'
-import './apexPickedGameStrip.css'
 
 function teamInitials(name) {
   const w = String(name || '')

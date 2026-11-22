@@ -1,0 +1,1494 @@
+/* The game analyzer, dressed like the rest of PropPickz: the night field, chalk text, lime for the
+   main button and the game you picked, Barlow for words and Big Shoulders for times (tokens.css).
+   The analyzer's markup is injected HTML (ApexStaticBody.html) run by ApexApp.jsx and the scripts
+   beside it, so the class names here are theirs. Everything sits under .apex-analyzer except the
+   flying logo, which the pick animation appends to <body>. */
+
+/* ------------------------------------------------------------------------------------- scope */
+.apex-analyzer {
+  color: var(--chalk);
+  font-family: var(--font-ui);
+}
+.apex-analyzer [hidden] {
+  display: none !important;
+}
+:where(.apex-analyzer) :where(h1, h2, h3, p, pre, ul, ol) {
+  margin: 0;
+}
+.apex-analyzer .apex-html-root,
+.apex-analyzer .apex-layout {
+  display: block;
+}
+.apex-analyzer .apex-main {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 20px var(--gutter) 32px;
+}
+@media (min-width: 960px) {
+  .apex-analyzer .apex-main {
+    padding-top: 28px;
+  }
+}
+
+/* the original app's side menu and reference tabs: kept in the markup, not shown */
+.apex-analyzer .apex-sidebar,
+.apex-analyzer .apex-sidebar-scrim,
+.apex-analyzer .tc,
+.apex-analyzer .prm-h {
+  display: none;
+}
+
+/* the three pages: Analyze and My games share #t1, Today has its own */
+.apex-analyzer .apex-route-analyze #t1,
+.apex-analyzer .apex-route-mygames #t1,
+.apex-analyzer .apex-route-today #apex-today-page {
+  display: block;
+}
+.apex-analyzer .apex-route-analyze #t1 > .prm,
+.apex-analyzer .apex-route-mygames #t1 > :not(.prm) {
+  display: none;
+}
+/* an analysis open: it takes the page, under the site's header, until Back */
+.apex-analyzer .apex-html-root:has(#apex-analyze-page:not([hidden])) :is(.hdr, .tc) {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------------------------- page head */
+.apex-analyzer .apex-page-head {
+  margin-bottom: 16px;
+}
+.apex-analyzer .apex-beta {
+  margin-left: 10px;
+  vertical-align: 0.55em;
+}
+.apex-analyzer .apex-page-head .page-sub {
+  max-width: 62ch;
+}
+.apex-analyzer .apex-top-nav {
+  margin-bottom: 22px;
+}
+.apex-analyzer .apex-top-nav .tabs__tab {
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------------------------ team search */
+.apex-analyzer .apex-game-input-heading {
+  position: relative;
+  z-index: 30;
+  margin-bottom: 26px;
+}
+.apex-analyzer .apex-team-search-ph {
+  position: relative;
+}
+.apex-analyzer .apex-odds-sport-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.apex-analyzer .apex-team-search-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 48px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-m);
+  background: var(--stand);
+  transition: border-color 0.15s;
+}
+.apex-analyzer .apex-team-search-row:focus-within {
+  border-color: var(--lime);
+}
+.apex-analyzer .apex-team-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 0 14px;
+}
+.apex-analyzer .apex-team-search-icon {
+  display: flex;
+  flex: none;
+  color: var(--chalk-3);
+}
+.apex-analyzer .apex-team-search-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.apex-analyzer .apex-team-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--chalk);
+  font-size: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.apex-analyzer .apex-team-search-input:focus-visible {
+  box-shadow: none;
+}
+.apex-analyzer .apex-team-search-input::placeholder {
+  color: var(--chalk-3);
+}
+.apex-analyzer .apex-team-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* the league filter rides at the end of the bar; ApexApp sizes it to its text (+ 12 + 30) */
+.apex-analyzer .apex-odds-sport-select {
+  flex: none;
+  max-width: 46vw;
+  margin: 8px 0;
+  padding: 0 30px 0 12px;
+  border: 0;
+  border-left: 1px solid var(--seat-2);
+  border-radius: 0;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23a9b5ae' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center / 12px;
+  color: var(--chalk-2);
+  font: 600 15px/1 var(--font-ui);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.apex-analyzer .apex-odds-sport-select:focus-visible {
+  outline: none;
+  color: var(--chalk);
+  box-shadow: none;
+}
+.apex-analyzer .apex-odds-sport-select option,
+.apex-analyzer .apex-analyze-sport-select option {
+  background: var(--stand-2);
+  color: var(--chalk);
+}
+.apex-analyzer .apex-odds-sport-measure {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  font: 600 15px/1 var(--font-ui);
+}
+.apex-analyzer .apex-team-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  max-height: min(340px, 52vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+.apex-analyzer .apex-team-search-hit {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--r-s);
+  background: transparent;
+  color: var(--chalk);
+  text-align: left;
+  cursor: pointer;
+}
+.apex-analyzer .apex-team-search-hit:hover,
+.apex-analyzer .apex-team-search-hit:focus-visible {
+  outline: none;
+  box-shadow: none;
+  background: var(--stand-3);
+}
+.apex-analyzer .apex-team-search-hit-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+.apex-analyzer .apex-team-search-hit-meta {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--chalk-3);
+}
+.apex-analyzer .apex-team-search-hit--finished {
+  cursor: not-allowed;
+  color: var(--chalk-3);
+}
+.apex-analyzer .apex-team-search-hit--finished:hover,
+.apex-analyzer .apex-team-search-hit--finished:focus-visible,
+.apex-analyzer .apex-team-search-hit--flash {
+  background: var(--flag-dim);
+}
+.apex-analyzer .apex-team-search-status {
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--chalk-3);
+}
+.apex-analyzer .apex-team-search-status--err {
+  color: var(--flag);
+}
+
+/* ------------------------------------------------------------------------- games: sections */
+.apex-analyzer .apex-quick-games-section {
+  position: relative;
+  margin-bottom: 26px;
+}
+.apex-analyzer .apex-qg-head,
+.apex-analyzer .apex-ppc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+.apex-analyzer .apex-qg-title,
+.apex-analyzer .apex-ppc-hint,
+.apex-analyzer .apex-today-league-title {
+  font: 800 24px/1.1 var(--font-num);
+  letter-spacing: 0.01em;
+  color: var(--chalk);
+}
+.apex-analyzer .apex-qg-note {
+  font-size: 14px;
+  color: var(--chalk-3);
+}
+.apex-analyzer .apex-qg-offseason,
+.apex-analyzer .apex-today-offseason {
+  padding: 18px 16px;
+  border: 1px dashed var(--seat-2);
+  border-radius: var(--r-m);
+  color: var(--chalk-2);
+  font-size: 15px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- games: strip mechanics
+   The scripts size each card (inline width) from the viewport and a 12px gap, duplicate the row
+   and slide it: CSS on desktop, a touch-driven loop on phones (…--swipe). */
+.apex-analyzer .apex-qg-carousel {
+  width: 100%;
+}
+.apex-analyzer .apex-qg-carousel-viewport {
+  width: 100%;
+  overflow: hidden;
+}
+.apex-analyzer .apex-qg-carousel-viewport--ticker {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+}
+.apex-analyzer .apex-qg-carousel-track {
+  display: flex;
+  gap: 12px;
+  padding: 4px 0;
+  will-change: transform;
+}
+@keyframes apex-qg-ticker {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+/* the end padding makes half the row exactly one set of cards plus gaps: a seamless loop */
+.apex-analyzer .apex-qg-carousel-track--ticker {
+  width: max-content;
+  padding-right: 12px;
+  animation: apex-qg-ticker var(--apex-qg-ticker-duration, 120s) linear infinite;
+}
+.apex-analyzer .apex-qg-carousel-viewport--paused .apex-qg-carousel-track--ticker {
+  animation-play-state: paused;
+}
+@media (hover: hover) and (pointer: fine) {
+  .apex-analyzer .apex-qg-carousel-viewport--ticker:hover .apex-qg-carousel-track--ticker {
+    animation-play-state: paused;
+  }
+}
+@media (max-width: 768px) {
+  .apex-analyzer .apex-qg-carousel-viewport--swipe {
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+  }
+  .apex-analyzer .apex-qg-carousel-viewport--swipe .apex-qg-carousel-track--ticker {
+    animation: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------------- games: a card
+   Every game card (strip, search, Today, My games) is league, away team, day + time, home team.
+   Here it reads like the site's scoreboard: league and kickoff on top, the two teams stacked. */
+.apex-analyzer .apex-qg-slide {
+  position: relative;
+  flex-shrink: 0;
+  min-width: 0;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-m);
+  background: var(--stand);
+  color: var(--chalk);
+  font: inherit;
+  text-align: left;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.apex-analyzer .apex-qg-slide:not(.apex-qg-slide--empty):not(.apex-ppc-slide) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'league day time'
+    'away away away'
+    'home home home'
+    'foot foot foot';
+  align-items: center;
+  gap: 10px 8px;
+  padding: 12px 14px 14px;
+  cursor: pointer;
+}
+.apex-analyzer .apex-qg-slide:not(.apex-qg-slide--empty):hover {
+  border-color: var(--seat-2);
+  background: var(--stand-2);
+}
+.apex-analyzer .apex-qg-slide:not(.apex-qg-slide--empty):focus-visible {
+  outline: none;
+  border-color: var(--lime);
+  box-shadow: 0 0 0 1px var(--lime);
+}
+.apex-analyzer .apex-qg-mid {
+  display: contents;
+}
+.apex-analyzer .apex-qg-league {
+  grid-area: league;
+  justify-self: start;
+  font: 700 12px/1 var(--font-ui);
+  letter-spacing: 0.06em;
+  color: var(--chalk-3);
+}
+.apex-analyzer .apex-qg-day {
+  grid-area: day;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--chalk-3);
+  white-space: nowrap;
+}
+.apex-analyzer .apex-qg-time {
+  grid-area: time;
+  font: 800 17px/1 var(--font-num);
+  letter-spacing: 0.01em;
+  color: var(--chalk);
+  white-space: nowrap;
+}
+.apex-analyzer .apex-qg-league + .apex-qg-team {
+  grid-area: away;
+}
+.apex-analyzer .apex-qg-mid + .apex-qg-team {
+  grid-area: home;
+}
+.apex-analyzer .apex-qg-team {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.apex-analyzer .apex-qg-logo {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--seat);
+  color: var(--chalk-2);
+  font: 800 14px/1 var(--font-num);
+}
+.apex-analyzer .apex-qg-logo.apex-qg-logo--img {
+  border-radius: 0;
+  background: transparent;
+}
+.apex-analyzer .apex-qg-logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.apex-analyzer .apex-qg-team-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.apex-analyzer .past-game-card__analyzed {
+  grid-area: foot;
+  padding-top: 10px;
+  border-top: 1px solid var(--seat);
+  font-size: 13px;
+  color: var(--chalk-3);
+}
+/* started or over: dimmed, and says so on touch */
+.apex-analyzer .apex-qg-slide.apex-qg-slide--finished {
+  cursor: not-allowed;
+}
+.apex-analyzer .apex-qg-slide--finished > :not(.apex-qg-game-over) {
+  opacity: 0.45;
+}
+.apex-analyzer .apex-qg-game-over {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: rgba(3, 6, 5, 0.72);
+  color: var(--chalk);
+  font-weight: 700;
+  font-size: 15px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+.apex-analyzer .apex-qg-slide--finished:hover .apex-qg-game-over,
+.apex-analyzer .apex-qg-slide--finished:active .apex-qg-game-over,
+.apex-analyzer .apex-qg-slide--finished-flash .apex-qg-game-over {
+  opacity: 1;
+}
+/* a picked game lights up as it flies to the Analyze button */
+@keyframes apex-qg-slide-pick {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.035);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.apex-analyzer .apex-qg-slide.apex-qg-slide--picked:not(.apex-qg-slide--empty) {
+  z-index: 3;
+  border-color: var(--lime);
+  box-shadow: 0 0 0 1px var(--lime), 0 0 22px rgba(140, 245, 22, 0.35);
+  animation: apex-qg-slide-pick 0.55s cubic-bezier(0.34, 1.35, 0.64, 1) forwards;
+}
+/* loading, nothing on, a fetch that failed */
+.apex-analyzer .apex-qg-slide--empty {
+  flex: 1 1 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  padding: 16px;
+  border-style: dashed;
+  border-color: var(--seat-2);
+  background: transparent;
+}
+.apex-analyzer .apex-qg-empty-msg {
+  color: var(--chalk-2);
+  font-size: 15px;
+  text-align: center;
+}
+
+/* the picked team logos flying to the button (appended to <body>, so unscoped) */
+.apex-qg-fly-to-analyze {
+  position: fixed;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px solid var(--lime);
+  border-radius: 50%;
+  background: var(--stand-2);
+  box-shadow: 0 0 18px rgba(140, 245, 22, 0.45);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.apex-qg-fly-to-analyze__img {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  object-fit: contain;
+}
+.apex-qg-fly-to-analyze__letter {
+  font: 800 22px/1 var(--font-num);
+  color: var(--chalk);
+}
+
+/* -------------------------------------------------------------------------------- the form */
+.apex-analyzer .inp-panel {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 26px;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: radial-gradient(120% 140% at 100% 0%, rgba(184, 255, 31, 0.08), transparent 55%), var(--stand);
+  scroll-margin-top: calc(var(--header) + 12px);
+}
+.apex-analyzer .apex-game-main-igrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 14px 12px;
+}
+.apex-analyzer .icell--away,
+.apex-analyzer .icell--home {
+  grid-column: 1 / -1;
+}
+@media (min-width: 720px) {
+  .apex-analyzer .apex-game-main-igrid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 0.8fr);
+  }
+  .apex-analyzer .icell--away,
+  .apex-analyzer .icell--home {
+    grid-column: auto;
+  }
+}
+.apex-analyzer .icell.field > span {
+  font-weight: 700;
+  color: var(--chalk-2);
+}
+.apex-analyzer .icell.field input,
+.apex-analyzer .icell.field select,
+.apex-analyzer .icell.field textarea {
+  min-height: 46px;
+  padding: 0 12px;
+  border-color: var(--seat-2);
+  background-color: var(--night);
+  font-size: 16px;
+}
+.apex-analyzer .icell.field input::placeholder,
+.apex-analyzer .icell.field textarea::placeholder {
+  color: var(--chalk-3);
+}
+.apex-analyzer .icell.field textarea {
+  min-height: 72px;
+  padding: 10px 12px;
+}
+.apex-analyzer .icell.field input[aria-invalid='true'] {
+  border-color: var(--flag);
+}
+.apex-analyzer .icell.field select {
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23a9b5ae' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.apex-analyzer .icell.field select:disabled,
+.apex-analyzer .icell.field option:disabled {
+  color: var(--chalk-3);
+}
+/* the extra-context fields the shared analysis no longer takes (kept, hidden by the script) */
+.apex-analyzer .apex-game-input-advanced {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+.apex-analyzer .apex-game-input-advanced .igrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.apex-analyzer .apex-game-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+.apex-analyzer .apex-analyze-clear {
+  min-height: 46px;
+}
+.apex-analyzer .apex-game-actions-analyze-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.apex-analyzer .apex-picked-game {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-right: auto;
+  padding: 5px 14px 5px 6px;
+  border: 1px solid rgba(184, 255, 31, 0.32);
+  border-radius: 999px;
+  background: var(--lime-dim);
+}
+.apex-analyzer .apex-picked-game-logos {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+.apex-analyzer .apex-picked-game-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  border: 1px solid var(--seat-2);
+  border-radius: 50%;
+  background: var(--stand-2);
+}
+.apex-analyzer .apex-picked-game-logo-wrap + .apex-picked-game-vs + .apex-picked-game-logo-wrap {
+  margin-left: -6px;
+}
+.apex-analyzer .apex-picked-game-logo-img {
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  object-fit: contain;
+}
+.apex-analyzer .apex-picked-game-logo-fallback {
+  font: 800 13px/1 var(--font-num);
+  color: var(--chalk-2);
+}
+.apex-analyzer .apex-picked-game-vs {
+  display: none;
+}
+.apex-analyzer .apex-picked-game-text {
+  display: grid;
+  min-width: 0;
+}
+.apex-analyzer .apex-picked-game-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--lime);
+}
+.apex-analyzer .apex-picked-game-matchup {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.apex-analyzer .apex-analyze-btn-and-timer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.apex-analyzer .apex-analyze-countdown {
+  font: 800 16px/1 var(--font-num);
+  letter-spacing: 0.01em;
+  color: var(--chalk-2);
+  white-space: nowrap;
+}
+.apex-analyzer .apex-analyze-countdown--urgent {
+  color: var(--lime);
+}
+.apex-analyzer .apex-analyze-countdown--expired {
+  color: var(--flag);
+}
+.apex-analyzer .abtn {
+  min-height: 48px;
+  min-width: 190px;
+  padding: 0 28px;
+  font-size: 17px;
+  font-weight: 800;
+}
+@keyframes apex-abtn-pulse {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+/* a game picked: the button breathes until it's pressed */
+@keyframes apex-abtn-ready {
+  0%,
+  100% {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 0 rgba(184, 255, 31, 0), 0 4px 16px rgba(124, 252, 0, 0.18);
+  }
+  50% {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 0 5px rgba(184, 255, 31, 0.16), 0 6px 26px rgba(124, 252, 0, 0.4);
+  }
+}
+.apex-analyzer .abtn.apex-abtn--pulse {
+  animation: apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.apex-analyzer .abtn.apex-abtn--sport-glow:not(:disabled) {
+  animation: apex-abtn-ready 2.6s ease-in-out infinite;
+}
+.apex-analyzer .abtn.apex-abtn--sport-glow.apex-abtn--pulse:not(:disabled) {
+  animation:
+    apex-abtn-pulse 0.45s cubic-bezier(0.34, 1.4, 0.64, 1),
+    apex-abtn-ready 2.6s ease-in-out infinite;
+}
+.apex-analyzer .apex-form-msg {
+  margin-top: 12px;
+  color: var(--flag);
+  font-size: 15px;
+}
+.apex-analyzer .apex-shared-note {
+  margin-top: 14px;
+  max-width: 72ch;
+  color: var(--chalk-3);
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* line depth and line type (MLB): the server sets both for the shared analysis, so the script
+   keeps these hidden; styled for when they come back */
+.apex-analyzer .apex-line-reasoning {
+  position: relative;
+}
+.apex-analyzer .apex-line-reasoning--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.apex-analyzer .apex-line-reasoning-btn,
+.apex-analyzer .apex-advanced-toggle {
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-s);
+  background: var(--stand-2);
+  color: var(--chalk);
+  font-weight: 700;
+  font-size: 15px;
+}
+.apex-analyzer .apex-line-reasoning-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  width: min(260px, 86vw);
+  padding: 6px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+.apex-analyzer .apex-line-reasoning-popover-inner {
+  display: grid;
+  gap: 2px;
+}
+.apex-analyzer .apex-line-reasoning-label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  padding: 8px;
+  border-radius: var(--r-s);
+  cursor: pointer;
+}
+.apex-analyzer .apex-line-reasoning-label:hover {
+  background: var(--stand-3);
+}
+.apex-analyzer .apex-line-reasoning-label input {
+  grid-row: 1 / span 2;
+  margin-top: 3px;
+  accent-color: var(--lime);
+}
+.apex-analyzer .apex-line-reasoning-option-title {
+  font-weight: 700;
+  font-size: 14px;
+}
+.apex-analyzer .apex-line-reasoning-option-desc {
+  grid-column: 2;
+  color: var(--chalk-3);
+  font-size: 13px;
+}
+
+/* phones: the picked game on its own line, then Clear and a wide Analyze */
+@media (max-width: 599px) {
+  .apex-analyzer .inp-panel {
+    padding: 16px;
+  }
+  .apex-analyzer .apex-game-actions-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px 10px;
+  }
+  .apex-analyzer .apex-game-actions-analyze-wrap {
+    display: contents;
+  }
+  .apex-analyzer .apex-picked-game {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-right: 0;
+    justify-self: start;
+    max-width: 100%;
+  }
+  .apex-analyzer .apex-analyze-clear {
+    grid-column: 1;
+  }
+  .apex-analyzer .apex-analyze-btn-and-timer {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+  .apex-analyzer .apex-analyze-btn-and-timer .abtn {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-width: 0;
+    width: 100%;
+  }
+  .apex-analyzer .apex-analyze-countdown {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: end;
+    font-size: 15px;
+  }
+}
+
+/* ----------------------------------------------------------------- live prop lines (MLB) */
+.apex-analyzer .apex-player-props-carousel-section {
+  margin-bottom: 26px;
+}
+.apex-analyzer .apex-ppc-hint-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  width: 100%;
+}
+.apex-analyzer .apex-ppc-book-select {
+  min-height: 36px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-s);
+  background: var(--stand) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23a9b5ae' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center / 12px;
+  color: var(--chalk);
+  font: 600 14px var(--font-ui);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* --------------------------------------------------------------------------- the analysis */
+.apex-analyzer .apex-analyze-page {
+  display: block;
+  scroll-margin-top: calc(var(--header) + 16px);
+}
+.apex-analyzer .apex-analyze-page-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+.apex-analyzer .apex-analyze-page-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 14px 0 8px;
+  border: 1px solid var(--seat-2);
+  border-radius: 999px;
+  background: var(--stand-2);
+  color: var(--chalk-2);
+  font-weight: 600;
+  font-size: 15px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.apex-analyzer .apex-analyze-page-back:hover {
+  border-color: var(--chalk-3);
+  color: var(--chalk);
+}
+.apex-analyzer .apex-analyze-page-back svg {
+  width: 18px;
+  height: 18px;
+}
+.apex-analyzer .apex-analyze-page-head {
+  display: grid;
+  gap: 10px;
+}
+/* the scoreboard: away, the kickoff in stadium numerals, home */
+.apex-analyzer .apex-analyze-page-ticker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 24px 20px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-l);
+  background:
+    radial-gradient(90% 130% at 50% 0%, rgba(184, 255, 31, 0.1), transparent 62%),
+    var(--stand);
+}
+.apex-analyzer .apex-analyze-page-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  text-align: center;
+}
+.apex-analyzer .apex-analyze-page-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border: 1px solid var(--seat);
+  border-radius: 50%;
+  background: var(--stand-2);
+}
+.apex-analyzer .apex-analyze-page-logo-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+.apex-analyzer .apex-analyze-page-logo-fallback {
+  font: 800 28px/1 var(--font-num);
+  color: var(--chalk-2);
+}
+.apex-analyzer .apex-analyze-page-team-name {
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.apex-analyzer .apex-analyze-page-mid {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.apex-analyzer .apex-analyze-page-day {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--chalk-2);
+}
+.apex-analyzer .apex-analyze-page-time {
+  font: 800 40px/0.95 var(--font-num);
+  letter-spacing: 0.01em;
+  color: var(--chalk);
+  text-shadow: 0 0 22px rgba(184, 255, 31, 0.22);
+  white-space: nowrap;
+}
+@media (max-width: 599px) {
+  .apex-analyzer .apex-analyze-page-ticker {
+    gap: 8px;
+    padding: 20px 14px;
+  }
+  .apex-analyzer .apex-analyze-page-logo {
+    width: 56px;
+    height: 56px;
+  }
+  .apex-analyzer .apex-analyze-page-logo-img {
+    width: 42px;
+    height: 42px;
+  }
+  .apex-analyzer .apex-analyze-page-team-name {
+    font-size: 16px;
+  }
+  .apex-analyzer .apex-analyze-page-time {
+    font-size: 34px;
+  }
+}
+.apex-analyzer .apex-analyze-page-analyzed-at {
+  color: var(--chalk-3);
+  font-size: 14px;
+  text-align: center;
+}
+.apex-analyzer .apex-analyze-page-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+.apex-analyzer .apex-analyze-error {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 90, 90, 0.45);
+  border-radius: var(--r-m);
+  background: var(--flag-dim);
+  color: var(--chalk);
+  font-size: 15px;
+}
+
+/* while it runs: the streamed draft, blurred, under a lime progress line */
+.apex-analyzer .apex-analyze-stream-head,
+.apex-analyzer .apex-analyze-loading-mode-block {
+  display: none;
+}
+.apex-analyzer .apex-analyze-page-live {
+  position: relative;
+}
+.apex-analyzer .apex-analyze-stream-body {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.apex-analyzer .apex-stream-live {
+  height: min(52vh, 460px);
+  min-height: 300px;
+  overflow: auto;
+  padding: 18px 20px;
+  color: var(--chalk-2);
+  font: 400 15px/1.6 var(--font-ui);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.apex-analyzer .apex-analyze-page-live.is-processing .apex-stream-live {
+  filter: blur(2px);
+  opacity: 0.35;
+}
+.apex-analyzer .apex-analyze-loading {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+  background: rgba(3, 6, 5, 0.45);
+}
+.apex-analyzer .apex-analyze-page-live.is-processing .apex-analyze-loading {
+  display: flex;
+}
+@keyframes apex-analyze-bar {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+.apex-analyzer .apex-analyze-loading-sheen {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--lime), transparent) no-repeat;
+  background-size: 40% 100%;
+  animation: apex-analyze-bar 1.4s ease-in-out infinite;
+}
+.apex-analyzer .apex-analyze-loading-inner {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.apex-analyzer .apex-analyze-loading-viz {
+  position: relative;
+  width: 76px;
+  height: 76px;
+}
+.apex-analyzer .apex-analyze-loading-rings,
+.apex-analyzer .apex-analyze-loading-ring,
+.apex-analyzer .apex-analyze-loading-orbit {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+@keyframes apex-analyze-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.apex-analyzer .apex-analyze-loading-ring {
+  border: 2px solid var(--seat);
+  border-top-color: var(--lime);
+  animation: apex-analyze-spin 1.6s linear infinite;
+}
+.apex-analyzer .apex-analyze-loading-ring--reverse {
+  inset: 12px;
+  border-color: transparent;
+  border-top-color: rgba(238, 243, 236, 0.45);
+  animation-duration: 2.6s;
+  animation-direction: reverse;
+}
+@keyframes apex-analyze-core {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+.apex-analyzer .apex-analyze-loading-core {
+  position: absolute;
+  inset: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(184, 255, 31, 0.55), rgba(184, 255, 31, 0) 70%);
+  animation: apex-analyze-core 2.4s ease-in-out infinite;
+}
+.apex-analyzer .apex-analyze-loading-orbit {
+  display: none;
+}
+.apex-analyzer .apex-analyze-loading-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: min(360px, 86vw);
+}
+.apex-analyzer .apex-analyze-loading-text {
+  color: var(--chalk);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+@keyframes apex-loading-bounce {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+.apex-analyzer .apex-analyze-loading-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+.apex-analyzer .apex-analyze-loading-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--lime);
+  animation: apex-loading-bounce 1.2s ease-in-out infinite;
+}
+.apex-analyzer .apex-analyze-loading-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.apex-analyzer .apex-analyze-loading-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* the three plays */
+.apex-analyzer .apex-bet-cards-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+@media (min-width: 900px) {
+  .apex-analyzer .apex-bet-cards-inner {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.apex-analyzer .apex-bet-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.apex-analyzer .apex-bet-card--single {
+  border-color: rgba(184, 255, 31, 0.4);
+  background: radial-gradient(130% 120% at 0% 0%, rgba(184, 255, 31, 0.1), transparent 58%), var(--stand);
+  box-shadow: inset 3px 0 0 var(--lime);
+}
+.apex-analyzer .apex-bet-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--chalk-3);
+}
+.apex-analyzer .apex-bet-card--single .apex-bet-card-title {
+  color: var(--lime);
+}
+.apex-analyzer .apex-bet-card-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.apex-analyzer .apex-bet-card-body-text {
+  min-width: 0;
+}
+.apex-analyzer .apex-bet-card-body--empty {
+  color: var(--chalk-3);
+  font-weight: 500;
+}
+.apex-analyzer .apex-bet-card-legs {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.apex-analyzer .apex-bet-card-leg {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 4px 8px;
+  align-items: baseline;
+}
+.apex-analyzer .apex-bet-card-leg + .apex-bet-card-leg {
+  padding-top: 12px;
+  border-top: 1px solid var(--seat);
+}
+.apex-analyzer .apex-bet-card-leg-l {
+  grid-column: 1;
+  grid-row: 1;
+  color: var(--chalk-3);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.apex-analyzer .apex-bet-card-leg > .apex-bet-card-line-tag {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: start;
+}
+.apex-analyzer .apex-bet-card-leg-t {
+  grid-column: 2;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.apex-analyzer .apex-bet-card-line-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--lime-dim);
+  color: var(--lime);
+  font: 700 12px/1.6 var(--font-ui);
+  white-space: nowrap;
+}
+
+/* why: one list, each play's reason under its name */
+.apex-analyzer .apex-analyze-page-reason,
+.apex-analyzer .apex-analyze-prop-ladder {
+  padding: 18px 20px 6px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.apex-analyzer .apex-analyze-page-reason-title,
+.apex-analyzer .apex-analyze-prop-ladder-title {
+  margin-bottom: 4px;
+  color: var(--chalk);
+  font: 800 24px/1.1 var(--font-num);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+.apex-analyzer .apex-analyze-page-reason-item {
+  padding: 14px 0;
+}
+.apex-analyzer .apex-analyze-page-reason-item + .apex-analyze-page-reason-item {
+  border-top: 1px solid var(--seat);
+}
+.apex-analyzer .apex-analyze-page-reason-item-title {
+  margin-bottom: 6px;
+  color: var(--chalk);
+  font-size: 16px;
+  font-weight: 700;
+}
+/* the plays themselves are on the cards just above */
+.apex-analyzer .apex-analyze-page-reason-item-bet {
+  display: none;
+}
+.apex-analyzer .apex-analyze-page-reason-item-body {
+  max-width: 75ch;
+  color: var(--chalk-2);
+  font-size: 15px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.apex-analyzer .apex-analyze-prop-ladder {
+  padding-bottom: 18px;
+}
+
+/* -------------------------------------------------------------------------------- My games */
+.apex-analyzer .prm-pane {
+  display: none;
+}
+.apex-analyzer .prm-pane.on {
+  display: block;
+}
+.apex-analyzer .past-games-hint {
+  margin-bottom: 14px;
+  color: var(--chalk-2);
+  font-size: 15px;
+}
+.apex-analyzer .past-games-hint:empty {
+  display: none;
+}
+/* nothing saved yet: the hint becomes the empty state */
+.apex-analyzer .past-games-hint:has(+ .past-games-list:empty) {
+  padding: 36px 20px;
+  border: 1px dashed var(--seat-2);
+  border-radius: var(--r-l);
+  text-align: center;
+}
+.apex-analyzer .past-games-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+}
+.apex-analyzer .past-game-card.apex-qg-slide {
+  width: auto;
+}
+.apex-analyzer .past-game-card--open.apex-qg-slide {
+  border-color: var(--lime);
+}
+
+/* ----------------------------------------------------------------------------------- Today */
+.apex-analyzer #apex-today-page .pnl {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.apex-analyzer .apex-today-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.apex-analyzer .apex-today-toolbar-label {
+  color: var(--chalk-2);
+  font-size: 15px;
+}
+.apex-analyzer .apex-today-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--seat);
+  border-radius: 999px;
+  background: var(--stand);
+}
+.apex-analyzer .apex-today-toggle-btn {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--chalk-2);
+  font-weight: 600;
+  font-size: 14px;
+}
+.apex-analyzer .apex-today-toggle-btn.on {
+  background: var(--stand-3);
+  color: var(--chalk);
+}
+/* one column that never grows to fit a strip's full row (the strips scroll inside it) */
+.apex-analyzer .apex-today-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 30px;
+}
+.apex-analyzer .apex-today-league-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+}
+.apex-analyzer #apex-today-page.apex-today-page--grid .apex-today-league-head {
+  cursor: pointer;
+}
+.apex-analyzer .apex-today-league-chevron {
+  color: var(--chalk-3);
+  font-size: 14px;
+  transition: transform 0.2s ease;
+}
+.apex-analyzer #apex-today-page:not(.apex-today-page--grid) .apex-today-league-chevron {
+  display: none;
+}
+.apex-analyzer #apex-today-page.apex-today-page--grid .apex-today-league--collapsed .apex-today-league-chevron {
+  transform: rotate(-90deg);
+}
+.apex-analyzer #apex-today-page.apex-today-page--grid .apex-today-league--collapsed .apex-today-league-body {
+  display: none;
+}
+.apex-analyzer .apex-today-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 12px;
+}
+.apex-analyzer .apex-today-grid .apex-qg-slide--empty {
+  grid-column: 1 / -1;
+}
+
+/* ------------------------------------------------------------------------- notes and toasts */
+.apex-analyzer .apex-analyzer-toast,
+.apex-analyzer .notif {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tabbar) + 16px + env(safe-area-inset-bottom));
+  z-index: 70;
+  max-width: calc(100vw - 32px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 10px);
+  transition: opacity 0.24s ease, transform 0.24s ease;
+}
+.apex-analyzer .apex-analyzer-toast {
+  background: var(--lime);
+  color: var(--lime-ink);
+}
+/* notes (a save that failed, a game already started) drop in under the header, clear of the toast */
+.apex-analyzer .notif {
+  top: calc(var(--header) + 12px);
+  bottom: auto;
+  border: 1px solid var(--seat-2);
+  background: var(--stand-3);
+  color: var(--chalk);
+  transform: translate(-50%, -10px);
+}
+.apex-analyzer .apex-analyzer-toast.show,
+.apex-analyzer .notif.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+@media (min-width: 960px) {
+  .apex-analyzer .apex-analyzer-toast {
+    bottom: 28px;
+  }
+}
+
+/* ---------------------------------------------------------------------------------- motion */
+@media (prefers-reduced-motion: reduce) {
+  .apex-analyzer .apex-qg-carousel-track--ticker {
+    animation: none;
+    transform: none;
+  }
+  .apex-analyzer .apex-qg-slide.apex-qg-slide--picked,
+  .apex-analyzer .abtn.apex-abtn--pulse,
+  .apex-analyzer .abtn.apex-abtn--sport-glow,
+  .apex-analyzer .apex-analyze-loading-sheen,
+  .apex-analyzer .apex-analyze-loading-ring,
+  .apex-analyzer .apex-analyze-loading-core,
+  .apex-analyzer .apex-analyze-loading-dots span {
+    animation: none !important;
+  }
+}

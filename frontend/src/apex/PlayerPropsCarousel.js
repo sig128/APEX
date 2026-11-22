@@ -10,7 +10,7 @@ import { authHeaders } from '../lib/api.js'
 import { formatAmericanOddsWithImpliedPercent } from './americanOddsPercent.js'
 import { setupMobileAutoPhysicsTicker, useMobileSwipeCarousel } from './apexCarouselMobileSwipe.js'
 
-/** Keep in sync with `--apex-qg-ticker-gap` in ApexApp.css */
+/** Keep in sync with the track gap in analyzer.css */
 const TICKER_GAP_PX = 12
 const DESKTOP_VISIBLE_SLOTS = 3
 const MOBILE_VISIBLE_SLOTS = 1
@@ -212,7 +212,7 @@ function normalizeApiPayload(data, fromClientCache) {
   const defaultKey = typeof data.defaultBookKey === 'string' ? data.defaultBookKey : ''
 
   if (data.source === 'live') {
-    const hint = 'Live Lines'
+    const hint = 'Live lines'
 
     if (bookOptions.length > 0) {
       let rows = props
@@ -586,6 +586,9 @@ export function setupPlayerPropsCarousel(root) {
   void loadShowcaseRows().then((result) => {
     if (cancelled) return
     const { rows, hint, bookOptions, defaultBookKey } = result
+    // only real lines are shown: the sample rows (out of season, or the feed down) stay hidden
+    const section = root.querySelector('#apex-player-props-carousel-section')
+    if (section) section.hidden = result.source !== 'live'
     if (hintEl && typeof hint === 'string') {
       hintEl.textContent = hint
     }

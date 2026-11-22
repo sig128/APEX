@@ -1,9 +1,9 @@
-import { useRef, useEffect, useState, useCallback, useLayoutEffect } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSportsConfig } from '../context/SportsConfigContext.jsx'
 import apexBody from './ApexStaticBody.html?raw'
-import { ApiConfigBanner } from './ApiConfigBanner.jsx'
-import { apiUrl } from './apiConfig.js'
+import { apiUrl, isHostingChatApiMisconfigured } from './apiConfig.js'
 import {
   captureFlySourcesFromSlide,
   clearAnalyzeButtonSportGlow,
@@ -37,15 +37,11 @@ import {
   humanizeOddsScheduleError,
 } from './humanReadableError.js'
 import { createPastGame, loadPastGame, subscribePastGames, updatePastGameBetCards } from './pastGamesService.js'
-import '../styles/apex-app.css'
-import './ApexApp.css'
+import './analyzer.css'
 import './PlayerPropsCarousel.css'
-import './apexPickedGameStrip.css'
-import './analyzeScheduleLock.css'
 import { applySportAvailabilityToRoot } from './apexSportAvailability.js'
 
 const APEX_SIDEBAR_COLLAPSED_KEY = 'apex-sidebar-collapsed'
-const APEX_THEME_KEY = 'apex-theme'
 const APEX_LINE_REASONING_LS_KEY = 'apex-line-reasoning-mode'
 const APEX_MLB_BETTING_SCOPE_LS_KEY = 'apex-mlb-betting-scope'
 
@@ -206,33 +202,13 @@ function persistAnalyzeSessionSnapshot(root, { messages, betCards, game, activeP
   })
 }
 
-/** Header controls: icon-only (no text). */
-const ICON_THEME_SUN =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>'
-const ICON_THEME_MOON =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
-const ICON_SIGN_OUT =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'
-
-function readStoredTheme() {
-  if (typeof window === 'undefined') return 'light'
-  try {
-    const s = localStorage.getItem(APEX_THEME_KEY)
-    if (s === 'dark' || s === 'light') return s
-  } catch {
-    /* ignore */
-  }
-  try {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  } catch {
-    return 'light'
-  }
-}
+/** The analyzer's three pages live under /apex (App.jsx routes /apex/*), so a refresh or Back lands on the same page. */
+const ANALYZER_PATHS = { analyze: '/apex', mygames: '/apex/games', today: '/apex/today' }
 
 function topPageFromPathname(pathname) {
-  const p = String(pathname || '/apex').toLowerCase()
-  if (p === '/today') return 'today'
-  if (p === '/mygames') return 'mygames'
+  const p = String(pathname || '/apex').toLowerCase().replace(/\/+$/, '')
+  if (p === '/apex/today') return 'today'
+  if (p === '/apex/games') return 'mygames'
   return 'analyze'
 }
 
@@ -291,10 +267,10 @@ function midDayTimeForPastGameCard(gameDateStr, gameTimeStr) {
   const d = new Date(raw)
   if (!Number.isNaN(d.getTime())) {
     const ft = formatDayTime(d.toISOString())
-    const timeLine = gt ? `at ${gt}` : ft.time ? `at ${ft.time}` : ''
+    const timeLine = gt || ft.time || ''
     return { day: ft.day, timeLine: timeLine || '—' }
   }
-  return { day: raw || '—', timeLine: gt ? `at ${gt}` : '—' }
+  return { day: raw || '—', timeLine: gt || '' }
 }
 
 /**
@@ -605,22 +581,22 @@ function renderPastGamesList(root, rows, uid) {
   const hint = root.querySelector('#past-games-hint')
   if (!list || !hint) return
   if (!uid) {
-    hint.textContent = 'Sign in to save analyses and reopen them here.'
+    hint.textContent = 'Sign in and every game you analyze is saved here.'
     list.replaceChildren()
     return
   }
   if (rows.length === 0) {
     hint.textContent =
       uid === '__admin_session__'
-        ? 'No games in this session yet. Run Analyze on a matchup to save bets here.'
-        : 'No saved games yet. Run Analyze on a matchup to save bets here.'
+        ? 'No games in this session yet. Every game you analyze shows up here.'
+        : 'No saved games yet. Every game you analyze is saved here.'
     list.replaceChildren()
     return
   }
   hint.textContent =
     uid === '__admin_session__'
-      ? 'Session-only — games clear when you refresh. Sign in to save permanently.'
-      : 'Tap a saved game to view the recommended bets that were saved for that analysis.'
+      ? 'These clear when you refresh. Sign in to keep them.'
+      : 'Tap a game to see its picks again.'
   list.replaceChildren()
   /** @type {Array<{ awayImg: HTMLImageElement, awayLogoWrap: HTMLDivElement, awayFallback: HTMLSpanElement, awayTeam: string, homeImg: HTMLImageElement, homeLogoWrap: HTMLDivElement, homeFallback: HTMLSpanElement, homeTeam: string, sportKey: string | null }>} */
   const logoJobs = []
@@ -744,36 +720,25 @@ export function ApexApp() {
   const pastGameClickGenRef = useRef(0)
   const analyzerDoneToastTimerRef = useRef(0)
   const [thread, setThread] = useState(null)
-  const [colorMode, setColorMode] = useState(readStoredTheme)
-  const { adminDevSession, signOutUser, user } = useAuth()
+  const { adminDevSession, user } = useAuth()
   const { disabledSportKeys } = useSportsConfig()
   /** In-memory only; cleared on full page refresh. Used when admin dev session has no Google uid. */
   const adminSessionPastGamesRef = useRef(/** @type {Array<{ id: string, data: Record<string, unknown> }>} */ ([]))
   const lastFirestorePastRowsRef = useRef(/** @type {Array<{ id: string, data: Record<string, unknown> }>} */ ([]))
+  // the site's router moves between the analyzer's pages (a ref: navigate changes with the path)
+  const navigate = useNavigate()
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
+  const { pathname } = useLocation()
+  /** Set by the setup effect: shows a page (analyze / mygames / today) without touching the URL. */
+  const showPageRef = useRef(/** @type {((page: string) => void) | null} */ (null))
 
   threadRef.current = thread
 
-  useLayoutEffect(() => {
-    try {
-      localStorage.setItem(APEX_THEME_KEY, colorMode)
-    } catch {
-      /* ignore */
-    }
-  }, [colorMode])
-
   useEffect(() => {
-    const root = wrapRef.current
-    if (!root) return
-    const btn = root.querySelector('.apex-theme-toggle')
-    if (!btn) return
-    const isDark = colorMode === 'dark'
-    btn.innerHTML = isDark ? ICON_THEME_SUN : ICON_THEME_MOON
-    btn.setAttribute(
-      'aria-label',
-      isDark ? 'Switch to light mode' : 'Switch to dark mode',
-    )
-    btn.setAttribute('aria-pressed', isDark ? 'true' : 'false')
-  }, [colorMode])
+    // a developer note, not something members should read on the page
+    if (isHostingChatApiMisconfigured()) console.warn('[analyzer] VITE_API_BASE is not set: long analyses can stop at about 60s on Firebase Hosting.')
+  }, [])
 
   /** Chat is no longer persisted across reloads; clear legacy keys from the old localStorage session. */
   useEffect(() => {
@@ -790,7 +755,7 @@ export function ApexApp() {
   const sn = useCallback((msg) => {
     const n = wrapRef.current?.querySelector('#notif')
     if (!n) return
-    n.textContent = msg || '✓ COPIED TO CLIPBOARD'
+    n.textContent = msg || 'Copied'
     n.classList.add('show')
     setTimeout(() => n.classList.remove('show'), 2500)
   }, [])
@@ -798,7 +763,7 @@ export function ApexApp() {
   const showAnalyzerDoneToast = useCallback(() => {
     const el = document.getElementById('apex-analyzer-toast')
     if (!el) return
-    el.textContent = 'Analyzer done'
+    el.textContent = 'Your picks are ready'
     el.classList.add('show')
     if (analyzerDoneToastTimerRef.current) {
       window.clearTimeout(analyzerDoneToastTimerRef.current)
@@ -851,47 +816,6 @@ export function ApexApp() {
     /** Without this, use a missing-template check so React Strict Mode remount reinjects after teardown. */
     if (!root.querySelector('#chat-log')) {
       root.innerHTML = apexBody
-    }
-
-    const hdr = root.querySelector('.hdr')
-    /** Template is only reinjected when #chat-log is missing; strip legacy header badges so updates apply. */
-    if (hdr) {
-      hdr
-        .querySelectorAll('.tag, .ver, .slcm-badge, .dual-badge')
-        .forEach((el) => el.remove())
-      hdr.querySelectorAll('.apex-theme-toggle-wrap, .apex-signout-wrap').forEach((el) => el.remove())
-    }
-
-    const hdrActions = root.querySelector('#apex-hdr-actions')
-    if (hdrActions && !hdrActions.querySelector('.apex-theme-toggle-wrap')) {
-      const twrap = document.createElement('span')
-      twrap.className = 'apex-theme-toggle-wrap'
-      const tbtn = document.createElement('button')
-      tbtn.type = 'button'
-      tbtn.className = 'apex-theme-toggle'
-      const dark = colorMode === 'dark'
-      tbtn.innerHTML = dark ? ICON_THEME_SUN : ICON_THEME_MOON
-      tbtn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode')
-      tbtn.setAttribute('aria-pressed', dark ? 'true' : 'false')
-      tbtn.addEventListener('click', () => {
-        setColorMode((m) => (m === 'dark' ? 'light' : 'dark'))
-      })
-      twrap.appendChild(tbtn)
-      hdrActions.appendChild(twrap)
-    }
-
-    if (hdrActions && !hdrActions.querySelector('.apex-signout-wrap')) {
-      const wrap = document.createElement('span')
-      wrap.className = 'apex-signout-wrap'
-      const btn = document.createElement('button')
-      btn.type = 'button'
-      btn.className = 'apex-btn-signout'
-      btn.innerHTML = ICON_SIGN_OUT
-      btn.setAttribute('aria-label', 'Sign out')
-      btn.setAttribute('title', 'Sign out')
-      btn.addEventListener('click', () => signOutUser())
-      wrap.appendChild(btn)
-      hdrActions.appendChild(wrap)
     }
 
     const syncSidebarAria = () => {
@@ -1135,19 +1059,19 @@ export function ApexApp() {
       root.classList.add(`apex-route-${route}`)
       root.querySelectorAll('.apex-top-nav-link').forEach((el) => {
         const isOn = el.getAttribute('data-page') === route
-        el.classList.toggle('on', isOn)
+        el.classList.toggle('is-on', isOn)
+        if (isOn) el.setAttribute('aria-current', 'page')
+        else el.removeAttribute('aria-current')
       })
       if (route === 'mygames') setPrmSubTab(root, 'past')
     }
 
+    /** Through the site's router, so Back, refresh and the site's own links agree with the page shown. */
     const navigateTopRoute = (page, replace = false) => {
       const route = page === 'mygames' || page === 'today' ? page : 'analyze'
-      const pathname = route === 'analyze' ? '/apex' : `/${route}`
-      if (typeof window !== 'undefined') {
-        const op = replace ? 'replaceState' : 'pushState'
-        window.history[op]({}, '', pathname)
-      }
-      applyTopRoute(route)
+      if (showPageRef.current) showPageRef.current(route)
+      else applyTopRoute(route)
+      if (window.location.pathname !== ANALYZER_PATHS[route]) navigateRef.current(ANALYZER_PATHS[route], { replace })
     }
 
     const attachAnalyzeBackButton = () => {
@@ -1455,17 +1379,29 @@ export function ApexApp() {
       const a = val(root, 'f2')
       const d = val(root, 'f3')
       const btn = root.querySelector('#abtn')
-      if (!h || !a || !d) {
-        if (btn) {
-          btn.style.background = 'rgba(232,60,60,0.4)'
-          btn.style.color = '#e83c3c'
-          setTimeout(() => {
-            btn.style.background = ''
-            btn.style.color = ''
-          }, 800)
+      const formMsg = root.querySelector('#apex-form-msg')
+      // the fields still empty are outlined, the first one gets the cursor, and the note says what's missing
+      const missing = [
+        ['f2', a],
+        ['f1', h],
+        ['f3', d],
+      ].filter(([, v]) => !v)
+      for (const id of ['f1', 'f2', 'f3']) {
+        const el = root.querySelector(`#${id}`)
+        if (!el) continue
+        if (missing.some(([m]) => m === id)) el.setAttribute('aria-invalid', 'true')
+        else el.removeAttribute('aria-invalid')
+      }
+      if (missing.length) {
+        if (formMsg) {
+          formMsg.textContent = 'Pick a game above, or fill in both teams and the date.'
+          formMsg.hidden = false
         }
+        const first = root.querySelector(`#${missing[0][0]}`)
+        if (first instanceof HTMLElement) first.focus()
         return
       }
+      if (formMsg) formMsg.hidden = true
       const commenceMsEarly = readCommenceMsFromRoot(root)
       if (commenceMsEarly != null && Date.now() >= commenceMsEarly) {
         sn('Game already started — pre-game analysis is locked. Live betting may be offered separately.')
@@ -1497,8 +1433,10 @@ export function ApexApp() {
       const analyzeBets = root.querySelector('#apex-analyze-page-bets')
       const analyzeReason = root.querySelector('#apex-analyze-page-reason')
       const analyzeReasonBody = root.querySelector('#apex-analyze-page-reason-body')
+      const analyzeError = root.querySelector('#apex-analyze-error')
       if (analyzeBets) mountApexBetCardsInto(analyzeBets, null)
       void refreshAnalyzePropLadderPanel(root, { game: {}, cards: null })
+      if (analyzeError) analyzeError.hidden = true
       if (analyzePage) analyzePage.hidden = false
       if (analyzeLiveWrap) analyzeLiveWrap.hidden = false
       analyzeLiveWrap?.classList.add('is-processing')
@@ -1557,11 +1495,11 @@ export function ApexApp() {
       const liveEl = analyzePre
       let liveText = ''
       const loadingPhrases = [
-        'Please wait — your bets are being created…',
-        'Thinking through lines and matchup edges…',
-        'Weighing odds and building your parlay legs…',
-        'Hang tight — SLCM is finishing the run…',
-        'Almost there — locking in your bet cards…',
+        'Reading the matchup',
+        'Checking the lines',
+        'Building the single and the parlays',
+        'Writing up the reasons',
+        'Almost there',
       ]
       let loadingPhraseIdx = 0
       let loadingPhraseTimer = 0
@@ -1598,7 +1536,7 @@ export function ApexApp() {
         btn.dataset.analyzing = '1'
         btn.disabled = true
         const label = btn.textContent
-        btn.textContent = '… Analyzing'
+        btn.textContent = 'Analyzing…'
         analyzePage?.scrollIntoView({ behavior: 'auto', block: 'start' })
         const chatIn = root.querySelector('#chat-input')
         if (chatIn) {
@@ -1680,6 +1618,11 @@ export function ApexApp() {
             mountApexBetCards(root, null)
             void refreshAnalyzePropLadderPanel(root, { game: gamePayload.game, cards: null })
           }
+          // finished, but nothing to show: say so instead of leaving an empty page
+          if (!betCardsForSave && analyzeError) {
+            analyzeError.textContent = 'This one came back without picks. Try it again in a minute.'
+            analyzeError.hidden = false
+          }
           setThread(messagesOut)
           if (user?.uid && betCardsForSave) {
             try {
@@ -1690,7 +1633,7 @@ export function ApexApp() {
               activePastGameIdRef.current = id
             } catch (err) {
               console.error('pastGames save:', err)
-              sn('Analysis complete, but could not save to your account. Check Firestore rules and try again.')
+              sn('Your picks are ready, but they couldn’t be saved to My games.')
             }
           } else if (adminDevSession && !user?.uid && betCardsForSave) {
             const row = buildAdminSessionPastGameRow(gamePayload.game, betCardsForSave)
@@ -1707,10 +1650,7 @@ export function ApexApp() {
               activePastGameId: activePastGameIdRef.current,
             })
           }
-          if (data?.stop_reason === 'max_tokens') {
-            sn('The answer hit its length limit. Answers are condensed by default; ask a follow-up for the rest.')
-          }
-          showAnalyzerDoneToast()
+          if (betCardsForSave) showAnalyzerDoneToast()
         } catch (e) {
           stopLoadingOverlay()
           activePastGameIdRef.current = null
@@ -1719,6 +1659,14 @@ export function ApexApp() {
           mountApexBetCards(root, null)
           if (chatLog) chatLog.innerHTML = ''
           appendError(formatUserFacingError(e))
+          // the chat log is out of sight: the analysis page says what went wrong
+          if (analyzeAnalyzedAt) analyzeAnalyzedAt.textContent = ''
+          if (analyzePre) analyzePre.textContent = ''
+          if (analyzeLiveWrap) analyzeLiveWrap.hidden = true
+          if (analyzeError) {
+            analyzeError.textContent = formatUserFacingError(e) || 'The analysis didn’t finish. Try again.'
+            analyzeError.hidden = false
+          }
         } finally {
           stopLoadingOverlay()
           btn.removeAttribute('data-analyzing')
@@ -1957,29 +1905,42 @@ export function ApexApp() {
         analyzeSportSel.value = sportKey
       }
       syncLineReasoningMlbDisabled()
+      clearFormFlags()
     }
     root.addEventListener('apex:analyze-fill', onAnalyzeFillEvent)
+
+    /** A field flagged as missing clears once it has something in it; the note goes when none are left. */
+    const clearFormFlags = () => {
+      let left = 0
+      for (const id of ['f1', 'f2', 'f3']) {
+        const el = root.querySelector(`#${id}`)
+        if (!(el instanceof HTMLInputElement)) continue
+        if (el.value.trim()) el.removeAttribute('aria-invalid')
+        else if (el.getAttribute('aria-invalid') === 'true') left++
+      }
+      const formMsg = root.querySelector('#apex-form-msg')
+      if (formMsg && !left) formMsg.hidden = true
+    }
+    const mainFields = root.querySelector('.apex-game-main-igrid')
+    mainFields?.addEventListener('input', clearFormFlags)
 
     const onTopNavClick = (e) => {
       const t = e.target
       if (!(t instanceof Element)) return
       const link = t.closest('.apex-top-nav-link')
       if (!link) return
+      // a new tab or window: let the link do its job
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
       e.preventDefault()
-      const page = link.getAttribute('data-page') || 'analyze'
-      navigateTopRoute(page)
-      if (page === 'today') {
-        window.requestAnimationFrame(() => {
-          void renderTodayRows()
-        })
-      }
+      navigateTopRoute(link.getAttribute('data-page') || 'analyze')
     }
 
-    const onPopState = () => {
-      if (typeof window === 'undefined') return
-      const page = topPageFromPathname(window.location.pathname)
-      applyTopRoute(page)
-      if (page === 'today') {
+    /** The page for the URL (Back, Forward, a site link): Today fetches its games the first time it shows. */
+    showPageRef.current = (page) => {
+      const route = page === 'mygames' || page === 'today' ? page : 'analyze'
+      const was = root.classList.contains(`apex-route-${route}`)
+      applyTopRoute(route)
+      if (route === 'today' && !was) {
         window.requestAnimationFrame(() => {
           void renderTodayRows()
         })
@@ -2105,14 +2066,14 @@ export function ApexApp() {
       }
 
       function showTodayOffSeason(sec, leagueTitle) {
-        const title = typeof leagueTitle === 'string' && leagueTitle.trim() ? leagueTitle.trim() : 'This league'
+        const title = typeof leagueTitle === 'string' && leagueTitle.trim() ? `${leagueTitle.trim()} ` : ''
         const msg = sec.querySelector('.apex-today-offseason')
         const wrap = sec.querySelector('.apex-today-carousel-wrap')
         const gridEl = sec.querySelector('[data-role="grid"]')
         const viewport = sec.querySelector('.apex-qg-carousel-viewport')
         const track = sec.querySelector('[data-role="row-track"]')
         if (msg) {
-          msg.textContent = `${title} — no games scheduled for the next two days (today & tomorrow).`
+          msg.textContent = `No ${title}games today or tomorrow.`
           msg.hidden = false
         }
         if (wrap) wrap.hidden = true
@@ -2213,7 +2174,7 @@ export function ApexApp() {
         dayEl.textContent = day
         const timeEl = document.createElement('span')
         timeEl.className = 'apex-qg-time'
-        timeEl.textContent = time ? `at ${time}` : ''
+        timeEl.textContent = time || ''
         mid.appendChild(dayEl)
         mid.appendChild(timeEl)
 
@@ -2360,16 +2321,44 @@ export function ApexApp() {
           }
 
           track.replaceChildren()
+          track.classList.remove('apex-qg-carousel-track--ticker')
+          viewport.classList.remove('apex-qg-carousel-viewport--ticker')
+          track.style.animation = 'none'
+          track.style.removeProperty('--apex-qg-ticker-duration')
           filtered.forEach((ev) => {
             track.appendChild(createTodayGameSlide(ev, sport, logoMaps, sec))
           })
 
           const n = filtered.length
-          for (let i = 0; i < n; i++) {
-            const clone = track.children[i].cloneNode(true)
-            clone.setAttribute('aria-hidden', 'true')
-            track.appendChild(clone)
+          const phone = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+          // a league with a game or two fits as it is: no copies, no motion
+          if (n <= (phone ? 1 : desktopSlots)) {
+            let tries = 0
+            const layoutStill = () => {
+              const vw = Math.max(0, viewport.clientWidth)
+              if (!vw) {
+                if (++tries <= 10) window.requestAnimationFrame(layoutStill)
+                return
+              }
+              const slots = phone ? 1.6 : desktopSlots
+              const cw = (vw - (slots - 1) * TICKER_GAP_PX) / slots
+              track.querySelectorAll('.apex-qg-slide').forEach((slide) => {
+                slide.style.flex = `0 0 ${cw}px`
+                slide.style.width = `${cw}px`
+              })
+            }
+            window.requestAnimationFrame(layoutStill)
+            return
           }
+          track.style.animation = ''
+
+          // the loop's second copy is built the same way (a cloned node would drop its tap handler)
+          filtered.forEach((ev) => {
+            const copy = createTodayGameSlide(ev, sport, logoMaps, sec)
+            copy.setAttribute('aria-hidden', 'true')
+            copy.tabIndex = -1
+            track.appendChild(copy)
+          })
           track.classList.add('apex-qg-carousel-track--ticker')
           viewport.classList.add('apex-qg-carousel-viewport--ticker')
 
@@ -2382,7 +2371,7 @@ export function ApexApp() {
               return
             }
             const mobileSlots =
-              typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 1 : desktopSlots
+              typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 1.6 : desktopSlots
             const cw = (vw - (mobileSlots - 1) * TICKER_GAP_PX) / mobileSlots
             const slides = track.querySelectorAll('.apex-qg-slide:not(.apex-qg-slide--empty)')
             slides.forEach((slide) => {
@@ -2552,7 +2541,7 @@ export function ApexApp() {
       const opt = sel.options[sel.selectedIndex]
       measure.textContent = opt?.text ?? ''
       const textW = measure.getBoundingClientRect().width
-      const horizontalPad = 2 + 22
+      const horizontalPad = 12 + 30 // the select's padding in analyzer.css
       sel.style.width = `${Math.ceil(textW + horizontalPad)}px`
     }
 
@@ -2577,7 +2566,6 @@ export function ApexApp() {
       void document.fonts.ready.then(() => syncOddsSportSelectWidth())
     }
     root.querySelector('.apex-top-nav')?.addEventListener('click', onTopNavClick)
-    window.addEventListener('popstate', onPopState)
     if (!restoreAnalyzeSessionFromSnapshotIfAny()) {
       if (typeof window !== 'undefined') {
         applyTopRoute(topPageFromPathname(window.location.pathname))
@@ -2604,8 +2592,13 @@ export function ApexApp() {
     const onClearAnalyze = () => {
       for (const id of ANALYZE_FORM_FIELD_IDS) {
         const el = root.querySelector(`#${id}`)
-        if (el) el.value = ''
+        if (el) {
+          el.value = ''
+          el.removeAttribute('aria-invalid')
+        }
       }
+      const formMsg = root.querySelector('#apex-form-msg')
+      if (formMsg) formMsg.hidden = true
       const oddsEventIdEl = root.querySelector('#apex-odds-event-id')
       if (oddsEventIdEl instanceof HTMLInputElement) oddsEventIdEl.value = ''
       clearCommenceIsoOnRoot(root)
@@ -2684,22 +2677,25 @@ export function ApexApp() {
       searchInput?.removeEventListener('input', onOddsInput)
       sportSel?.removeEventListener('change', onOddsSportChange)
       root.removeEventListener('apex:analyze-fill', onAnalyzeFillEvent)
+      mainFields?.removeEventListener('input', clearFormFlags)
       root.querySelector('.apex-top-nav')?.removeEventListener('click', onTopNavClick)
       root.querySelector('#apex-today-page')?.removeEventListener('click', onTodayPageClick)
-      window.removeEventListener('popstate', onPopState)
+      showPageRef.current = null
       cleanupQuickGames()
       cleanupPlayerPropsCarousel()
       stopPreGameTicker()
     }
   }, [
     adminDevSession,
-    signOutUser,
     sn,
     user?.uid,
     showAnalyzerDoneToast,
-    setColorMode,
-    colorMode,
   ])
+
+  // Back, Forward or a site link moved between /apex, /apex/games and /apex/today
+  useEffect(() => {
+    showPageRef.current?.(topPageFromPathname(pathname))
+  }, [pathname])
 
   useEffect(() => {
     renderChat()
@@ -2713,11 +2709,7 @@ export function ApexApp() {
 
   return (
     <>
-      <ApiConfigBanner />
-      <div
-        ref={wrapRef}
-        className={`apex-html-root apex-ios apex-theme-${colorMode}`}
-      />
+      <div ref={wrapRef} className="apex-html-root apex-ios" />
       <div
         id="apex-analyzer-toast"
         className="apex-analyzer-toast"

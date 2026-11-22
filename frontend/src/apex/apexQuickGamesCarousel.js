@@ -52,10 +52,11 @@ function buildUpcomingOddsUrl(sport) {
 }
 
 /** How many game columns are visible at once (stock-ticker row). */
+// a phone shows one game and a half, so the row reads as one you can swipe
 const DESKTOP_VISIBLE_SLOTS = 3
-const MOBILE_VISIBLE_SLOTS = 1
+const MOBILE_VISIBLE_SLOTS = 1.6
 
-/** Space between each game card — keep in sync with `--apex-qg-ticker-gap` in ApexApp.css */
+/** Space between each game card — keep in sync with the track gap in analyzer.css */
 const TICKER_GAP_PX = 12
 
 /** Horizontal scroll speed for the ticker (pixels per second). */
@@ -390,7 +391,7 @@ export function setupQuickGamesCarousel(root) {
     day.textContent = dayStr
     const tim = document.createElement('span')
     tim.className = 'apex-qg-time'
-    tim.textContent = timeStr ? `at ${timeStr}` : ''
+    tim.textContent = timeStr || ''
     mid.appendChild(day)
     mid.appendChild(tim)
 
@@ -491,6 +492,7 @@ export function setupQuickGamesCarousel(root) {
 
       hideOffSeasonUi()
       events = list
+      clearTickerChrome()
       track.replaceChildren()
 
       if (reducedMotion) {
@@ -498,7 +500,7 @@ export function setupQuickGamesCarousel(root) {
           typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
             ? MOBILE_VISIBLE_SLOTS
             : DESKTOP_VISIBLE_SLOTS
-        const subset = events.slice(0, slots)
+        const subset = events.slice(0, Math.ceil(slots))
         subset.forEach((ev, i) => {
           track.appendChild(buildSlide(ev, i, subset.length, logoMaps))
         })
@@ -511,12 +513,23 @@ export function setupQuickGamesCarousel(root) {
         track.appendChild(buildSlide(ev, i, events.length, logoMaps))
       })
 
-      const n = events.length
-      for (let i = 0; i < n; i++) {
-        const clone = track.children[i].cloneNode(true)
-        clone.setAttribute('aria-hidden', 'true')
-        track.appendChild(clone)
+      // a short list fits on screen as it is: no copies, no motion
+      const visibleSlots =
+        typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+          ? MOBILE_VISIBLE_SLOTS
+          : DESKTOP_VISIBLE_SLOTS
+      if (events.length <= Math.floor(visibleSlots)) {
+        window.requestAnimationFrame(() => layoutStaticRow())
+        return
       }
+
+      // the loop's second copy is built the same way (a cloned node would drop its tap handler)
+      events.forEach((ev, i) => {
+        const copy = buildSlide(ev, i, events.length, logoMaps)
+        copy.setAttribute('aria-hidden', 'true')
+        copy.tabIndex = -1
+        track.appendChild(copy)
+      })
 
       track.classList.add('apex-qg-carousel-track--ticker')
       viewport.classList.add('apex-qg-carousel-viewport--ticker')

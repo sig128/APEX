@@ -83,14 +83,11 @@ export async function postChatStream(body, handlers) {
   }
 
   if (!complete?.messages) {
-    const hostingHint =
-      'On Firebase Hosting, long runs need VITE_API_BASE set to your Cloud Function URL in frontend/.env.production, then rebuild and redeploy — otherwise the connection can stop around 60 seconds.'
-    const timeoutHint =
-      'If this happened after a long wait, the server or proxy may have hit a time limit. Redeploy Cloud Functions if you raised the timeout; local npm run dev does not use that cap.'
+    // (a cut-off on Firebase Hosting usually means VITE_API_BASE isn't set: see apiConfig.js)
     throw new Error(
       sawStreamActivity
-        ? `The reply was cut off before it finished (connection closed mid-stream). ${timeoutHint} ${hostingHint}`
-        : `No reply was received from the analyzer. ${hostingHint}`,
+        ? 'The analysis was cut off before it finished. Try again.'
+        : 'No answer came back from the analyzer. Try again in a moment.',
     )
   }
 
@@ -106,9 +103,7 @@ function mapStreamNetworkError(e) {
     msg.includes('network') ||
     (typeof e?.name === 'string' && e.name === 'TypeError' && msg.includes('fetch'))
   ) {
-    return new Error(
-      'Connection failed or was reset (often a timeout or blocked network). On Firebase Hosting, set VITE_API_BASE to your Cloud Function URL, rebuild, and redeploy, or long ANALYZE runs can stop around 60 seconds. Try a private window or disable browser extensions if this keeps happening.',
-    )
+    return new Error('The connection dropped before the analysis finished. Check your connection and try again.')
   }
   return e instanceof Error ? e : new Error(msg)
 }

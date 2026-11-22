@@ -1,31 +1,5 @@
-/* Scoped under .apex-analyzer so the analyzer's styles stay inside it. */
-
-
-.apex-html-root.apex-ios .apex-analyze-prop-ladder {
-  margin: 12px 0 0;
-  padding: 12px 14px 14px;
-  border-radius: 12px;
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-analyze-prop-ladder {
-  border-color: rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.apex-html-root.apex-ios .apex-analyze-prop-ladder-title {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.65);
-  margin: 0 0 10px;
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-analyze-prop-ladder-title {
-  color: rgba(60, 60, 67, 0.55);
-}
+/* Live prop lines under an MLB analysis: the ladder's insides. The box and its title are in
+   analyzer.css. */
 
 .apex-html-root.apex-ios .apex-apl-stack {
   display: flex;
@@ -43,10 +17,6 @@
 .apex-html-root.apex-ios .apex-apl-submarket {
   padding-top: 8px;
   border-top: 0.5px solid rgba(255, 255, 255, 0.1);
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-submarket {
-  border-top-color: rgba(0, 0, 0, 0.08);
 }
 
 .apex-html-root.apex-ios .apex-apl-submarket:first-child {
@@ -71,10 +41,6 @@
   color: rgba(255, 255, 255, 0.88);
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-yesno-grid {
-  color: var(--text);
-}
-
 .apex-html-root.apex-ios .apex-apl-yesno-cell .apex-apl-ou-side {
   opacity: 0.75;
   margin-right: 4px;
@@ -87,18 +53,10 @@
   color: rgba(255, 255, 255, 0.82);
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-msg {
-  color: var(--text);
-}
-
 .apex-html-root.apex-ios .apex-apl-msg--secondary {
   margin-top: 10px;
   font-size: 12px;
   opacity: 0.82;
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-msg--secondary {
-  opacity: 0.9;
 }
 
 .apex-html-root.apex-ios .apex-apl-inner {
@@ -122,10 +80,6 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(30, 35, 45, 0.6);
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-img-wrap {
-  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .apex-html-root.apex-ios .apex-apl-img {
@@ -166,10 +120,6 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-market {
-  color: var(--text);
-}
-
 .apex-html-root.apex-ios .apex-apl-book {
   font-size: 8px;
   font-weight: 800;
@@ -177,15 +127,9 @@
   text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 6px;
-  color: rgba(125, 255, 203, 0.95);
-  border: 0.5px solid rgba(125, 255, 203, 0.35);
-  background: rgba(125, 255, 203, 0.1);
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-book {
-  color: #0a6b4d;
-  border-color: rgba(10, 107, 77, 0.35);
-  background: rgba(10, 107, 77, 0.08);
+  color: rgba(184, 255, 31, 0.95);
+  border: 0.5px solid rgba(184, 255, 31, 0.35);
+  background: rgba(184, 255, 31, 0.1);
 }
 
 .apex-html-root.apex-ios .apex-apl-player {
@@ -193,10 +137,6 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #fff;
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-player {
-  color: var(--text);
 }
 
 .apex-html-root.apex-ios .apex-apl-grid {
@@ -216,11 +156,7 @@
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(125, 255, 203, 0.85);
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-implied-bar-text {
-  color: #0a6b4d;
+  color: rgba(184, 255, 31, 0.85);
 }
 
 .apex-html-root.apex-ios .apex-apl-ou-row {
@@ -230,13 +166,8 @@
 }
 
 .apex-html-root.apex-ios .apex-apl-ou-row--implied .apex-apl-ou-cell {
-  border-color: rgba(125, 255, 203, 0.45);
-  box-shadow: 0 0 0 1px rgba(125, 255, 203, 0.12);
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-row--implied .apex-apl-ou-cell {
-  border-color: rgba(10, 107, 77, 0.4);
-  box-shadow: 0 0 0 1px rgba(10, 107, 77, 0.1);
+  border-color: rgba(184, 255, 31, 0.45);
+  box-shadow: 0 0 0 1px rgba(184, 255, 31, 0.12);
 }
 
 .apex-html-root.apex-ios .apex-apl-ou-cell {
@@ -249,19 +180,10 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-cell {
-  border-color: rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.55);
-}
-
 .apex-html-root.apex-ios .apex-apl-ou-main {
   font-size: 12px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.92);
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-main {
-  color: var(--text);
 }
 
 .apex-html-root.apex-ios .apex-apl-ou-side {
@@ -272,10 +194,6 @@
   margin-right: 2px;
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-side {
-  color: var(--text3);
-}
-
 .apex-html-root.apex-ios .apex-apl-ou-price {
   font-size: 14px;
   font-weight: 800;
@@ -283,6 +201,3 @@
   color: #7dffcb;
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-apl-ou-price {
-  color: #0a6b4d;
-}

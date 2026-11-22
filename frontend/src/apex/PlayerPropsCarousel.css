@@ -1,73 +1,5 @@
-/* Scoped under .apex-analyzer so the analyzer's styles stay inside it. */
-
-
-.apex-html-root.apex-ios .apex-player-props-carousel-section {
-  margin-top: 14px;
-  margin-bottom: 10px;
-  padding: 0 14px 6px;
-}
-
-.apex-html-root.apex-ios .apex-ppc-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px 14px;
-  margin-bottom: 10px;
-}
-
-.apex-html-root.apex-ios .apex-ppc-hint-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px 10px;
-  max-width: 100%;
-}
-
-.apex-html-root.apex-ios .apex-ppc-hint {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--text3, #7fa08e);
-  opacity: 0.9;
-  line-height: 1.3;
-  max-width: min(100%, 420px);
-}
-
-.apex-html-root.apex-ios .apex-ppc-book-select {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: min(200px, 52vw);
-  padding: 5px 28px 5px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--text, #fff);
-  background: rgba(118, 118, 128, 0.14);
-  border: 0.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' fill-opacity='0.55' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 9px center;
-  cursor: pointer;
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-ppc-book-select {
-  color: var(--text);
-  background: rgba(118, 118, 128, 0.1);
-  border-color: rgba(0, 0, 0, 0.1);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000000' fill-opacity='0.45' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 9px center;
-}
-
-.apex-html-root.apex-ios .apex-ppc-book-select:focus-visible {
-  outline: 2px solid rgba(10, 132, 255, 0.65);
-  outline-offset: 2px;
-}
-
+/* The live prop lines strip (MLB, only when the feed has real lines): card insides. The section,
+   its heading and the book picker are styled in analyzer.css. */
 
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-track {
   padding-block: 2px 6px;
@@ -106,12 +38,6 @@
     0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-card-img-wrap {
-  border-color: rgba(0, 0, 0, 0.12);
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 246, 250, 0.98) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-card-img {
   width: 100%;
   height: 100%;
@@ -138,12 +64,7 @@
   font-weight: 800;
   letter-spacing: 0.04em;
   color: rgba(255, 255, 255, 0.88);
-  background: linear-gradient(145deg, rgba(10, 132, 255, 0.35), rgba(60, 60, 67, 0.5));
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-card-img-fallback {
-  color: rgba(60, 60, 67, 0.92);
-  background: linear-gradient(145deg, rgba(0, 122, 255, 0.2), rgba(240, 240, 245, 0.95));
+  background: linear-gradient(145deg, rgba(184, 255, 31, 0.35), rgba(60, 60, 67, 0.5));
 }
 
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-card-body {
@@ -166,10 +87,6 @@
   text-overflow: ellipsis;
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-name {
-  color: var(--text);
-}
-
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-meta {
   font-size: 9px;
   font-weight: 600;
@@ -189,11 +106,6 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-prop {
-  color: var(--text3);
-}
-
 
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-odds {
   flex: 0 0 auto;
@@ -215,10 +127,6 @@
   color: rgba(255, 255, 255, 0.72);
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-side {
-  color: var(--text3);
-}
-
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-line {
   font-size: 14px;
   font-weight: 800;
@@ -228,15 +136,9 @@
   color: #7dffcb;
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-line {
-  color: #0a6b4d;
-}
-
-
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-qg-slide.apex-ppc-slide:focus-visible {
   outline: none;
 }
-
 
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-slide--ladder {
   min-height: 0;
@@ -288,10 +190,6 @@
   -webkit-line-clamp: 2;
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-prop--ladder-market {
-  color: var(--text);
-}
-
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-book-pill {
   flex: 0 0 auto;
   font-size: 8px;
@@ -300,15 +198,9 @@
   text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 6px;
-  color: rgba(125, 255, 203, 0.95);
-  border: 0.5px solid rgba(125, 255, 203, 0.35);
-  background: rgba(125, 255, 203, 0.1);
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-book-pill {
-  color: #0a6b4d;
-  border-color: rgba(10, 107, 77, 0.35);
-  background: rgba(10, 107, 77, 0.08);
+  color: rgba(184, 255, 31, 0.95);
+  border: 0.5px solid rgba(184, 255, 31, 0.35);
+  background: rgba(184, 255, 31, 0.1);
 }
 
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-slide--ladder .apex-ppc-name {
@@ -336,11 +228,7 @@
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(125, 255, 203, 0.85);
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-implied-bar-text {
-  color: #0a6b4d;
+  color: rgba(184, 255, 31, 0.85);
 }
 
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-row {
@@ -351,15 +239,9 @@
 }
 
 .apex-html-root.apex-ios.apex-ppc-implied-on .apex-player-props-carousel-section .apex-ppc-ou-row--implied .apex-ppc-ou-cell {
-  border-color: rgba(125, 255, 203, 0.45);
-  box-shadow: 0 0 0 1px rgba(125, 255, 203, 0.12);
+  border-color: rgba(184, 255, 31, 0.45);
+  box-shadow: 0 0 0 1px rgba(184, 255, 31, 0.12);
 }
-
-.apex-html-root.apex-ios.apex-theme-light.apex-ppc-implied-on .apex-player-props-carousel-section .apex-ppc-ou-row--implied .apex-ppc-ou-cell {
-  border-color: rgba(10, 107, 77, 0.4);
-  box-shadow: 0 0 0 1px rgba(10, 107, 77, 0.1);
-}
-
 
 .apex-html-root.apex-ios:not(.apex-ppc-implied-on) .apex-player-props-carousel-section .apex-ppc-implied-bar {
   display: none;
@@ -378,21 +260,12 @@
   min-width: 0;
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-ou-cell {
-  border-color: rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.55);
-}
-
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-cell-main {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: rgba(255, 255, 255, 0.92);
   white-space: nowrap;
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-ou-cell-main {
-  color: var(--text);
 }
 
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-side {
@@ -403,10 +276,6 @@
   margin-right: 2px;
 }
 
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-ou-side {
-  color: var(--text3);
-}
-
 .apex-html-root.apex-ios .apex-player-props-carousel-section .apex-ppc-ou-price {
   font-size: 13px;
   font-weight: 800;
@@ -414,9 +283,5 @@
   letter-spacing: -0.02em;
   line-height: 1.1;
   color: #7dffcb;
-}
-
-.apex-html-root.apex-ios.apex-theme-light .apex-player-props-carousel-section .apex-ppc-ou-price {
-  color: #0a6b4d;
 }
 

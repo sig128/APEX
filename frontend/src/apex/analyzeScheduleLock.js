@@ -88,7 +88,7 @@ export function updatePreGameCountdownLabel(root) {
   const minsLeft = until / 60000
   if (minsLeft <= 15) cd.classList.add('apex-analyze-countdown--urgent')
   else cd.classList.remove('apex-analyze-countdown--urgent')
-  cd.textContent = formatCountdownUntil(until)
+  cd.textContent = `Starts in ${formatCountdownUntil(until)}`
 }
 
 /**

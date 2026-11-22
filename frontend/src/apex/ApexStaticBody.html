@@ -32,36 +32,15 @@
   <div class="apex-sidebar-scrim" id="apex-sidebar-scrim" aria-hidden="true"></div>
   <div class="apex-main">
     <div class="hdr">
-      <div class="logo">PropPickz <span class="logo-ver">(BETA)</span></div>
-      <nav class="apex-top-nav" aria-label="Primary">
-        <a class="apex-top-nav-link" data-page="analyze" href="/apex">
-          <span class="apex-top-nav-link-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 12h3l2-5 4 10 2-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="apex-top-nav-link-label">Analyze</span>
-        </a>
-        <a class="apex-top-nav-link" data-page="mygames" href="/mygames">
-          <span class="apex-top-nav-link-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
-              <path d="M8 9h8M8 13h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <span class="apex-top-nav-link-label">My Games</span>
-        </a>
-        <a class="apex-top-nav-link" data-page="today" href="/today">
-          <span class="apex-top-nav-link-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
-              <path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <span class="apex-top-nav-link-label">Today</span>
-        </a>
+      <header class="page-head apex-page-head">
+        <h1 class="page-title">Game analyzer<span class="tag apex-beta">Beta</span></h1>
+        <p class="page-sub">Pick a game and get a single, a 2-leg parlay and a 3-leg parlay for it, each with the reason behind it.</p>
+      </header>
+      <nav class="tabs apex-top-nav" aria-label="Game analyzer">
+        <a class="tabs__tab apex-top-nav-link" data-page="analyze" href="/apex">Analyze</a>
+        <a class="tabs__tab apex-top-nav-link" data-page="mygames" href="/apex/games">My games</a>
+        <a class="tabs__tab apex-top-nav-link" data-page="today" href="/apex/today">Today</a>
       </nav>
-      <div class="hdr-actions" id="apex-hdr-actions" aria-label="Account and appearance"></div>
     </div>
 <div class="wrap">
 
@@ -69,9 +48,9 @@
 <div class="tc on" id="t1">
   <div class="apex-game-input-heading">
     <div class="apex-team-search-ph">
-      <label class="apex-odds-sport-label" for="apex-odds-sport">League</label>
+      <label class="apex-odds-sport-label" for="apex-team-search">Search upcoming games by team</label>
       <div class="apex-team-search-row" role="search">
-        <div class="apex-team-search" role="search">
+        <div class="apex-team-search">
           <span class="apex-team-search-icon" aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
@@ -85,14 +64,13 @@
             placeholder="Search teams"
             autocomplete="off"
             enterkeyhint="search"
-            aria-label="Search teams by name"
             aria-autocomplete="list"
             aria-controls="apex-team-search-results"
             aria-expanded="false"
           />
         </div>
-        <select id="apex-odds-sport" class="apex-odds-sport-select" aria-label="League filter for schedule search">
-          <option value="all">All Teams</option>
+        <select id="apex-odds-sport" class="apex-odds-sport-select" aria-label="League">
+          <option value="all">All leagues</option>
           <option value="nfl">NFL</option>
           <option value="nba">NBA</option>
           <option value="mlb">MLB</option>
@@ -112,6 +90,7 @@
   <section class="apex-quick-games-section" id="apex-schedule-games-section" aria-labelledby="apex-qg-section-title">
     <div class="apex-qg-head">
       <h2 class="apex-qg-title" id="apex-qg-section-title">Upcoming games</h2>
+      <p class="apex-qg-note">Tap a game to fill in the form.</p>
     </div>
     <p id="apex-qg-offseason" class="apex-qg-offseason" hidden role="status"></p>
     <div class="apex-qg-carousel" id="apex-qg-carousel">
@@ -124,18 +103,18 @@
     <input type="hidden" id="apex-odds-event-id" value="" autocomplete="off" aria-hidden="true" />
     <input type="hidden" id="apex-odds-commence-iso" value="" autocomplete="off" aria-hidden="true" />
     <div class="igrid apex-game-main-igrid">
-      <div class="icell"><div class="ilbl"><span class="rq">★</span>HOME TEAM</div><input id="f1" placeholder="e.g. Toronto Blue Jays"/></div>
-      <div class="icell"><div class="ilbl"><span class="rq">★</span>AWAY TEAM</div><input id="f2" placeholder="e.g. New York Yankees"/></div>
-      <div class="icell"><div class="ilbl"><span class="rq">★</span>DATE</div><input id="f3" placeholder="e.g. April 10, 2026"/></div>
-      <div class="icell">
-        <div class="ilbl"><span class="rq">★</span>SPORT</div>
-        <select id="apex-analyze-sport" class="apex-analyze-sport-select" aria-label="Sport for the analysis">
+      <label class="field icell icell--away"><span>Away team</span><input id="f2" placeholder="e.g. Buffalo Bills" autocomplete="off"/></label>
+      <label class="field icell icell--home"><span>Home team</span><input id="f1" placeholder="e.g. Kansas City Chiefs" autocomplete="off"/></label>
+      <label class="field icell icell--date"><span>Date</span><input id="f3" placeholder="e.g. Dec 6, 2026" autocomplete="off"/></label>
+      <label class="field icell icell--league">
+        <span>League</span>
+        <select id="apex-analyze-sport" class="apex-analyze-sport-select">
           <option value="baseball_mlb">MLB</option>
           <option value="icehockey_nhl">NHL</option>
           <option value="basketball_nba">NBA</option>
           <option value="americanfootball_nfl">NFL</option>
         </select>
-      </div>
+      </label>
     </div>
     <div id="apex-game-input-advanced" class="apex-game-input-advanced" hidden>
       <div class="igrid apex-game-context-grid">
@@ -156,9 +135,7 @@
       </div>
     </div>
     <div class="apex-game-actions-row">
-      <button type="button" class="apex-analyze-clear" id="apex-analyze-clear-btn" aria-label="Clear all game fields">
-        Clear
-      </button>
+      <button type="button" class="btn btn--quiet apex-analyze-clear" id="apex-analyze-clear-btn" aria-label="Clear the game">Clear</button>
       <button type="button" class="apex-advanced-toggle" id="apex-game-input-advanced-toggle" aria-expanded="false" aria-controls="apex-game-input-advanced" hidden>
         Advanced options
       </button>
@@ -247,7 +224,7 @@
           id="apex-picked-game"
           hidden
           aria-live="polite"
-          aria-label="Selected matchup from schedule"
+          aria-label="Picked game"
         >
           <div class="apex-picked-game-logos">
             <span class="apex-picked-game-logo-wrap" id="apex-picked-game-away-logo-wrap"></span>
@@ -260,26 +237,28 @@
           </div>
         </div>
         <div class="apex-analyze-btn-and-timer">
-          <button class="abtn" id="abtn" type="button">Analyze</button>
           <span
             class="apex-analyze-countdown"
             id="apex-analyze-countdown"
             hidden
             aria-live="polite"
           ></span>
+          <button class="abtn btn btn--lime" id="abtn" type="button">Analyze</button>
         </div>
       </div>
     </div>
-    <p class="apex-shared-note">Each game is analysed once and shared with every member, so after the first run it opens at once and doesn’t use your allowance. Ask about your bankroll or anything specific in the chat after.</p>
+    <p class="apex-form-msg" id="apex-form-msg" role="alert" hidden></p>
+    <p class="apex-shared-note">Each game is analyzed once and shared with every member, so after the first run it opens straight away and doesn’t use your allowance.</p>
   </div>
   <section
     class="apex-player-props-carousel-section apex-quick-games-section"
     id="apex-player-props-carousel-section"
-    aria-label="Player prop lines and sportsbook"
+    aria-label="Live player prop lines"
+    hidden
   >
     <div class="apex-ppc-head">
       <div class="apex-ppc-hint-row">
-        <span class="apex-ppc-hint" id="apex-ppc-hint">Sample data — live odds coming soon</span>
+        <span class="apex-ppc-hint" id="apex-ppc-hint">Live lines</span>
         <select
           id="apex-ppc-book"
           class="apex-ppc-book-select"
@@ -320,10 +299,13 @@
   </div>
 </div>
 
-<!-- Fullscreen Analyze page (shown after clicking Analyze) -->
-<section class="apex-analyze-page" id="apex-analyze-page" hidden aria-label="Analysis results">
+<!-- An analysis (shown after Analyze, or a saved game from My games); takes the page until Back -->
+<section class="apex-analyze-page" id="apex-analyze-page" hidden aria-label="Analysis">
   <div class="apex-analyze-page-top">
-    <button type="button" class="apex-analyze-page-back" id="apex-analyze-page-back" aria-label="Back to analyzer">‹</button>
+    <button type="button" class="apex-analyze-page-back" id="apex-analyze-page-back">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Back
+    </button>
     <div class="apex-analyze-page-head">
       <div class="apex-analyze-page-ticker">
         <div class="apex-analyze-page-team">
@@ -345,10 +327,11 @@
           <div class="apex-analyze-page-team-name" id="apex-analyze-page-home-name">Home</div>
         </div>
       </div>
-      <div class="apex-analyze-page-analyzed-at" id="apex-analyze-page-analyzed-at">Analyzed at —</div>
+      <div class="apex-analyze-page-analyzed-at" id="apex-analyze-page-analyzed-at"></div>
     </div>
   </div>
   <div class="apex-analyze-page-body">
+    <p class="apex-analyze-error" id="apex-analyze-error" role="alert" hidden></p>
     <div class="apex-analyze-page-live" id="apex-analyze-page-live">
       <header class="apex-analyze-stream-head" id="apex-analyze-stream-head" hidden>
         <span class="apex-analyze-stream-head-kicker" id="apex-analyze-stream-head-kicker">Line reasoning</span>
@@ -375,7 +358,7 @@
               <span class="apex-analyze-loading-mode-hint" id="apex-analyze-loading-mode-hint"></span>
             </div>
             <div class="apex-analyze-loading-copy">
-              <span class="apex-analyze-loading-text" id="apex-analyze-loading-text">Thinking</span>
+              <span class="apex-analyze-loading-text" id="apex-analyze-loading-text">Reading the matchup</span>
               <span class="apex-analyze-loading-dots" aria-hidden="true"><span></span><span></span><span></span></span>
             </div>
           </div>
@@ -383,12 +366,12 @@
       </div>
     </div>
     <section class="apex-bet-cards" id="apex-analyze-page-bets" hidden aria-label="Recommended plays"></section>
-    <section class="apex-analyze-prop-ladder" id="apex-analyze-page-prop-ladder" hidden aria-label="Live MLB player prop lines for certified picks">
-      <div class="apex-analyze-prop-ladder-title">Live props · main + alt lines</div>
+    <section class="apex-analyze-prop-ladder" id="apex-analyze-page-prop-ladder" hidden aria-labelledby="apex-analyze-prop-ladder-title">
+      <h2 class="apex-analyze-prop-ladder-title" id="apex-analyze-prop-ladder-title">Live prop lines</h2>
       <div id="apex-analyze-page-prop-ladder-body" class="apex-analyze-prop-ladder-body"></div>
     </section>
-    <section class="apex-analyze-page-reason" id="apex-analyze-page-reason" hidden aria-label="Quick reasoning">
-      <div class="apex-analyze-page-reason-title">Quick reasoning</div>
+    <section class="apex-analyze-page-reason" id="apex-analyze-page-reason" hidden aria-labelledby="apex-analyze-reason-title">
+      <h2 class="apex-analyze-page-reason-title" id="apex-analyze-reason-title">Why these picks</h2>
       <div class="apex-analyze-page-reason-body" id="apex-analyze-page-reason-body"></div>
     </section>
   </div>
@@ -398,8 +381,8 @@
 <div class="tc" id="apex-today-page">
   <div class="pnl">
     <div class="apex-today-toolbar">
-      <span class="apex-today-toolbar-label">View</span>
-      <div class="apex-today-toggle" role="group" aria-label="Today layout">
+      <span class="apex-today-toolbar-label">Games today and tomorrow, by league.</span>
+      <div class="apex-today-toggle" role="group" aria-label="Layout">
         <button type="button" class="apex-today-toggle-btn on" id="apex-today-toggle-carousel" data-today-layout="carousel">Carousel</button>
         <button type="button" class="apex-today-toggle-btn" id="apex-today-toggle-grid" data-today-layout="grid">Grid</button>
       </div>
