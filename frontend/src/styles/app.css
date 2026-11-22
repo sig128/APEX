@@ -1418,7 +1418,7 @@ code {
   justify-items: end;
   line-height: 1.1;
 }
-/* the chance and its fair price on one line: 71% = -248 */
+/* the fair price and its chance on one line: -248 = 71% */
 .prop-row__eq {
   display: inline-flex;
   align-items: baseline;

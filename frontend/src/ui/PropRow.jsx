@@ -77,20 +77,23 @@ export const PropRow = memo(function PropRow({ c, rank, showGame = false, win, l
         </span>
       ) : (
         <span className="prop-row__read">
-          {/* the chance and the price it's worth, on one line: 71% = -248 */}
-          <span className="prop-row__eq" title={Number.isFinite(c.fair) ? `A ${pct(c.prob)} chance is worth ${odds(c.fair)} (the fair price)` : undefined}>
-            <b className={`prop-row__prob num${strong ? ' is-strong' : ''}`}>{pct(c.prob)}</b>
+          {/* the fair price and the chance it stands for, on one line: -248 = 71% (the chance stays by the + button) */}
+          <span className="prop-row__eq" title={Number.isFinite(c.fair) ? `${odds(c.fair)} (the fair price) is a ${pct(c.prob)} chance` : undefined}>
             {Number.isFinite(c.fair) && (
               <>
+                <span className="prop-row__fair num">
+                  <span className="sr-only">Fair price </span>
+                  {odds(c.fair)}
+                </span>
                 <span className="prop-row__eqsign" aria-hidden="true">
                   =
                 </span>
-                <span className="prop-row__fair num">
-                  <span className="sr-only">, fair price </span>
-                  {odds(c.fair)}
-                </span>
               </>
             )}
+            <b className={`prop-row__prob num${strong ? ' is-strong' : ''}`}>
+              {Number.isFinite(c.fair) && <span className="sr-only">, chance </span>}
+              {pct(c.prob)}
+            </b>
           </span>
           <TickMark c={c} />
         </span>
