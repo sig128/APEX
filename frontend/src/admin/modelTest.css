@@ -1,0 +1,74 @@
+/* The model test page (/admin/model-test): the admin page's panels and tables, plus a progress bar. */
+.mt .adm-cell.is-big .adm-cell__value {
+  font-size: 40px;
+}
+.mt-meta {
+  margin: 6px 0 0;
+  color: var(--chalk-3);
+  font-size: 13px;
+}
+.mt-err {
+  margin-top: 16px;
+}
+.mt-start {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+}
+.mt-start .adm-h3,
+.mt-progress .adm-h3 {
+  margin: 0;
+}
+.mt-start .adm-note {
+  margin: 0;
+}
+.mt-progress {
+  display: grid;
+  gap: 10px;
+}
+.mt-progress__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mt-progress__count {
+  margin: 0;
+  color: var(--chalk-2);
+}
+.mt-progress__count b {
+  margin-right: 6px;
+  color: var(--chalk);
+  font: 800 28px/1 var(--font-num);
+}
+.mt-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--seat);
+}
+.mt-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lime);
+  transition: width 0.4s ease;
+}
+.mt-scroll {
+  overflow-x: auto;
+}
+.mt .adm-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.mt-plus {
+  color: var(--turf);
+}
+.mt-minus {
+  color: var(--flag);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-bar > span {
+    transition: none;
+  }
+}

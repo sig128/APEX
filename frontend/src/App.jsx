@@ -33,6 +33,7 @@ const LockPage = page(() => import('./pages/LockPage.jsx'), 'LockPage')
 const PricingPage = page(() => import('./pages/PricingPage.jsx'), 'PricingPage')
 const AccountPage = page(() => import('./pages/AccountPage.jsx'), 'AccountPage')
 const AdminPage = page(() => import('./pages/AdminPage.jsx'), 'AdminPage')
+const AdminModelTestPage = page(() => import('./pages/AdminModelTestPage.jsx'), 'AdminModelTestPage')
 const DvpPage = page(() => import('./pages/DvpPage.jsx'), 'DvpPage')
 const AnalyzerPage = page(() => import('./pages/AnalyzerPage.jsx'), 'AnalyzerPage')
 const AdminSportsPage = page(() => import('./pages/AdminSportsPage.jsx'), 'AdminSportsPage')
@@ -99,6 +100,7 @@ export function App() {
               {/* the analyzer's pages: /apex, /apex/games, /apex/today */}
               <Route path="/apex/*" element={<AnalyzerPage />} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/model-test" element={<AdminModelTestPage />} />
               <Route
                 path="/adminn"
                 element={

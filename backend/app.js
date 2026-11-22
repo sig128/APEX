@@ -31,6 +31,8 @@ import { membersRoutes } from './src/members/routes.js'
 import { createMailer } from './src/members/mail.js'
 import { createContests } from './src/contests/service.js'
 import { contestsRoutes } from './src/contests/routes.js'
+import { createModelTest } from './src/modeltest/service.js'
+import { modelTestRoutes } from './src/modeltest/routes.js'
 import { createAccess } from './src/security/access.js'
 import { defaultAuthInstance, authMode } from './src/security/auth.js'
 import { createLimiter } from './src/security/rateLimit.js'
@@ -256,6 +258,9 @@ export function createApexApp({
   const contestApi = contestsRoutes({ contests, access, lock })
   app.use('/api/contests', contestApi.public)
   app.use('/api/admin/contests', contestApi.admin)
+  // our formulas against the language model on props already graded (/admin/model-test)
+  const modelTest = createModelTest({ store: engineStore, ai, leagues: Object.keys(engines), ...(now ? { now } : {}) })
+  app.use('/api/admin/model-test', modelTestRoutes({ lock, test: modelTest }))
   // the consent screen's record, the onboarding tour's counts, feedback to the team's inbox
   const members = createMembers({ store: engineStore, mail: createMailer(), ...(now ? { now } : {}) })
   app.use('/api/members', membersRoutes({ members, access }))
