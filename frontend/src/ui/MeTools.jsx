@@ -164,12 +164,21 @@ function ClvTrend({ weeks }) {
   )
 }
 
+// Each limit with what it's measured against right now (the server enforces the same counts).
 const LIMITS = [
-  { key: 'picksDay', label: 'Picks a day', step: 1, min: 1, max: 20 },
-  { key: 'unitsDay', label: 'Units staked a day', step: 0.5, min: 0.5, max: 200 },
-  { key: 'unitsWeek', label: 'Units staked in 7 days', step: 0.5, min: 1, max: 1000 },
-  { key: 'lossWeek', label: 'Units lost in 7 days', step: 0.5, min: 1, max: 1000 },
+  { key: 'picksDay', label: 'Picks a day', unit: 'picks', when: 'today', used: (u) => u.picksToday || 0, step: 1, min: 1, max: 20 },
+  { key: 'unitsDay', label: 'Units staked a day', unit: 'u', when: 'today', used: (u) => u.unitsToday || 0, step: 0.5, min: 0.5, max: 200 },
+  { key: 'unitsWeek', label: 'Units staked in 7 days', unit: 'u', when: 'last 7 days', used: (u) => u.unitsWeek || 0, step: 0.5, min: 1, max: 1000 },
+  { key: 'lossWeek', label: 'Units lost in 7 days', unit: 'u', when: 'last 7 days', used: (u) => Math.max(0, -(u.netWeek || 0)), step: 0.5, min: 1, max: 1000 },
 ]
+const num = (x) => (Number.isInteger(x) ? String(x) : x.toFixed(1))
+const lengthText = (c) => (c.kind === 'cool' ? (c.days === 1 ? '24-hour' : `${c.days}-day`) : c.months >= 12 ? `${c.months / 12}-year` : `${c.months}-month`)
+function endOf(c) {
+  const d = new Date()
+  if (c.kind === 'cool') d.setDate(d.getDate() + c.days)
+  else d.setMonth(d.getMonth() + c.months)
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: c.kind === 'cool' ? undefined : 'numeric' })
+}
 
 /** Limits on your own picks, a break, and self-exclusion. */
 export function LimitsCard() {
@@ -209,75 +218,128 @@ export function LimitsCard() {
     }
   }
   const u = data.usage
+  const paused = Boolean(data.pausedUntil)
+  const excluded = paused && data.excludedUntil && data.excludedUntil >= data.pausedUntil
   return (
-    <section className="tool-card" id="limits" aria-labelledby="limits-title">
-      <div className="tool-card__head">
-        <h2 id="limits-title" className="tool-card__title">
+    <section className="rg" id="limits" aria-labelledby="limits-title">
+      <header className="rg__head">
+        <h2 id="limits-title" className="rg__title">
           Limits and breaks
         </h2>
-      </div>
-      {data.pausedUntil && (
+        <p className="rg__sub">Caps on your own picks. A lower limit applies right away; raising or removing one takes 24 hours.</p>
+      </header>
+      {paused && (
         <p className="rg-paused" role="status">
-          {data.excludedUntil && data.excludedUntil >= data.pausedUntil ? 'You’ve excluded yourself from picks, tailing and contests' : 'You’re on a break from picks, tailing and contests'} until <b>{dateText(data.pausedUntil)}</b>. It can’t be ended early.
+          {excluded ? 'You’ve excluded yourself from picks, tailing and contests' : 'You’re on a break from picks, tailing and contests'} until <b>{dateText(data.pausedUntil)}</b>. It can’t be ended early.
         </p>
       )}
-      <p className="muted small">
-        Today: {u.picksToday} {u.picksToday === 1 ? 'pick' : 'picks'}, {u.unitsToday} units. Last 7 days: {u.unitsWeek} units staked, {fmtUnits(u.netWeek)} net.
-      </p>
-      <form className="rg-form" onSubmit={save}>
-        {LIMITS.map((l) => (
-          <label key={l.key} className="field">
-            <span>{l.label}</span>
-            <input type="number" inputMode="decimal" min={l.min} max={l.max} step={l.step} placeholder="No limit" value={form[l.key]} onChange={(e) => setForm((f) => ({ ...f, [l.key]: e.target.value }))} />
-          </label>
-        ))}
-        <div className="rg-form__foot">
+      <form onSubmit={save}>
+        <div className="rg-meters">
+          {LIMITS.map((l) => {
+            const used = l.used(u)
+            const cap = data.limits?.[l.key] ?? null
+            const share = cap ? Math.min(1, used / cap) : 0
+            return (
+              <div key={l.key} className={`rg-meter${cap && used >= cap ? ' is-full' : ''}`}>
+                <span className="rg-meter__label">{l.label}</span>
+                <span className="rg-meter__now">
+                  <b className="num">
+                    {num(used)}
+                    {l.unit === 'u' ? 'u' : ''}
+                  </b>
+                  <span>{cap ? `of ${num(cap)}${l.unit === 'u' ? 'u' : ''} ${l.when}` : l.when}</span>
+                </span>
+                {/* no limit, no bar (its space is kept so the tiles line up) */}
+                <span className={`rg-meter__bar${cap ? '' : ' is-off'}`} aria-hidden="true">
+                  <i style={{ width: `${share * 100}%` }} />
+                </span>
+                <label className="rg-meter__set">
+                  <span>Limit</span>
+                  <input type="number" inputMode="decimal" min={l.min} max={l.max} step={l.step} placeholder="None" value={form[l.key]} onChange={(e) => setForm((f) => ({ ...f, [l.key]: e.target.value }))} aria-label={`${l.label} limit`} />
+                  <span>{l.unit}</span>
+                </label>
+              </div>
+            )
+          })}
+        </div>
+        <div className="rg__save">
           <button type="submit" className="btn btn--lime" disabled={state.busy}>
             Save limits
           </button>
-          <span className="muted small">Lower limits apply at once. Raising or removing one takes 24 hours.</span>
+          {state.msg && (
+            <p className="form-ok" role="status">
+              {state.msg}
+            </p>
+          )}
         </div>
       </form>
-      {data.pending && <p className="small">Waiting to apply: {LIMITS.filter((l) => data.pending.limits[l.key] !== data.limits[l.key]).map((l) => `${l.label.toLowerCase()} ${data.pending.limits[l.key] ?? 'no limit'}`).join(', ')} on {new Date(data.pending.at).toLocaleString()}.</p>}
-      <div className="rg-pause">
-        <p className="rg-pause__title">Take a break</p>
-        <div className="row">
-          {data.options.coolDays.map((d) => (
-            <button key={d} type="button" className="btn btn--quiet btn--s" onClick={() => setConfirm({ kind: 'cool', days: d, text: `Take a ${d === 1 ? '24-hour' : `${d}-day`} break from posting picks, tailing and contests? It can’t be ended early.` })}>
-              {d === 1 ? '24 hours' : `${d} days`}
-            </button>
-          ))}
-        </div>
-        <p className="rg-pause__title">Exclude yourself</p>
-        <div className="row">
-          {data.options.excludeMonths.map((m) => (
-            <button key={m} type="button" className="btn btn--quiet btn--s" onClick={() => setConfirm({ kind: 'exclude', months: m, text: `Exclude yourself from picks, tailing and contests for ${m >= 12 ? `${m / 12} ${m === 12 ? 'year' : 'years'}` : `${m} months`}? It can’t be ended early.` })}>
-              {m >= 12 ? `${m / 12} ${m === 12 ? 'year' : 'years'}` : `${m} months`}
-            </button>
-          ))}
-        </div>
-        {confirm && (
-          <div className="rg-confirm" role="alertdialog" aria-label="Confirm">
-            <p>{confirm.text}</p>
-            <div className="row">
-              <button type="button" className="btn btn--lime" disabled={state.busy} onClick={() => pause(confirm.kind === 'cool' ? { kind: 'cool', days: confirm.days } : { kind: 'exclude', months: confirm.months })}>
-                Yes, start it
-              </button>
-              <button type="button" className="btn btn--quiet" onClick={() => setConfirm(null)}>
-                Cancel
-              </button>
-            </div>
+      {data.pending && (
+        <p className="rg-pending">
+          Waiting to apply on {new Date(data.pending.at).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}:{' '}
+          {LIMITS.filter((l) => data.pending.limits[l.key] !== data.limits[l.key])
+            .map((l) => `${l.label.toLowerCase()} ${data.pending.limits[l.key] ?? 'no limit'}`)
+            .join(', ')}
+          .
+        </p>
+      )}
+
+      <div className="rg-breaks">
+        <div className="rg-break">
+          <h3>Take a break</h3>
+          <p>No posting picks, tailing or contests until it ends.</p>
+          <div className="rg-choices">
+            {data.options.coolDays.map((d) => {
+              const c = { kind: 'cool', days: d }
+              const on = confirm?.kind === 'cool' && confirm.days === d
+              return (
+                <button key={d} type="button" className={`rg-choice${on ? ' is-on' : ''}`} aria-pressed={on} disabled={paused} onClick={() => setConfirm(on ? null : c)}>
+                  {d === 1 ? '24 hours' : `${d} days`}
+                </button>
+              )
+            })}
           </div>
-        )}
+        </div>
+        <div className="rg-break">
+          <h3>Exclude yourself</h3>
+          <p>The same, for months or years at a time.</p>
+          <div className="rg-choices">
+            {data.options.excludeMonths.map((m) => {
+              const c = { kind: 'exclude', months: m }
+              const on = confirm?.kind === 'exclude' && confirm.months === m
+              return (
+                <button key={m} type="button" className={`rg-choice${on ? ' is-on' : ''}`} aria-pressed={on} disabled={paused} onClick={() => setConfirm(on ? null : c)}>
+                  {m >= 12 ? `${m / 12} ${m === 12 ? 'year' : 'years'}` : `${m} months`}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
+      {confirm && (
+        <div className="rg-confirm" role="alertdialog" aria-labelledby="rg-confirm-text">
+          <p id="rg-confirm-text">
+            <b>
+              {confirm.kind === 'cool' ? `A ${lengthText(confirm)} break` : `A ${lengthText(confirm)} self-exclusion`}, until {endOf(confirm)}.
+            </b>{' '}
+            You won’t be able to post picks, tail picks or enter contests, and it can’t be ended early.
+          </p>
+          <div className="row">
+            <button type="button" className="btn btn--lime" disabled={state.busy} onClick={() => pause(confirm.kind === 'cool' ? { kind: 'cool', days: confirm.days } : { kind: 'exclude', months: confirm.months })}>
+              {confirm.kind === 'cool' ? 'Start my break' : 'Exclude me'}
+            </button>
+            <button type="button" className="btn btn--quiet" onClick={() => setConfirm(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {state.err && (
         <p className="form-err" role="alert">
           {state.err.message}
         </p>
       )}
-      {state.msg && <p className="form-ok">{state.msg}</p>}
-      <p className="small rg-help">
-        Gambling problem? Call <a href="tel:18006973738">1-800-MY-RESET</a> or visit <a href="https://www.ncpgambling.org/help-treatment/" target="_blank" rel="noopener noreferrer">ncpgambling.org</a>. Sportsbooks run their own limits and self-exclusion, and most states have a self-exclusion list that covers every licensed book.
+      <p className="rg-help">
+        Gambling problem? Call <a href="tel:18006973738">1-800-MY-RESET</a> or visit <a href="https://www.ncpgambling.org/help-treatment/" target="_blank" rel="noopener noreferrer">ncpgambling.org</a>. Sportsbooks run their own limits and self-exclusion, and most states keep a self-exclusion list that covers every licensed book.
       </p>
     </section>
   )

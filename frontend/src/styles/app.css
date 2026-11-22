@@ -1418,16 +1418,52 @@ code {
   justify-items: end;
   line-height: 1.1;
 }
+/* the chance and its fair price on one line: 71% = -248 */
+.prop-row__eq {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
 .prop-row__prob {
-  font-size: 26px;
+  font-size: 25px;
   color: var(--chalk);
 }
 .prop-row__prob.is-strong {
   color: var(--lime);
 }
-.prop-row__fair {
-  font-size: 12px;
+.prop-row__eqsign {
+  font: 700 15px/1 var(--font-num);
   color: var(--chalk-3);
+}
+.prop-row__fair {
+  font: 700 18px/1 var(--font-num);
+  color: var(--chalk-2);
+}
+/* narrow phones: a tighter equation, and the prop wraps to a second line rather than being cut */
+@media (max-width: 420px) {
+  .prop-row {
+    column-gap: 10px;
+  }
+  .prop-row__eq {
+    gap: 3px;
+  }
+  .prop-row__prob {
+    font-size: 23px;
+  }
+  .prop-row__eqsign {
+    font-size: 13px;
+  }
+  .prop-row__fair {
+    font-size: 16px;
+  }
+  .prop-row__label {
+    white-space: normal;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
 }
 .prop-row .slip-toggle {
   grid-area: add;
@@ -1437,7 +1473,7 @@ code {
 }
 @media (min-width: 760px) {
   .prop-row {
-    grid-template-columns: minmax(0, 1fr) 260px 92px 40px;
+    grid-template-columns: minmax(0, 1fr) 260px 112px 40px;
     grid-template-areas: 'main form read add';
   }
   .prop-row.prop-row--live {
@@ -1448,7 +1484,7 @@ code {
   }
   .prop-list--ranked .prop-row,
   .prop-row:has(.prop-row__rank) {
-    grid-template-columns: 28px minmax(0, 1fr) 260px 92px 40px;
+    grid-template-columns: 28px minmax(0, 1fr) 260px 112px 40px;
     grid-template-areas: 'rank main form read add';
   }
   .prop-row__rank {
@@ -3034,19 +3070,6 @@ code {
 }
 .record__last .is-l {
   background: var(--flag);
-}
-.me-card {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  padding: 14px;
-  border-radius: var(--r-m);
-  border: 1px solid var(--seat);
-  background: var(--stand);
-  margin-bottom: 18px;
-}
-.me-card p {
-  margin: 0 0 2px;
 }
 .slip-state {
   font-weight: 700;
