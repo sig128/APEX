@@ -1,6 +1,9 @@
 // In-memory state for the current NFL week, plus snapshot/restore for the persistent store.
 import { injurySeverity } from '../providers/espn/normalize.js'
 
+// what a saved roster holds: 2 = each player's bio (size, age, years in, school) for the lineup card
+export const ROSTER_V = 2
+
 export function createWarehouse() {
   const w = {
     version: 0,
@@ -76,7 +79,7 @@ export function createWarehouse() {
       const prev = w.players.get(p.id)
       w.players.set(p.id, { ...(prev || {}), ...p })
     }
-    w.rosters.set(String(teamId), { at, size: list.length })
+    w.rosters.set(String(teamId), { at, size: list.length, v: ROSTER_V })
     w.bump('rosters')
   }
 

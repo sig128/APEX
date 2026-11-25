@@ -7,7 +7,7 @@
 import { createEspnClient } from '../providers/espn/client.js'
 import { createOddsApi, ODDS_SPORTS } from '../providers/oddsapi/props.js'
 import { oddsKeys } from '../providers/oddsapi/keys.js'
-import { createWarehouse } from './warehouse.js'
+import { createWarehouse, ROSTER_V } from './warehouse.js'
 import { createScheduler } from '../lib/scheduler.js'
 import { createPropLog } from './proplog.js'
 import { createTicker } from './ticker.js'
@@ -232,7 +232,8 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
   async function rostersTask() {
     const teams = new Set(games().flatMap((g) => [g.home?.id, g.away?.id]).filter(Boolean))
     const t = now()
-    const todo = [...teams].filter((tid) => !wh.rosters.has(tid) || t - wh.rosters.get(tid).at > 6 * HOUR)
+    // a roster saved before rosters carried bios (ROSTER_V) loads again once, so the lineup card has them
+    const todo = [...teams].filter((tid) => !wh.rosters.has(tid) || t - wh.rosters.get(tid).at > 6 * HOUR || (wh.rosters.get(tid).v || 1) < ROSTER_V)
     await mapLimit(todo, 4, async (tid) => {
       try {
         wh.setRoster(tid, await espn.roster(tid, { priority: 'background' }), now())
