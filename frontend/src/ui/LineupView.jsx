@@ -39,12 +39,11 @@ function Inj({ inj }) {
 /** A player's photo, cropped round; his initials when ESPN has none. Key it by player. */
 function Face({ src, name, className = '' }) {
   const [bad, setBad] = useState(false)
-  const initials = String(name || '?')
+  // first and last name, past any suffix: "Virgil van Dijk" is VD, "Nolan Smith Jr." is NS
+  const words = String(name || '?')
     .split(/\s+/)
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
+    .filter((w) => w && !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(w))
+  const initials = `${words[0]?.[0] || '?'}${words.length > 1 ? words[words.length - 1][0] : ''}`.toUpperCase()
   return (
     <span className={`headshot ${className}`}>
       {src && !bad ? <img src={src} alt="" loading="lazy" decoding="async" onError={() => setBad(true)} /> : <span className="headshot__initials" aria-hidden="true">{initials}</span>}
