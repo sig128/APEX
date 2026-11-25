@@ -3231,6 +3231,14 @@ code {
   gap: 8px;
   color: var(--chalk-2);
 }
+/* under the plans: what credits are for, and that a pass holds the rest whatever they say */
+.plans__note {
+  max-width: 760px;
+  margin: 16px 0 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--lime);
+  color: var(--chalk);
+}
 .faq {
   margin-top: 40px;
   max-width: 760px;

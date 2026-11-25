@@ -81,7 +81,7 @@ function Lists({ view }) {
           {u.slots.map((s) => (
             <li key={s.key} className={s.focus === true ? 'is-focus' : s.match ? 'is-match' : ''}>
               <span className="lu-list__pos">{s.pos}</span> {s.player.name}
-              {s.player.inj?.status ? <span className="muted"> ({s.player.inj.status.toLowerCase()})</span> : ''}
+              {tagOf(s.player.inj) ? <span className="muted"> ({s.player.inj.status.toLowerCase()})</span> : ''}
               {s.out ? <span className="muted">, for {s.out.name} (out)</span> : ''}
             </li>
           ))}

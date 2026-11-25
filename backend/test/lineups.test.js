@@ -131,12 +131,18 @@ test('basketball: five box-score starters make a chart, guards to center', () =>
   assert.deepEqual(Object.fromEntries(Object.entries(chart.slots).map(([k, s]) => [k, s.players[0].name])), { pg: 'Bea G', sg: 'Di G', sf: 'Cat F', pf: 'Eve F', c: 'Ana C' })
 })
 
-test('hockey: a second-line center gets his line, the goalie he shoots at and the center he faces off against', () => {
+test('hockey: a second-line center gets his line against theirs, the goalie he shoots at and the center he faces off against', () => {
   const chart = (p) => normDepth({ depthchart: [{ id: '1', name: 'Default', positions: { c: pos('C', ath(`${p}1`, 'Cee One'), ath(`${p}2`, 'Cee Two')), lw: pos('LW', ath(`${p}3`, 'Lefty One'), ath(`${p}4`, 'Lefty Two')), rw: pos('RW', ath(`${p}5`, 'Righty One'), ath(`${p}6`, 'Righty Two')), ld: pos('LD', ath(`${p}7`, 'Dee Left')), rd: pos('RD', ath(`${p}8`, 'Dee Right')), g: pos('G', ath(`${p}9`, 'Gil Goalie'), ath(`${p}0`, 'Gus Backup')) } }] })
   const v = buildView('hockey', { mine: chart('21'), theirs: chart('8'), myTeam: { id: '21' }, oppTeam: { id: '8' }, focusId: '212' })
   assert.equal(v.bottom.label, 'Line 2')
   assert.deepEqual(v.bottom.slots.filter((s) => ['lw', 'c', 'rw'].includes(s.key)).map((s) => s.player.name), ['Lefty Two', 'Cee Two', 'Righty Two'])
-  assert.deepEqual(v.matchups.map((m) => [m.title, m.players[0].name]), [['In goal against him', 'Gil Goalie'], ['Faceoffs against', 'Cee One']])
+  // their second line across from his, and their starting goalie (not their second)
+  assert.equal(v.top.label, 'Line 2')
+  assert.deepEqual(v.top.slots.filter((s) => ['lw', 'c', 'rw'].includes(s.key)).map((s) => s.player.name), ['Righty Two', 'Cee Two', 'Lefty Two'])
+  assert.deepEqual(v.matchups.map((m) => [m.title, m.players[0].name]), [['In goal against him', 'Gil Goalie'], ['Faceoffs against', 'Cee Two']])
+  // a hockey chart's news under "injuries" with the status "active" is not an injury
+  const news = normDepth({ depthchart: [{ id: '1', positions: { c: { position: { abbreviation: 'C' }, athletes: [{ id: '1', displayName: 'Newsy', injuries: [{ status: 'active', shortComment: 'Scored twice on Sunday.' }] }] } } }] })
+  assert.equal(news[0].slots.c.players[0].inj, null)
   // they face down: their left wing is drawn on the right
   assert.ok(v.top.slots.find((s) => s.key === 'lw').x > v.top.slots.find((s) => s.key === 'rw').x)
 })
@@ -187,6 +193,21 @@ test('soccer: both elevens in formation rows; a left winger is matched with thei
   assert.ok(lw.x < 0.5, 'his left wing is on the left')
   assert.equal(v.matchups[0].title, 'Defenders on him')
   assert.equal(v.matchups[0].players[0].name, 'Right Back 363')
+})
+
+test('soccer: a 4-2-3-1 filed as LM and RM keeps its pivot inside the wide attackers, with room between rows', () => {
+  // how ESPN files a Premier League 4-2-3-1: the double pivot comes as LM and RM
+  const shape = ['G', 'LB', 'CD-L', 'CD-R', 'RB', 'LM', 'RM', 'AM-L', 'AM', 'AM-R', 'F']
+  const eleven = (p) => ({ team: { id: p }, formation: '4-2-3-1', roster: shape.map((abbr, i) => ({ starter: true, formationPlace: String(i + 1), position: { abbreviation: abbr }, athlete: { id: `${p}${i}`, displayName: `${abbr} ${p}` } })) })
+  const m = normMatchLineups({ rosters: [eleven('1'), eleven('2')] })
+  const v = buildView('soccer', { myLineup: m['1'], theirLineup: m['2'], myTeam: { id: '1' }, oppTeam: { id: '2' }, focusId: '13' })
+  for (const u of [v.top, v.bottom]) {
+    const pivot = u.slots.filter((s) => s.row === 'mid')
+    assert.equal(pivot.length, 2)
+    for (const s of pivot) assert.ok(s.x > 0.25 && s.x < 0.75, `${s.pos} stays central (${s.x})`)
+    // no two players drawn on top of each other: apart by a chip's width or a row's height
+    for (const a of u.slots) for (const b of u.slots) if (a !== b) assert.ok(Math.abs(a.x - b.x) >= 0.14 || Math.abs(a.y - b.y) >= 0.18, `${a.pos} and ${b.pos} overlap`)
+  }
 })
 
 // ---- the service: caching and fallbacks ---------------------------------------------------------

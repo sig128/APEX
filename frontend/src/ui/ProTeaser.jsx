@@ -28,7 +28,7 @@ export function ProTeaser() {
     <aside className="pro-teaser" aria-label="PropPickz Pro">
       <div className="pro-teaser__card">
         <p className="pro-teaser__title">{lapsed ? 'Your Pro pass has ended' : 'Get the full read with Pro'}</p>
-        <p className="pro-teaser__body">The model’s written take on this prop, both lineups with the matchups that decide it, the game analyzer and Kelly stake sizing.</p>
+        <p className="pro-teaser__body">The model’s written take on this prop, both lineups with the matchups that decide it, the game analyzer and Kelly stake sizing. None of it uses credits.</p>
         <p className="pro-teaser__price">
           {!paywall ? (
             'Passes aren’t on sale yet.'

@@ -75,7 +75,7 @@ export function CreditsCard({ onBuy }) {
             {c.topup > 0 ? ` Top-up credits: ${c.topup}. They don’t expire, and they’re used after the monthly ones.` : ''}
           </p>
           {c.warn === 'low' && <p className="credits-warn">You’ve used 80% of this month’s credits.</p>}
-          {c.warn === 'out' && <p className="credits-warn is-out">You’re out of credits until {day(c.resetsAt)}. A top-up adds more now.</p>}
+          {c.warn === 'out' && <p className="credits-warn is-out">You’re out of credits until {day(c.resetsAt)}. A top-up adds more now. The rest of your pass stays on.</p>}
         </>
       )}
       <details className="acct-credits__costs">
@@ -84,7 +84,7 @@ export function CreditsCard({ onBuy }) {
           <li>A simulation: {c.costs.sim} (a large one, 50,000+ runs or 7+ legs: {c.costs.simLarge})</li>
           <li>A bet breakdown: {c.costs.breakdown}. Looking at it again is free.</li>
           <li>A parlay build: {c.costs.build}</li>
-          <li>Free: the slip’s quick check, the live ticker, tracking, leaderboards, lineups and feedback.</li>
+          <li>Everything else uses none: model reads, lineups and matchups, the game analyzer, Kelly sizing, the slip’s quick check, live tracking, news and leaderboards. It all stays on when your credits run out.</li>
         </ul>
         <p className="muted small">A use that fails gives its credits back. Credits have no cash value and can’t be refunded otherwise.</p>
       </details>

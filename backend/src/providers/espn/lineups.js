@@ -6,10 +6,12 @@
 //   - probable pitchers on a scoreboard or summary (baseball)
 
 const str = (x) => (x == null ? '' : String(x))
+// hockey charts file every player's latest news under "injuries" with the status "active"
+const HEALTHY = /^(active|healthy|available)$/i
 
 function athleteOf(a) {
   if (!a?.id) return null
-  const inj = (a.injuries || []).find((i) => i?.status) || null
+  const inj = (a.injuries || []).find((i) => i?.status && !HEALTHY.test(String(i.status).trim())) || null
   return {
     id: str(a.id),
     name: a.displayName || a.fullName || '',

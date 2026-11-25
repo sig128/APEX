@@ -27,8 +27,10 @@ export function formatUnits(units) {
   return `${whole}.${frac}`
 }
 
+// What a pass holds whatever its credits: none of these use credits, so they stay on when a
+// member's credits run out. Credits pay only for the heavy runs (./credits.js) and come with a pass.
 const FEATURES = {
-  pro: ['Model reads on every prop (your PropPickz ruleset)', 'Game analyzer', 'Kelly stake sizing on every pick', 'Bankroll simulator'],
+  pro: ['Model reads on every prop (your PropPickz ruleset)', 'Lineups and matchups on every prop', 'Game analyzer', 'Kelly stake sizing on every pick', 'Bankroll simulator'],
   elite: ['Everything in Pro', 'Public picks page with your X and Instagram', 'Verified, auto-graded record', 'Elite badge and a spot in the picks feed', 'Leaderboard'],
 }
 

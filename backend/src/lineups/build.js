@@ -199,15 +199,17 @@ function hockey({ mine, theirs, myTeam, oppTeam, focusId }) {
   const pair = ['ld', 'rd'].includes(listed?.key) ? listed.rank - 1 : 0
   const goalie = listed?.key === 'g' ? listed.rank - 1 : 0
   const used = new Set()
+  const label = fwd ? `Line ${fwd + 1}` : pair ? `Top line, pair ${pair + 1}` : 'Top line'
   const bottom = {
     team: myTeam,
-    label: fwd ? `Line ${fwd + 1}` : 'Top line',
+    label,
     formation: null,
     slots: place(myChart, [['lw', 0.2, 0.22, fwd], ['c', 0.5, 0.22, fwd], ['rw', 0.8, 0.22, fwd], ['ld', 0.35, 0.56, pair], ['rd', 0.65, 0.56, pair], ['g', 0.5, 0.86, goalie]], used),
   }
   const theirsUsed = new Set()
-  // they face down: their left wing and left defenseman are drawn on the right
-  const top = { team: oppTeam, label: 'Top line', formation: null, slots: place(theirChart, [['g', 0.5, 0.14], ['rd', 0.35, 0.44], ['ld', 0.65, 0.44], ['rw', 0.2, 0.78], ['c', 0.5, 0.78], ['lw', 0.8, 0.78]], theirsUsed) }
+  // they face down: their left wing and left defenseman are drawn on the right. Their line and
+  // pair are the same numbers as his, the usual way lines line up; their starting goalie is first.
+  const top = { team: oppTeam, label, formation: null, slots: place(theirChart, [['g', 0.5, 0.14], ['rd', 0.35, 0.44, pair], ['ld', 0.65, 0.44, pair], ['rw', 0.2, 0.78, fwd], ['c', 0.5, 0.78, fwd], ['lw', 0.8, 0.78, fwd]], theirsUsed) }
   const focus = markFocus(bottom, myChart, focusId)
   const matchups = []
   if (focus?.key === 'g') matchups.push(matchup('Their top line', top.slots.filter((s) => ['lw', 'c', 'rw'].includes(s.key))))
@@ -247,9 +249,22 @@ function baseball({ mine, theirs, myTeam, oppTeam, focusId, focusPos, probables 
 
 // ---- soccer ----------------------------------------------------------------------------------
 
-const ROWS = ['gk', 'def', 'dm', 'mid', 'am', 'fw']
-const Y_TOP = { gk: 0.08, def: 0.3, dm: 0.46, mid: 0.58, am: 0.7, fw: 0.84 }
-const Y_BOTTOM = { fw: 0.16, am: 0.3, mid: 0.42, dm: 0.54, def: 0.7, gk: 0.92 }
+// the outfield rows from the halfway line back towards goal
+const ROWS = ['fw', 'am', 'mid', 'dm', 'def']
+// how far a row spreads from the middle, by how many play in it: a pair stays central (a double
+// pivot, two strikers), four or five reach the touchlines
+const SPREAD = { 1: 0, 2: 0.16, 3: 0.3 }
+
+/** Each row's height in a team's half: the rows it plays spaced evenly, the keeper on his line. */
+function rowYs(present, top) {
+  const rows = ROWS.filter((r) => present.has(r))
+  const ys = { gk: top ? 0.09 : 0.91 }
+  rows.forEach((r, i) => {
+    const y = rows.length > 1 ? 0.15 + (0.57 * i) / (rows.length - 1) : 0.42
+    ys[r] = top ? 1 - y : y
+  })
+  return ys
+}
 
 export function rowOf(pos) {
   const p = String(pos || '').toUpperCase()
@@ -273,12 +288,14 @@ function lateral(pos) {
 function elevenUnit(team, lineup, top) {
   const by = {}
   for (const p of lineup?.players || []) (by[rowOf(p.pos)] ||= []).push(p)
+  const ys = rowYs(new Set(Object.keys(by)), top)
   const slots = []
-  for (const r of ROWS) {
+  for (const r of ['gk', ...[...ROWS].reverse()]) {
     const list = (by[r] || []).sort((a, b) => lateral(a.pos) - lateral(b.pos) || (a.place ?? 99) - (b.place ?? 99))
+    const half = SPREAD[list.length] ?? 0.38
     list.forEach((p, i) => {
-      const x = list.length > 1 ? 0.12 + (0.76 * i) / (list.length - 1) : 0.5
-      slots.push({ key: `${r}${i}`, row: r, pos: p.pos || r.toUpperCase(), x: top ? 1 - x : x, y: (top ? Y_TOP : Y_BOTTOM)[r], player: lite(p) })
+      const x = list.length > 1 ? 0.5 - half + (2 * half * i) / (list.length - 1) : 0.5
+      slots.push({ key: `${r}${i}`, row: r, pos: p.pos || r.toUpperCase(), x: top ? 1 - x : x, y: ys[r], player: lite(p) })
     })
   }
   return { team, label: lineup?.last ? 'Last match’s lineup' : 'Lineup', formation: lineup?.formation || null, slots }
