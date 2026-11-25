@@ -272,3 +272,38 @@ test('service: nothing to draw is a reason, not an error', async () => {
   assert.equal(v.view, null)
   assert.equal(v.reason, 'No depth chart for these teams yet.')
 })
+
+test('service: everyone drawn gets a photo, the roster’s facts and his props in this game', async () => {
+  const provider = { depthChart: async (tid) => nflCharts(tid), gameLineups: async () => null, probables: async () => ({}) }
+  const row = { id: '901.recYds.o.55.5', kind: 'player', playerId: '901', teamId: '9', gameId: '401', short: 'W. One', name: 'Will One', pos: 'WR' }
+  const engine = fakeEngine({ row, games: [{ id: '401', date: '2026-11-29T18:00:00Z', status: { state: 'pre' }, home: { id: '9', abbr: 'GB', name: 'Packers' }, away: { id: '26', abbr: 'SEA', name: 'Seahawks' } }] })
+  engine.sport.headshots = 'nfl'
+  engine.wh.players.set('901', { pos: 'WR', jersey: '11', bio: { ht: '6\' 1"', wt: '200 lbs', age: 25, exp: 3, college: 'Georgia' } })
+  const rows = [
+    { kind: 'player', playerId: '901', id: '901.recYds.o.55.5', shortLabel: 'o55.5 Rec Yds', prob: 0.58, score: 70 },
+    { kind: 'player', playerId: '901', id: '901.rec.o.4.5', shortLabel: 'o4.5 Rec', prob: 0.61, score: 80 },
+    { kind: 'team', teamId: '9', id: 'team.9.pts', shortLabel: 'o24.5 Pts', prob: 0.5, score: 90 },
+  ]
+  engine.views.allRows = () => ({ byGame: new Map([['401', rows]]) })
+  const a = await createLineups({ engine, provider }).forProp(row.id)
+  const me = a.people['901']
+  assert.match(me.photo, /headshots\/nfl\/players\/full\/901\.png$/)
+  assert.equal(me.jersey, '11')
+  assert.equal(me.bio.college, 'Georgia')
+  assert.deepEqual(me.props.map((p) => p.label), ['o4.5 Rec', 'o55.5 Rec Yds'], 'his props, best first')
+  assert.equal(me.propCount, 2)
+  assert.equal(me.page, true)
+  // every player drawn is in it, the ones in the matchups too
+  for (const s of [...a.view.top.slots, ...a.view.bottom.slots]) assert.ok(a.people[s.player.id]?.photo, s.key)
+  for (const m of a.view.matchups) for (const p of m.players) assert.ok(a.people[p.id])
+  // an opponent the warehouse doesn't know: a photo, no player page and no props
+  const [, opp] = Object.entries(a.people).find(([id]) => id.startsWith('26'))
+  assert.ok(opp.photo && !opp.page && !opp.props)
+})
+
+test('rosters: a player’s size, age, years in and school come along as his bio', async () => {
+  const { bioOf } = await import('../src/providers/espn/normalize.js')
+  assert.deepEqual(bioOf({ displayHeight: '6\' 3"', displayWeight: '200 lbs', age: 25, experience: { years: 5 }, college: { name: 'Georgia' }, hand: { abbreviation: 'B' } }), { ht: '6\' 3"', wt: '200 lbs', age: 25, exp: 5, college: 'Georgia', hand: 'B' })
+  assert.deepEqual(bioOf({ displayHeight: '6\' 2"', age: 29, citizenship: 'England' }), { ht: '6\' 2"', age: 29, nat: 'England' })
+  assert.equal(bioOf({}), null)
+})

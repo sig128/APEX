@@ -92,6 +92,57 @@ export function createLineups({ engine, provider = engine?.espn, now = () => Dat
 
   const teamOf = (side) => side && { id: String(side.id), abbr: side.abbr || '', name: side.name || side.abbr || '', logo: side.logo || null, color: side.color || null }
 
+  // ESPN's photo of a player, by id, from the league's own folder
+  const photoOf = (id) => (S.headshots ? `https://a.espncdn.com/i/headshots/${S.headshots}/players/full/${id}.png` : null)
+
+  /**
+   * Everyone drawn, by id: his photo, number and what the roster says about him (size, age, years
+   * in, school), and his props in this game, best first. A depth chart only has names.
+   */
+  function peopleOf(view, gameId) {
+    const ids = new Set()
+    const add = (p) => p?.id && ids.add(String(p.id))
+    for (const u of [view.top, view.bottom]) {
+      for (const s of u?.slots || []) {
+        add(s.player)
+        add(s.out)
+      }
+    }
+    for (const m of view.matchups || []) {
+      for (const p of m.players || []) {
+        add(p)
+        add(p.out)
+      }
+    }
+    let rows = []
+    try {
+      rows = engine.views.allRows?.().byGame?.get(String(gameId)) || []
+    } catch (e) {
+      log.warn('lineups: props for people failed', { sport: S.key, err: errText(e) })
+    }
+    const byPlayer = new Map()
+    for (const r of rows) {
+      if (r.kind !== 'player' || !r.playerId) continue
+      const k = String(r.playerId)
+      if (!byPlayer.has(k)) byPlayer.set(k, [])
+      byPlayer.get(k).push(r)
+    }
+    const out = {}
+    for (const id of ids) {
+      const p = engine.wh.players.get(id)
+      const mine = (byPlayer.get(id) || []).sort((a, b) => (b.score || 0) - (a.score || 0))
+      out[id] = {
+        photo: photoOf(id),
+        ...(p?.jersey ? { jersey: String(p.jersey) } : {}),
+        ...(p?.bio ? { bio: p.bio } : {}),
+        ...(mine.length ? { props: mine.slice(0, 3).map((r) => ({ id: r.id, label: r.shortLabel || r.label, prob: r.prob })), propCount: mine.length } : {}),
+        // the player page needs him in the warehouse
+        ...(p ? { page: true } : {}),
+      }
+    }
+    return out
+  }
+
   async function chartsFor(teamId, before) {
     let charts = withInjuries(await depth(teamId))
     let source = 'depth'
@@ -161,6 +212,7 @@ export function createLineups({ engine, provider = engine?.espn, now = () => Dat
       focusNote,
       notes: [...sources].map((s) => NOTES[s]).filter(Boolean),
       view,
+      people: peopleOf(view, g.id),
     }
   }
 

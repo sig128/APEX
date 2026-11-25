@@ -102,14 +102,17 @@ const offOf = (charts) => (charts || []).find((c) => c.slots.qb) || null
 
 function defenseUnit(team, chart) {
   const used = new Set()
-  const specs = [['fs', 0.3, 0.14], ['ss', 0.7, 0.14], ['rcb', 0.07, 0.5], ['lcb', 0.93, 0.5], ['nb', 0.19, 0.66], ...row(chart, LB, 0.5, 0.33, 0.67), ...row(chart, DL, 0.84, 0.33, 0.67)]
+  const specs = [['fs', 0.3, 0.16], ['ss', 0.7, 0.16], ['rcb', 0.07, 0.52], ['lcb', 0.93, 0.52], ['nb', 0.19, 0.7], ...row(chart, LB, 0.52, 0.3, 0.7), ...row(chart, DL, 0.86, 0.3, 0.7)]
   return { team, label: 'Defense', formation: chart?.name || null, slots: place(chart, specs, used) }
 }
 
 function offenseUnit(team, chart) {
   const used = new Set()
   const fb = Boolean(chart?.slots?.fb?.players?.length)
-  const specs = [['wr1', 0.07, 0.12], ['wr3', 0.2, 0.3], ['lt', 0.32, 0.12], ['lg', 0.41, 0.12], ['c', 0.5, 0.12], ['rg', 0.59, 0.12], ['rt', 0.68, 0.12], ['te', 0.8, 0.3], ['wr2', 0.93, 0.12], ['qb', 0.5, 0.44], ['fb', 0.5, 0.64], ['rb', 0.5, fb ? 0.86 : 0.76]]
+  // with a fullback the backfield is offset, so three players with photos don't stack in one column
+  const back = fb ? [['fb', 0.42, 0.76], ['rb', 0.58, 0.9]] : [['rb', 0.5, 0.84]]
+  // the line spread wide enough that five photos sit side by side on a phone
+  const specs = [['wr1', 0.07, 0.16], ['wr3', 0.17, 0.38], ['lt', 0.29, 0.16], ['lg', 0.395, 0.16], ['c', 0.5, 0.16], ['rg', 0.605, 0.16], ['rt', 0.71, 0.16], ['te', 0.83, 0.38], ['wr2', 0.93, 0.16], ['qb', 0.5, 0.5], ...back]
   return { team, label: 'Offense', formation: chart?.name || null, slots: place(chart, specs, used) }
 }
 

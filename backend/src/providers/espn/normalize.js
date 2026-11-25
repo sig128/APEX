@@ -374,6 +374,23 @@ export function normTeams(j) {
   return list.map((t) => normTeam(t.team)).filter(Boolean)
 }
 
+/** What a roster says about a player beyond his name: size, age, years in, school, nation, hand. */
+export function bioOf(a) {
+  const b = {}
+  if (a?.displayHeight) b.ht = String(a.displayHeight)
+  if (a?.displayWeight) b.wt = String(a.displayWeight)
+  if (Number(a?.age) > 0) b.age = Number(a.age)
+  if (Number.isFinite(a?.experience?.years)) b.exp = a.experience.years
+  const college = a?.college?.name || a?.college?.shortName
+  if (college) b.college = String(college)
+  if (a?.citizenship) b.nat = String(a.citizenship)
+  // hockey: the hand he shoots with; baseball: how he bats and throws
+  if (a?.hand?.abbreviation) b.hand = String(a.hand.abbreviation)
+  if (a?.bats?.abbreviation) b.bats = String(a.bats.abbreviation)
+  if (a?.throws?.abbreviation) b.throws = String(a.throws.abbreviation)
+  return Object.keys(b).length ? b : null
+}
+
 export function normRoster(j, teamId, headshots = 'nfl') {
   const tid = String(j?.team?.id || teamId || '')
   const out = []
@@ -395,6 +412,7 @@ export function normRoster(j, teamId, headshots = 'nfl') {
         active: group !== 'injuredReserveOrOut' && group !== 'suspended' && group !== 'practiceSquad' && (a.status?.type || 'active') === 'active',
         injury: a.injuries?.[0]?.status || null,
         headshot: a.headshot?.href || `https://a.espncdn.com/i/headshots/${headshots}/players/full/${a.id}.png`,
+        bio: bioOf(a),
       })
     }
   }

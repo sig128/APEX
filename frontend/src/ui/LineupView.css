@@ -1,7 +1,10 @@
 /* Lineups and matchups on a prop page: both teams laid out the way the sport lines up, like a
-   broadcast graphic. Position tags are white for the top team and turf-dark for the bottom one;
-   the player in focus is lime, the opponents to watch are ringed in lime. */
+   broadcast graphic, each player with his photo. Position tags are white for the top team and
+   turf-dark for the bottom one; the player in focus is lime, the opponents to watch are ringed in
+   lime. Tapping a player opens his card under the field. */
 .lineup {
+  --lu-face: 38px;
+  --lu-chip: 76px;
   margin-top: 18px;
   padding: 18px 16px 14px;
   border-radius: var(--r-l);
@@ -40,7 +43,7 @@
 }
 .lu-half {
   position: relative;
-  height: 220px;
+  height: 240px;
 }
 .lu-line {
   position: relative;
@@ -83,22 +86,56 @@
 .lu-half.is-bottom .lu-slots {
   bottom: 26px;
 }
+
+/* a player: photo, position tag over its foot, name */
 .lu-slot {
   position: absolute;
   z-index: 1;
-  display: grid;
-  justify-items: center;
-  gap: 3px;
-  width: 74px;
-  text-align: center;
   transform: translate(-50%, -50%);
   transition: opacity 0.2s ease;
 }
+.lu-chip {
+  display: grid;
+  justify-items: center;
+  width: var(--lu-chip);
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.lu-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.lu-slot .lu-face {
+  width: var(--lu-face);
+  height: var(--lu-face);
+  border: 2px solid rgba(238, 243, 236, 0.55);
+  transition: border-color 0.15s ease;
+}
+.lu-slot.is-bottom .lu-face {
+  border-color: #2e6b4a;
+}
+.lu-face .headshot__initials {
+  font-size: 12px;
+}
+.lu-chip:hover .lu-face {
+  border-color: var(--chalk);
+}
 .lu-pos {
-  min-width: 34px;
-  padding: 2px 6px;
+  position: relative;
+  z-index: 1;
+  min-width: 32px;
+  margin-top: -8px;
+  padding: 1px 5px;
   border-radius: 4px;
-  font: 800 12px/1.25 var(--font-num);
+  font: 800 11px/1.25 var(--font-num);
   letter-spacing: 0.05em;
 }
 .lu-slot.is-top .lu-pos {
@@ -110,7 +147,12 @@
   color: var(--chalk);
 }
 .lu-name {
-  font: 700 14px/1.05 var(--font-num);
+  display: -webkit-box;
+  margin-top: 3px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font: 700 13px/1.05 var(--font-num);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--chalk);
@@ -121,27 +163,40 @@
   line-height: 1.1;
   color: var(--flag);
 }
+@media (min-width: 521px) {
+  /* one line where there's room, so the chip doesn't grow into the line above */
+  .lu-out {
+    white-space: nowrap;
+  }
+}
 
-/* the player and the opponents to watch; everyone else steps back */
-.lu-field.has-focus .lu-slot:not(.is-focus):not(.is-match):not(.is-near):not(.is-behind) {
+/* the player, the opponents to watch and the one picked; everyone else steps back */
+.lu-field.has-focus .lu-slot:not(.is-focus):not(.is-match):not(.is-near):not(.is-behind):not(.is-sel) {
   opacity: 0.55;
+}
+.lu-slot.is-focus .lu-face {
+  border-color: var(--lime);
+  box-shadow: var(--lime-glow);
 }
 .lu-slot.is-focus .lu-pos {
   background: var(--lime);
   color: var(--lime-ink);
-  box-shadow: var(--lime-glow);
 }
 .lu-slot.is-focus .lu-name {
   color: var(--lime);
 }
-.lu-slot.is-match .lu-pos {
+.lu-slot.is-match .lu-face {
   outline: 2px solid var(--lime);
   outline-offset: 2px;
 }
-.lu-slot.is-near .lu-pos,
-.lu-slot.is-behind .lu-pos {
+.lu-slot.is-near .lu-face,
+.lu-slot.is-behind .lu-face {
   outline: 1.5px dashed var(--lime);
   outline-offset: 2px;
+}
+.lu-slot.is-sel .lu-face {
+  outline: 2px solid var(--chalk);
+  outline-offset: 3px;
 }
 
 /* injury tags: out, doubtful, questionable or day to day, probable */
@@ -171,7 +226,7 @@
   color: var(--turf);
 }
 
-/* each sport's ground, faintly */
+/* each sport's ground, faintly; the heights leave a photo's room between rows */
 .lu-football {
   min-width: 640px;
   background-image:
@@ -179,10 +234,10 @@
     radial-gradient(120% 80% at 50% 50%, #0b1a11 0%, #060c09 70%);
 }
 .lu-football .lu-half {
-  height: 256px;
+  height: 290px;
 }
 .lu-basketball .lu-half {
-  height: 146px;
+  height: 164px;
 }
 .lu-basketball .lu-line,
 .lu-soccer .lu-line {
@@ -202,7 +257,7 @@
   pointer-events: none;
 }
 .lu-hockey .lu-half {
-  height: 226px;
+  height: 256px;
 }
 .lu-hockey .lu-line {
   border-top: 3px solid rgba(255, 90, 90, 0.4);
@@ -220,8 +275,11 @@
 .lu-hockey .lu-half.is-bottom::before {
   top: 30%;
 }
+.lu-baseball {
+  min-width: 520px;
+}
 .lu-baseball .lu-half {
-  height: 256px;
+  height: 310px;
 }
 .lu-baseball .lu-half::before {
   content: '';
@@ -229,13 +287,16 @@
   /* the infield sits where the players do, below or above the team's strip */
   top: calc((100% - 26px) * 0.58);
   left: 50%;
-  width: 118px;
-  height: 118px;
+  width: 128px;
+  height: 128px;
   border: 1px solid rgba(238, 243, 236, 0.09);
   transform: translate(-50%, -50%) rotate(45deg);
 }
+.lu-baseball .lu-half.is-top::before {
+  top: calc(26px + (100% - 26px) * 0.58);
+}
 .lu-soccer .lu-half {
-  height: 318px;
+  height: 372px;
 }
 .lu-soccer .lu-half::before {
   content: '';
@@ -250,6 +311,146 @@
 }
 .lu-soccer .lu-half.is-bottom::before {
   bottom: -2px;
+}
+.lu-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--chalk-3);
+}
+
+/* the player picked: who he is and what he's in for in this game */
+.lu-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: var(--r-m);
+  border: 1px solid var(--seat);
+  background: var(--night);
+  scroll-margin: 80px 0 96px;
+}
+.lu-card .lu-card__face {
+  width: 72px;
+  height: 72px;
+  border: 2px solid var(--seat);
+}
+.lu-card .lu-card__face .headshot__initials {
+  font-size: 20px;
+}
+.lu-card__body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.lu-card__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  font: 800 24px/1.05 var(--font-num);
+  color: var(--chalk);
+}
+.lu-card__num {
+  font-size: 18px;
+  color: var(--chalk-3);
+}
+.lu-card__role {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--chalk-2);
+}
+.lu-card__pos {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--stand-3);
+  font: 800 12px/1.3 var(--font-num);
+  letter-spacing: 0.05em;
+  color: var(--chalk);
+}
+.lu-card__this {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--lime);
+  font: 800 12px/1.3 var(--font-num);
+  letter-spacing: 0.04em;
+  color: var(--lime-ink);
+}
+.lu-card__line {
+  margin: 0;
+  font-size: 14px;
+  color: var(--chalk-2);
+}
+.lu-card__line.is-out,
+.lu-card__line.is-doubt {
+  color: var(--flag);
+}
+.lu-card__line.is-quest {
+  color: var(--lime-hi);
+}
+.lu-card__bio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 2px 0 0;
+}
+.lu-card__bio div {
+  display: grid;
+  gap: 1px;
+}
+.lu-card__bio dt {
+  font-size: 12px;
+  color: var(--chalk-3);
+}
+.lu-card__bio dd {
+  margin: 0;
+  font: 700 16px/1.15 var(--font-num);
+  color: var(--chalk);
+}
+.lu-card__k {
+  margin: 4px 0 4px;
+  font-size: 12px;
+  color: var(--chalk-3);
+}
+.lu-card__props ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lu-card__props a {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--seat);
+  background: var(--stand);
+  font-size: 14px;
+  color: var(--chalk);
+  text-decoration: none;
+}
+.lu-card__props a:hover {
+  border-color: var(--lime);
+}
+.lu-card__props a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.lu-card__props b {
+  color: var(--lime);
+}
+.lu-card__page {
+  justify-self: start;
+  font-size: 14px;
 }
 
 /* below the field: the matchups, any note, and every starter as a list */
@@ -277,18 +478,39 @@
 }
 .lu-matchup ul {
   display: grid;
-  gap: 5px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.lu-matchup li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 8px;
-  font-size: 15px;
+.lu-matchup__who {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 2px 10px;
+  width: 100%;
+  margin: 0;
+  padding: 2px 4px 2px 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
   color: var(--chalk);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.lu-matchup__who:hover .lu-matchup__name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lu-matchup__who:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.lu-matchup__who .headshot {
+  width: 32px;
+  height: 32px;
 }
 .lu-matchup__pos {
   min-width: 30px;
@@ -297,8 +519,7 @@
   color: var(--chalk-3);
 }
 .lu-matchup__for {
-  flex-basis: 100%;
-  padding-left: 38px;
+  grid-column: 3;
   font-size: 13px;
 }
 .lu-lists {
@@ -353,29 +574,52 @@
 
 @media (max-width: 520px) {
   .lineup {
+    --lu-face: 30px;
+    --lu-chip: 62px;
     padding: 16px 12px 12px;
   }
   .lu-scroll {
     margin: 0 -12px;
     padding: 0 12px;
   }
-  .lu-slot {
-    width: 66px;
-  }
   .lu-name {
-    font-size: 13px;
+    font-size: 12px;
+  }
+  .lu-pos {
+    min-width: 28px;
+    margin-top: -7px;
+    font-size: 10px;
+  }
+  .lu-out {
+    font-size: 10px;
+  }
+  .lu-football .lu-half {
+    height: 274px;
+  }
+  .lu-basketball .lu-half {
+    height: 150px;
+  }
+  .lu-hockey .lu-half {
+    height: 240px;
+  }
+  .lu-soccer .lu-half {
+    height: 356px;
+  }
+  .lu-card {
+    gap: 12px;
+    padding: 12px;
+  }
+  .lu-card .lu-card__face {
+    width: 56px;
+    height: 56px;
+  }
+  .lu-card__name {
+    font-size: 21px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lu-slot {
+  .lu-slot,
+  .lu-face {
     transition: none;
   }
-}
-.lu-hint {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--chalk-3);
-}
-.lu-baseball .lu-half.is-top::before {
-  top: calc(26px + (100% - 26px) * 0.58);
 }
