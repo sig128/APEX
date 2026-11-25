@@ -16,6 +16,8 @@ import { PropRow } from '../ui/PropRow.jsx'
 import { ReadFeed } from '../ui/ReadFeed.jsx'
 import { AskApex } from '../ui/AskApex.jsx'
 import { Locked } from '../ui/Locked.jsx'
+import { ProTeaser } from '../ui/ProTeaser.jsx'
+import { LineupView } from '../ui/LineupView.jsx'
 import { Skeleton, ErrorBox, Section, InjChip } from '../ui/Bits.jsx'
 import { ReturnGames } from '../ui/ReturnGames.jsx'
 import { Odds, ImpliedHint } from '../ui/Odds.jsx'
@@ -218,11 +220,14 @@ export function PropPage() {
           </div>
           <HitChart games={games} line={p.line} side={p.side} oneSided={p.oneSided} label={curW?.label} height={230} />
           {p.notes ? <ReadFeed p={p} /> : <OldNotes p={p} />}
+          <ProTeaser />
           <Helpful about={`${sport}:${p.id}`} />
         </div>
       </div>
 
       <LineShop row={p} />
+
+      {p.gameId && <LineupView sport={sport} propId={p.id} />}
 
       {data.returning?.show && <ReturnGames r={data.returning} name={p.short || p.name} marketLabel={p.marketLabel} />}
 

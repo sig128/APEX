@@ -17,6 +17,7 @@ import { simulateSlip } from './analytics/sim.js'
 import { readRequest, profilesView, LEG_RANGE, TARGET_RANGE } from './analytics/builder.js'
 import { envInt } from '../lib/util.js'
 import { NO_AI } from '../ai/llm.js'
+import { createLineups } from '../lineups/service.js'
 
 /** Optional: make every read require sign-in (APEX_READS_NEED_AUTH=1). Off by default: stats are free. */
 const readsNeedAuth = () => process.env.APEX_READS_NEED_AUTH === '1'
@@ -25,6 +26,7 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
   const r = createRouter()
   const views = engine.views
   const home = engine.sport?.key || 'nfl'
+  const lineups = createLineups({ engine })
   // another league's engine, by its key ("nba"); nothing for junk like "__proto__"
   const engineFor = (key) => (key === home ? engine : engines && Object.hasOwn(engines, key) && engines[key]?.views ? engines[key] : null)
 
@@ -149,6 +151,13 @@ export function createNflRouter(engine, { ai = NO_AI, auth = defaultAuthInstance
     if (!parsePropId(ctx.params.id)) throw new ApiError(400, 'bad_prop', 'That prop id is not valid.')
     const out = views.prop(ctx.params.id)
     if (!out) throw new ApiError(404, 'not_found', 'That prop is not on the board right now.')
+    return out
+  })
+  r.get('/props/:id/lineup', { tier: t('lineup'), cache: C(120, 300, 900) }, async (ctx) => {
+    if (!parsePropId(ctx.params.id)) throw new ApiError(400, 'bad_prop', 'That prop id is not valid.')
+    const out = await lineups.forProp(ctx.params.id)
+    if (!out) throw new ApiError(404, 'not_found', 'That prop is not on the board right now.')
+    if (!out.view) ctx.cache = C(60, 60, 120)
     return out
   })
   r.get('/games/:id/h2h', { tier: t('games'), cache: C(60, 60, 240) }, (ctx) => {

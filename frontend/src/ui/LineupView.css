@@ -1,0 +1,370 @@
+/* Lineups and matchups on a prop page: both teams laid out the way the sport lines up, like a
+   broadcast graphic. Position tags are white for the top team and turf-dark for the bottom one;
+   the player in focus is lime, the opponents to watch are ringed in lime. */
+.lineup {
+  margin-top: 18px;
+  padding: 18px 16px 14px;
+  border-radius: var(--r-l);
+  border: 1px solid var(--seat);
+  background: var(--stand);
+}
+.lineup__title {
+  margin: 0 0 4px;
+  font: 800 28px/1.05 var(--font-num);
+  color: var(--chalk);
+}
+.lu-sub {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--chalk-2);
+}
+.lu-empty {
+  margin: 6px 0 0;
+}
+
+/* the field: sideways scroll on a phone for the eleven-man football line */
+.lu-scroll {
+  margin: 0 -16px;
+  padding: 0 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+.lu-field {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-m);
+  border: 1px solid var(--seat);
+  background: radial-gradient(120% 80% at 50% 50%, #0b1a11 0%, #060c09 70%);
+}
+.lu-half {
+  position: relative;
+  height: 220px;
+}
+.lu-line {
+  position: relative;
+  z-index: 1;
+  margin: 0 12px;
+  border-top: 2px dashed rgba(184, 255, 31, 0.42);
+}
+.lu-team {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--chalk-3);
+}
+.lu-half.is-bottom .lu-team {
+  top: auto;
+  bottom: 8px;
+}
+.lu-team__abbr {
+  font: 800 15px/1 var(--font-num);
+  letter-spacing: 0.02em;
+  color: var(--chalk);
+}
+.lu-slots {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lu-slot {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  width: 74px;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s ease;
+}
+.lu-pos {
+  min-width: 34px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font: 800 12px/1.25 var(--font-num);
+  letter-spacing: 0.05em;
+}
+.lu-slot.is-top .lu-pos {
+  background: var(--chalk);
+  color: var(--night);
+}
+.lu-slot.is-bottom .lu-pos {
+  background: #1f4a33;
+  color: var(--chalk);
+}
+.lu-name {
+  font: 700 14px/1.05 var(--font-num);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--chalk);
+  overflow-wrap: anywhere;
+}
+.lu-out {
+  font-size: 11px;
+  line-height: 1.1;
+  color: var(--flag);
+}
+
+/* the player and the opponents to watch; everyone else steps back */
+.lu-field.has-focus .lu-slot:not(.is-focus):not(.is-match):not(.is-near):not(.is-behind) {
+  opacity: 0.55;
+}
+.lu-slot.is-focus .lu-pos {
+  background: var(--lime);
+  color: var(--lime-ink);
+  box-shadow: var(--lime-glow);
+}
+.lu-slot.is-focus .lu-name {
+  color: var(--lime);
+}
+.lu-slot.is-match .lu-pos {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+}
+.lu-slot.is-near .lu-pos,
+.lu-slot.is-behind .lu-pos {
+  outline: 1.5px dashed var(--lime);
+  outline-offset: 2px;
+}
+
+/* injury tags: out, doubtful, questionable or day to day, probable */
+.lu-inj {
+  margin-left: 4px;
+  padding: 0 3px;
+  border-radius: 3px;
+  font: 800 10px/1.45 var(--font-ui);
+  letter-spacing: 0;
+  text-decoration: none;
+  vertical-align: 1px;
+}
+.lu-inj.is-out {
+  background: var(--flag);
+  color: var(--night);
+}
+.lu-inj.is-doubt {
+  background: var(--flag-dim);
+  color: var(--flag);
+}
+.lu-inj.is-quest {
+  background: rgba(233, 255, 154, 0.14);
+  color: var(--lime-hi);
+}
+.lu-inj.is-prob {
+  background: var(--turf-dim);
+  color: var(--turf);
+}
+
+/* each sport's ground, faintly */
+.lu-football {
+  min-width: 640px;
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(238, 243, 236, 0.035) calc(10% - 1px) 10%),
+    radial-gradient(120% 80% at 50% 50%, #0b1a11 0%, #060c09 70%);
+}
+.lu-football .lu-half {
+  height: 236px;
+}
+.lu-basketball .lu-half {
+  height: 124px;
+}
+.lu-basketball .lu-line,
+.lu-soccer .lu-line {
+  border-top: 2px solid rgba(238, 243, 236, 0.12);
+}
+.lu-basketball::after,
+.lu-soccer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 96px;
+  height: 96px;
+  border: 2px solid rgba(238, 243, 236, 0.08);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.lu-hockey .lu-half {
+  height: 204px;
+}
+.lu-hockey .lu-line {
+  border-top: 3px solid rgba(255, 90, 90, 0.4);
+}
+.lu-hockey .lu-half::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 2px solid rgba(120, 170, 255, 0.22);
+}
+.lu-hockey .lu-half.is-top::before {
+  bottom: 30%;
+}
+.lu-hockey .lu-half.is-bottom::before {
+  top: 30%;
+}
+.lu-baseball .lu-half {
+  height: 236px;
+}
+.lu-baseball .lu-half::before {
+  content: '';
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  width: 118px;
+  height: 118px;
+  border: 1px solid rgba(238, 243, 236, 0.09);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.lu-soccer .lu-half {
+  height: 276px;
+}
+.lu-soccer .lu-half::before {
+  content: '';
+  position: absolute;
+  left: 26%;
+  width: 48%;
+  height: 16%;
+  border: 2px solid rgba(238, 243, 236, 0.08);
+}
+.lu-soccer .lu-half.is-top::before {
+  top: -2px;
+}
+.lu-soccer .lu-half.is-bottom::before {
+  bottom: -2px;
+}
+
+/* below the field: the matchups, any note, and every starter as a list */
+.lu-note {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--chalk-2);
+}
+.lu-matchups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.lu-matchup {
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  border: 1px solid var(--seat);
+  background: var(--night);
+}
+.lu-matchup__title {
+  margin: 0 0 6px;
+  font: 800 17px/1.1 var(--font-num);
+  color: var(--lime);
+}
+.lu-matchup ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lu-matchup li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 15px;
+  color: var(--chalk);
+}
+.lu-matchup__pos {
+  min-width: 30px;
+  font: 800 12px/1 var(--font-num);
+  letter-spacing: 0.05em;
+  color: var(--chalk-3);
+}
+.lu-matchup__for {
+  flex-basis: 100%;
+  padding-left: 38px;
+  font-size: 13px;
+}
+.lu-lists {
+  margin-top: 12px;
+  font-size: 14px;
+}
+.lu-lists summary {
+  cursor: pointer;
+  color: var(--chalk-2);
+  font-weight: 600;
+}
+.lu-lists summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: 4px;
+}
+.lu-lists__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+.lu-list__team {
+  margin: 0 0 4px;
+  font: 800 15px/1.1 var(--font-num);
+  color: var(--chalk);
+}
+.lu-list ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--chalk-2);
+}
+.lu-list li.is-focus {
+  color: var(--lime);
+}
+.lu-list li.is-match {
+  color: var(--chalk);
+}
+.lu-list__pos {
+  display: inline-block;
+  min-width: 34px;
+  font: 800 12px/1 var(--font-num);
+  letter-spacing: 0.05em;
+  color: var(--chalk-3);
+}
+.lu-src {
+  margin: 10px 0 0;
+}
+
+@media (max-width: 520px) {
+  .lineup {
+    padding: 16px 12px 12px;
+  }
+  .lu-scroll {
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+  .lu-slot {
+    width: 66px;
+  }
+  .lu-name {
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lu-slot {
+    transition: none;
+  }
+}
+.lu-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--chalk-3);
+}

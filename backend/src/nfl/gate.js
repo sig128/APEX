@@ -18,6 +18,8 @@ export const ROUTE_TIER = {
   check: 'pro',
   intel: 'pro',
   lock: 'pro',
+  // both teams' lineups and the player's matchups on a prop page
+  lineup: 'pro',
   shop: 'free',
   // decides for itself: the live list for members, a delayed snapshot for everyone else
   ticker: 'free',

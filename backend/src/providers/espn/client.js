@@ -1,6 +1,7 @@
 // ESPN's public JSON APIs (unofficial, no key). site.api for scores and summaries,
 // site.web.api for game logs, sports.core.api for prop lines.
 import { normScoreboard, normSummary, normTeams, normRoster, normSchedule, normGamelog, normPropBets } from './normalize.js'
+import { normDepth, normMatchLineups, normBoxStarters, probablesOf } from './lineups.js'
 import * as football from '../../sports/football.js'
 
 /** 'YYYYMMDD-YYYYMMDD' (or one day) -> every day in it, at most 14. */
@@ -147,5 +148,18 @@ export function createEspnClient({ http, sport = 'football', league = 'nfl', pro
     schedule: async (teamId, season, opts) => normSchedule(await get(`${SITE}/teams/${teamId}/schedule?season=${season}`, opts), teamId),
     gamelog: async (athleteId, season, opts) => (fam.LOGS_FROM_SUMMARIES ? soccerLog(athleteId, season, opts) : normGamelog(await get(`${WEB}/athletes/${athleteId}/gamelog?season=${season}`, opts), season, fam)),
     propBets,
+    // the lineup view (src/lineups): a team's depth chart, and from one game's summary its
+    // announced lineups, box-score starters and probable pitchers
+    depthChart: async (teamId, opts) => normDepth(await get(`${SITE}/teams/${teamId}/depthcharts`, opts)),
+    gameLineups: async (eventId, opts) => {
+      const j = await get(`${SITE}/summary?event=${eventId}`, opts)
+      return { match: normMatchLineups(j), starters: normBoxStarters(j), probables: probablesOf(j?.header?.competitions?.[0]?.competitors) }
+    },
+    probables: async (day, opts) => {
+      const j = await scoreboardJson({ dates: day }, opts)
+      const out = {}
+      for (const e of j?.events || []) out[String(e.id)] = probablesOf(e.competitions?.[0]?.competitors)
+      return out
+    },
   }
 }
