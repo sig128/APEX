@@ -307,3 +307,30 @@ test('rosters: a player’s size, age, years in and school come along as his bio
   assert.deepEqual(bioOf({ displayHeight: '6\' 2"', age: 29, citizenship: 'England' }), { ht: '6\' 2"', age: 29, nat: 'England' })
   assert.equal(bioOf({}), null)
 })
+
+test('rosters saved before they carried bios load again once, on serverless too', async () => {
+  const { fullEngine, clock } = await import('./support.js')
+  const { ROSTER_V } = await import('../src/nfl/warehouse.js')
+  const now = clock()
+  const engine = await fullEngine({ now })
+  // as if restored from a store written before rosters carried bios
+  for (const [k, r] of engine.wh.rosters) engine.wh.rosters.set(k, { at: r.at, size: r.size })
+  let calls = 0
+  const roster = engine.espn.roster
+  engine.espn.roster = async (...a) => {
+    calls++
+    return roster(...a)
+  }
+  now.add(3 * 60_000)
+  engine.touch()
+  await engine.runTask('rosters')
+  assert.ok(calls > 0, 'old rosters load again')
+  assert.equal([...engine.wh.rosters.values()].filter((r) => r.v === ROSTER_V).length, calls)
+  assert.ok([...engine.wh.players.values()].some((p) => p.bio), 'with bios')
+  // and only once
+  const after = calls
+  now.add(3 * 60_000)
+  engine.touch()
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(calls, after)
+})

@@ -229,8 +229,12 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     return out
   }
 
+  // rosters saved before they carried what the lineup card shows: load them again, once
+  const gameTeams = () => new Set(games().flatMap((g) => [g.home?.id, g.away?.id]).filter(Boolean))
+  const rostersOld = () => [...gameTeams()].some((tid) => wh.rosters.has(tid) && (wh.rosters.get(tid).v || 1) < ROSTER_V)
+
   async function rostersTask() {
-    const teams = new Set(games().flatMap((g) => [g.home?.id, g.away?.id]).filter(Boolean))
+    const teams = gameTeams()
     const t = now()
     // a roster saved before rosters carried bios (ROSTER_V) loads again once, so the lineup card has them
     const todo = [...teams].filter((tid) => !wh.rosters.has(tid) || t - wh.rosters.get(tid).at > 6 * HOUR || (wh.rosters.get(tid).v || 1) < ROSTER_V)
@@ -445,7 +449,7 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
     // lazy: make sure lines/rosters exist before the first board renders (bounded wait)
     const first = []
     if (!wh.lines.size || age('lines') > 10 * MIN) first.push(runTask('lines'))
-    if (!wh.rosters.size || age('rosters') > 6 * HOUR) first.push(runTask('rosters'))
+    if (!wh.rosters.size || age('rosters') > 6 * HOUR || rostersOld()) first.push(runTask('rosters'))
     await Promise.race([Promise.all(first), new Promise((r) => setTimeout(r, 6000))])
     touch()
   }
@@ -458,7 +462,8 @@ export function createEngine({ mode = 'daemon', http, store, hub, sport = 'nfl',
       scoreboard: age('scoreboard') > (live ? 15_000 : 2 * MIN),
       summaries: age('summaries') > (live ? 20_000 : 10 * MIN),
       lines: age('lines') > 6 * MIN,
-      rosters: age('rosters') > 6 * HOUR,
+      // an old roster that failed to load waits a couple of minutes before the next try
+      rosters: age('rosters') > 6 * HOUR || (rostersOld() && age('rosters') > 2 * MIN),
       schedules: age('schedules') > 6 * HOUR,
       logs: age('logs') > 20_000 && (staleLogs.size > 0 || wantedPlayers().some((p) => !wh.logMeta.get(p)) || age('logs') > 3 * HOUR),
       odds: Boolean(odds) && age('odds') > 30 * MIN,
