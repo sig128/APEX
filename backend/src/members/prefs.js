@@ -3,10 +3,11 @@
 // Kept per account, so the website and the iPhone app show the same.
 import { ApiError } from '../lib/router.js'
 import { SPORT_KEYS } from '../sports/index.js'
+import { OPERATOR_KEYS } from './operators.js'
 
 export const PREF_ODDS = ['american', 'decimal']
-// the books we have prices for (the slip's grid and the line shop)
-export const PREF_BOOKS = ['fanduel', 'draftkings', 'betmgm', 'williamhill_us', 'bet365', 'fanatics', 'betrivers', 'espnbet']
+// the betting apps on the setup's list (operators.js): sportsbooks, pick'em apps, prediction markets
+export const PREF_BOOKS = OPERATOR_KEYS
 export const US_STATES = 'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ')
 export const CA_PROVINCES = 'AB BC MB NB NL NS NT NU ON PE QC SK YT'.split(' ')
 
@@ -37,9 +38,9 @@ export function cleanPrefs(p = {}) {
     out.region = p.region
   }
   if (p.books !== undefined) {
-    if (!Array.isArray(p.books)) throw bad('Pick your sportsbooks from the list.')
+    if (!Array.isArray(p.books)) throw bad('Pick your operators from the list.')
     const keys = [...new Set(p.books.map(String))]
-    if (keys.some((k) => !PREF_BOOKS.includes(k))) throw bad('One of those sportsbooks isn’t on the list.')
+    if (keys.some((k) => !PREF_BOOKS.includes(k))) throw bad('One of those operators isn’t on the list.')
     out.books = keys
   }
   return out

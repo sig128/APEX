@@ -28,6 +28,7 @@ import { createGroups } from './src/picks/groups.js'
 import { picksRoutes } from './src/picks/routes.js'
 import { createMembers } from './src/members/service.js'
 import { membersRoutes } from './src/members/routes.js'
+import { createOperatorIcons } from './src/members/operatorIcons.js'
 import { createMailer } from './src/members/mail.js'
 import { createContests } from './src/contests/service.js'
 import { contestsRoutes } from './src/contests/routes.js'
@@ -264,6 +265,12 @@ export function createApexApp({
   // the consent screen's record, the onboarding tour's counts, feedback to the team's inbox
   const members = createMembers({ store: engineStore, mail: createMailer(), ...(now ? { now } : {}) })
   app.use('/api/members', membersRoutes({ members, access }))
+  // the betting apps' current App Store icons, for the setup and the slip (members/operatorIcons.js)
+  const operatorIcons = createOperatorIcons({ http, store: engineStore, ...(now ? { now } : {}) })
+  app.get('/api/operators/icons', async (req, res) => {
+    const { icons } = await operatorIcons.get().catch(() => ({ icons: {} }))
+    res.set('Cache-Control', Object.keys(icons).length ? 'public, max-age=3600, s-maxage=21600' : 'public, max-age=300').json({ icons })
+  })
   app.use('/api/admin', adminRoutes({ lock, metrics, sports: Object.keys(engines), billing, picks, members, credits, integrity }))
   // the public calibration page (src/calibration); the daily run also fingerprints the days it closed
   const calibration = createCalibration({ engines, store: engineStore, ...(now ? { now } : {}) })

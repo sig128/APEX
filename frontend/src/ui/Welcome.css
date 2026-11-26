@@ -230,15 +230,59 @@ html.is-welcoming body {
   font-size: 13px;
   font-weight: 800;
 }
-.wl-tile--book {
-  min-height: 92px;
+/* an operator: its app icon, lit from behind in its own color, the way it sits on a phone */
+.wl-tile.wl-tile--op {
+  justify-items: center;
+  align-content: center;
+  gap: 9px;
+  min-height: 116px;
+  padding: 16px 6px 12px;
+  text-align: center;
+  background:
+    radial-gradient(64px 58px at 50% 40px, rgba(var(--lg), 0.44), transparent 76%),
+    var(--stand-2);
 }
-.wl-tile--book .booklogo {
-  margin-bottom: 10px;
-  border-radius: 8px;
+.wl-tile.wl-tile--op[aria-pressed='true'] {
+  background:
+    radial-gradient(76px 66px at 50% 40px, rgba(var(--lg), 0.62), transparent 76%),
+    linear-gradient(180deg, rgba(184, 255, 31, 0.06), rgba(184, 255, 31, 0.02)),
+    var(--stand-2);
 }
-.wl-tile__name--book {
-  font: 700 15px/1.15 var(--font-ui);
+.wl-tile--op .booklogo {
+  width: 52px;
+  height: 52px;
+  border-radius: 23%;
+  box-shadow:
+    0 8px 20px -4px rgba(var(--lg), 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.wl-tile--op .wl-tile__name {
+  max-width: 100%;
+  font: 700 14px/1.15 var(--font-ui);
+  letter-spacing: 0;
+}
+.wl-grid + .wl-group,
+.wl-grid + .wl-more {
+  margin-top: 18px;
+}
+.wl-more {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  border: 1px dashed var(--seat-2);
+  border-radius: var(--r-m);
+  background: none;
+  color: var(--chalk);
+  font: 600 15px/1 var(--font-ui);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.wl-more:hover {
+  border-color: var(--chalk-3);
+}
+.wl-more:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
 }
 
 /* rows: odds format and where you bet */

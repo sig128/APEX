@@ -16,12 +16,12 @@ import { webCheckoutFits } from '../lib/webSignIn.js'
 import { usePrefs, withSetup } from '../lib/prefs.js'
 import { regionName } from '../lib/regions.js'
 import { sportInfo } from '../lib/sport.js'
-import { bookName } from '../lib/format.js'
+import { operatorName } from '../lib/operators.js'
 
 const fmtDay = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '')
 const PLAN = { free: 'Free', pro: 'Pro', elite: 'Elite' }
 
-/** The setup from signing up (leagues, odds, where you bet, sportsbooks), and the way to change it. */
+/** The setup from signing up (leagues, odds, where you bet, the apps you bet with), and the way to change it. */
 function SetupCard() {
   const p = usePrefs()
   const nav = useNavigate()
@@ -29,7 +29,7 @@ function SetupCard() {
     ['Leagues', p.leagues.map((k) => sportInfo(k).name).join(', ') || 'Not picked yet'],
     ['Odds', p.odds === 'decimal' ? 'Decimal, like 1.91' : 'American, like -110'],
     ['Where you bet', regionName(p.region) || 'Not set'],
-    ['Sportsbooks', p.books.map(bookName).join(', ') || 'None picked'],
+    ['Operators', p.books.map((k) => operatorName(k)).filter(Boolean).join(', ') || 'None picked'],
   ]
   return (
     <section className="acct-list acct-setup">

@@ -7,6 +7,8 @@ import { useSport, apiOf, legRef, legsSport } from '../lib/sport.js'
 
 import { BOOK_STATES as STATES } from '../lib/regions.js'
 import { usePrefs } from '../lib/prefs.js'
+import { useApi } from '../lib/useApi.js'
+import { OPERATORS, iconOf, operatorName } from '../lib/operators.js'
 const read = (k, d) => {
   try {
     return localStorage.getItem(k) || d
@@ -212,18 +214,30 @@ const ICON_SITE = {
   williamhill_us: 'sportsbook.caesars.com',
 }
 
-/** The book's own app icon, so people know it at a glance; its initial if the icon won't load. */
-export function BookLogo({ book, size = 20 }) {
-  const [failed, setFailed] = useState(false)
+/** The operators' current App Store icons, from the server (lib/operators.js has the ones we ship). */
+export function useOperatorIcons() {
+  return useApi('/api/operators/icons', { maxAgeMs: 6 * 3600_000 }).data?.icons || null
+}
+
+/**
+ * The book's own app icon, so people know it at a glance: its App Store icon (the current one
+ * when the server has it), else its site's icon, else its initial on its color.
+ */
+export function BookLogo({ book, size = 20, eager = false }) {
+  const fresh = useOperatorIcons()
+  const [bad, setBad] = useState(() => new Set())
   const site = ICON_SITE[book]
-  if (!site || failed) {
+  const src = [iconOf(book, fresh), iconOf(book), site ? `https://www.google.com/s2/favicons?domain=${site}&sz=64` : null].find((u) => u && !bad.has(u))
+  if (!src) {
+    const name = TILE_NAME[book] || operatorName(book) || bookName(book) || '?'
+    const glow = OPERATORS[book]?.glow
     return (
-      <span className="booklogo booklogo--initial" style={{ width: size, height: size, fontSize: Math.round(size * 0.55), '--book': BOOK_COLOR[book] || 'var(--seat-2)' }} aria-hidden="true">
-        {(TILE_NAME[book] || bookName(book) || '?').slice(0, 1).toUpperCase()}
+      <span className="booklogo booklogo--initial" style={{ width: size, height: size, fontSize: Math.round(size * 0.55), '--book': BOOK_COLOR[book] || (glow ? `rgb(${glow})` : 'var(--seat-2)') }} aria-hidden="true">
+        {name.slice(0, 1).toUpperCase()}
       </span>
     )
   }
-  return <img className="booklogo" src={`https://www.google.com/s2/favicons?domain=${site}&sz=64`} width={size} height={size} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+  return <img className="booklogo" src={src} width={size} height={size} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" referrerPolicy="no-referrer" onError={() => setBad((s) => new Set(s).add(src))} />
 }
 
 /**

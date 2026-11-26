@@ -7,10 +7,10 @@ import { api } from '../lib/api.js'
 import { SPORTS, isSport, sp, setLeague } from '../lib/sport.js'
 import { readPrefs, savePrefs, withSetup } from '../lib/prefs.js'
 import { US_STATES, CA_PROVINCES, flagOf } from '../lib/regions.js'
-import { bookName } from '../lib/format.js'
+import { OPERATORS, operatorsFor, operatorName } from '../lib/operators.js'
 import { pushEnv, enablePush } from '../lib/push.js'
 import { isNative, enableNativePush } from '../lib/native.js'
-import { BookLogo, FEATURED_BOOKS } from './Books.jsx'
+import { BookLogo } from './Books.jsx'
 import './Welcome.css'
 
 // The setup right after signing up, in the app and on the website: the leagues you follow, how
@@ -224,24 +224,56 @@ function Region({ value, onChange }) {
   )
 }
 
-function Books({ value, onChange }) {
-  const toggle = (k) => onChange(value.includes(k) ? value.filter((x) => x !== k) : [...value, k])
+/** One operator: its App Store icon on a glow in its color, its name, a tick once it's picked. */
+function Operator({ k, on, onToggle }) {
   return (
-    <ul className="wl-grid" aria-label="Sportsbooks">
-      {FEATURED_BOOKS.map((k) => (
-        <li key={k}>
-          <button type="button" className="wl-tile wl-tile--book" aria-pressed={value.includes(k)} onClick={() => toggle(k)}>
-            <BookLogo book={k} size={30} />
-            <span className="wl-tile__name wl-tile__name--book">{bookName(k)}</span>
-            {value.includes(k) && (
-              <span className="wl-tile__tick">
-                <Check />
-              </span>
-            )}
-          </button>
-        </li>
-      ))}
-    </ul>
+    <li>
+      <button type="button" className="wl-tile wl-tile--op" style={{ '--lg': OPERATORS[k].glow }} aria-pressed={on} onClick={() => onToggle(k)}>
+        <BookLogo book={k} size={52} eager />
+        <span className="wl-tile__name wl-tile__name--op">{operatorName(k, { short: true })}</span>
+        {on && (
+          <span className="wl-tile__tick">
+            <Check />
+          </span>
+        )}
+      </button>
+    </li>
+  )
+}
+
+/** The operators offered where the member bets first; the rest, by country, a tap away. */
+function Books({ value, onChange, region }) {
+  const { first, rest } = useMemo(() => operatorsFor(region), [region])
+  // picked before (another time through, or before a move) and not on this list: kept in view
+  const [kept] = useState(() => value.filter((k) => OPERATORS[k] && !first.includes(k)))
+  const top = [...first, ...kept]
+  const [more, setMore] = useState(false)
+  const toggle = (k) => onChange(value.includes(k) ? value.filter((x) => x !== k) : [...value, k])
+  const groups = rest.map(([title, keys]) => [title, keys.filter((k) => !top.includes(k))]).filter(([, keys]) => keys.length)
+  return (
+    <>
+      <ul className="wl-grid" aria-label="Operators">
+        {top.map((k) => (
+          <Operator key={k} k={k} on={value.includes(k)} onToggle={toggle} />
+        ))}
+      </ul>
+      {more
+        ? groups.map(([title, keys]) => (
+            <section key={title} className="wl-group" aria-label={title}>
+              <p className="wl-group__title">{title}</p>
+              <ul className="wl-grid">
+                {keys.map((k) => (
+                  <Operator key={k} k={k} on={value.includes(k)} onToggle={toggle} />
+                ))}
+              </ul>
+            </section>
+          ))
+        : groups.length > 0 && (
+            <button type="button" className="wl-more" onClick={() => setMore(true)}>
+              Show more operators
+            </button>
+          )}
+    </>
   )
 }
 
@@ -339,7 +371,7 @@ const COPY = {
   leagues: ['Pick your leagues', 'PropPickz opens on the first one, and they all come first in the league menu.'],
   odds: ['How do you read odds?', 'Every price on PropPickz shows this way. You can change it in Account.'],
   region: ['Where do you bet?', 'Sportsbook links open in your state’s version of each book.'],
-  books: ['Pick your sportsbooks', 'Their prices come first on your slip, and a tap opens their app.'],
+  books: ['Pick your operators', 'The apps you bet with. Their prices come first wherever we have them.'],
   record: ['Graded in public', 'Every prop we rate is checked against the result, and the record is open to anyone.'],
   alerts: ['Get the alerts that matter', 'Results as your games end, injury news on your picks, and big line moves.'],
   pro: ['PropPickz Pro', 'The full read on every prop.'],
@@ -491,7 +523,7 @@ export function Flow({ loc, nav }) {
         {step === 'leagues' && <Leagues value={leagues} onChange={setLeagues} offseason={offseason} />}
         {step === 'odds' && <Odds value={odds} onChange={setOdds} />}
         {step === 'region' && <Region value={region} onChange={setRegion} />}
-        {step === 'books' && <Books value={books} onChange={setBooks} />}
+        {step === 'books' && <Books value={books} onChange={setBooks} region={region} />}
         {step === 'record' && <Record cal={cal} />}
         {step === 'alerts' && <Alerts format={odds} />}
         {over && <Pro plans={plans} plan={plan} setPlan={setPlan} paywall={paywall} native={native} />}

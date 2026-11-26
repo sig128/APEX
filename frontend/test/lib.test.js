@@ -186,3 +186,37 @@ test('where you bet: names, and the state a sportsbook link uses', async () => {
   assert.equal(bookState('US-CA'), null)
   assert.equal(bookState('CA-ON'), null)
 })
+
+test('operators: where they bet comes first, everything else a tap away, each once', async () => {
+  const { OPERATORS, OPERATOR_KEYS, operatorsFor, iconOf, operatorName } = await import('../src/lib/operators.js')
+  const all = (o) => [...o.first, ...o.rest.flatMap(([, keys]) => keys)]
+  for (const region of [null, 'US-NY', 'US-TX', 'CA-ON', 'CA-QC', 'CA-BC', 'CA-AB', 'CA-NS', 'other']) {
+    const o = operatorsFor(region)
+    const keys = all(o)
+    assert.equal(new Set(keys).size, keys.length, `${region}: no operator twice`)
+    assert.deepEqual([...keys].sort(), [...OPERATOR_KEYS].sort(), `${region}: every operator somewhere`)
+  }
+  // the US: the big books first, then pick'em apps and prediction markets, the rest under "More"
+  const us = operatorsFor('US-NY')
+  assert.deepEqual(us.first.slice(0, 4), ['fanduel', 'draftkings', 'betmgm', 'williamhill_us'])
+  assert.ok(us.first.includes('prizepicks') && us.first.includes('kalshi'))
+  assert.deepEqual(us.rest.map(([t]) => t), ['More in the US', 'Canada', 'Elsewhere'])
+  assert.deepEqual(operatorsFor(null).first, us.first, 'no answer yet reads as the US')
+  // Canada: the province's own lottery app leads; a province without one starts on the books
+  assert.equal(operatorsFor('CA-ON').first[0], 'proline')
+  assert.equal(operatorsFor('CA-QC').first[0], 'miseojeu')
+  assert.equal(operatorsFor('CA-BC').first[0], 'playnow')
+  assert.equal(operatorsFor('CA-AB').first[0], 'playalberta')
+  assert.equal(operatorsFor('CA-NS').first[0], 'espnbet')
+  assert.equal(operatorsFor('CA-ON').rest[0][0], 'More in Canada')
+  assert.equal(operatorsFor('other').first[0], 'bet365')
+  // Apple's icons only: the server's current one when it's an Apple address, ours otherwise
+  assert.match(iconOf('fanduel'), /^https:\/\/is1-ssl\.mzstatic\.com\/image\/thumb\/.+\/180x180bb\.jpg$/)
+  assert.equal(iconOf('fanduel', { fanduel: 'https://is3-ssl.mzstatic.com/image/thumb/x/y.png/180x180bb.jpg' }), 'https://is3-ssl.mzstatic.com/image/thumb/x/y.png/180x180bb.jpg')
+  assert.equal(iconOf('fanduel', { fanduel: 'https://evil.example/x.jpg' }), iconOf('fanduel'))
+  assert.equal(iconOf('nope'), null)
+  for (const [k, o] of Object.entries(OPERATORS)) assert.match(o.glow, /^\d{1,3}, \d{1,3}, \d{1,3}$/, k)
+  assert.equal(operatorName('espnbet'), 'theScore Bet')
+  assert.equal(operatorName('pick6', { short: true }), 'Pick6')
+  assert.equal(operatorName('nope'), '')
+})
