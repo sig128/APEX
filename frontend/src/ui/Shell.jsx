@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { SPORTS, sportInfo, useSport, apiOf, sp, isSharedPath, setLeague, leagueSwitchPath } from '../lib/sport.js'
 import { Logo } from '../brand/Logo.jsx'
@@ -12,7 +12,8 @@ import { backFromBook, clearAway } from './Books.jsx'
 import { ConsentGate } from './ConsentGate.jsx'
 import { Tour, replayTour } from './Tour.jsx'
 import { Welcome } from './Welcome.jsx'
-import { loadPrefs, usePrefs } from '../lib/prefs.js'
+import { loadPrefs, usePrefs, setupDue, withSetup, markSetupPending } from '../lib/prefs.js'
+import { hasConsented } from '../lib/consent.js'
 import { FeedbackDialog, openFeedback } from './Feedback.jsx'
 import { getSlip } from '../lib/slip.js'
 import { PickNudge } from './PickNudge.jsx'
@@ -20,6 +21,36 @@ import { playIntro } from '../intro/intro.js'
 import { DAY } from './time.js'
 import { Headshot } from './Img.jsx'
 import { isNative } from '../lib/native.js'
+
+/**
+ * Once a visit per account: the account's setup comes to this device, and a member who hasn't been
+ * through the setup (signed up before it existed, or left it on another device) gets it over the
+ * page they're on, after the consent screen. Signing in on the sign-in page runs it from there.
+ */
+function syncSetup(uid, go) {
+  const k = `apex_prefs_loaded_${uid}`
+  try {
+    if (sessionStorage.getItem(k)) return
+    sessionStorage.setItem(k, '1')
+  } catch {
+    /* storage off: once per load */
+  }
+  let prefs = null
+  const open = () => {
+    const { pathname, search, hash } = window.location
+    if (!prefs || !hasConsented() || !setupDue(prefs, { pathname, search })) return
+    prefs = null
+    window.removeEventListener('apex:consented', open)
+    go(withSetup(`${pathname}${search}${hash}`))
+  }
+  window.addEventListener('apex:consented', open)
+  loadPrefs().then((p) => {
+    if (!p || p.onboarded) return window.removeEventListener('apex:consented', open)
+    prefs = p
+    markSetupPending(true)
+    open()
+  })
+}
 
 /** The PropPickz lockup at a given mark height (kept under this name for older imports). */
 export function Wordmark({ height = 28 }) {
@@ -113,17 +144,13 @@ export function Shell({ children }) {
   const slip = useSlip()
   const { user } = useAuth()
 
-  // signed in: the account's setup comes to this device once a visit (the app, a new browser)
+  // signed in: the account's setup comes to this device once a visit (the app, a new browser), and
+  // someone who hasn't been through it yet gets it then
+  const nav = useNavigate()
+  const go = useRef(nav)
+  go.current = nav
   useEffect(() => {
-    if (!user?.uid) return
-    const k = `apex_prefs_loaded_${user.uid}`
-    try {
-      if (sessionStorage.getItem(k)) return
-      sessionStorage.setItem(k, '1')
-    } catch {
-      /* storage off: load anyway */
-    }
-    loadPrefs()
+    if (user?.uid) syncSetup(user.uid, (to) => go.current(to, { replace: true }))
   }, [user?.uid])
 
   useEffect(() => {

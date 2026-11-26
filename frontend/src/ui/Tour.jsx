@@ -3,6 +3,7 @@ import { resetDiscover } from './Discover.jsx'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import { sp, useSport } from '../lib/sport.js'
+import { setupPending } from '../lib/prefs.js'
 
 /**
  * The onboarding tour: a few steps that point at the real screen, one idea each. Every step can
@@ -72,8 +73,8 @@ export function Tour() {
   useEffect(() => {
     // a first visit: after the consent screen and the intro
     const first = () => {
-      // not over the setup that follows signing up; it starts on its own later
-      if (new URLSearchParams(window.location.search).has('welcome')) return
+      // not over the setup that follows signing up (or is about to open); it starts on its own later
+      if (new URLSearchParams(window.location.search).has('welcome') || setupPending()) return
       if (!read()) start(false)
     }
     const again = () => start(true)

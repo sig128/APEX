@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { api } from './api.js'
 import { setOddsFormat } from './format.js'
 import { bookState } from './regions.js'
-import { isSport } from './leagues.js'
+import { isSport, sp } from './leagues.js'
 
 const KEY = 'apex_prefs'
 const EVENT = 'apex:prefs'
@@ -62,6 +62,32 @@ export function usePrefs() {
     }
   }, [])
   return p
+}
+
+/**
+ * Where signing in lands: where they were headed, else the home page of their first league (never
+ * Account). Someone who hasn't been through the setup (a new account) gets it first, over that
+ * page, unless they're on their way to buy a pass.
+ */
+export function landingAfterSignIn(p, next = null) {
+  const first = (p?.leagues || []).find(isSport)
+  const to = next || sp(first || 'nfl')
+  return p && !p.onboarded && !/[?&]buy=/.test(to) ? withSetup(to) : to
+}
+
+// a signed-in member's setup is about to open (the first-visit tour waits for another visit)
+let pending = false
+export const setupPending = () => pending
+export const markSetupPending = (v) => {
+  pending = Boolean(v)
+}
+
+// where the setup never opens by itself: signing in (it follows that), the admin and legal pages
+const NO_SETUP = /^\/(login|admin|adminn|consent|terms|privacy)(\/|$)/
+
+/** Whether a signed-in member who hasn't been through the setup gets it here, on its own. */
+export function setupDue(p, { pathname = '/', search = '' } = {}) {
+  return Boolean(p && !p.onboarded) && !NO_SETUP.test(pathname) && !/[?&](welcome|buy)=/.test(search)
 }
 
 /** A path with the setup opened over it ("/nba?welcome=1"). */

@@ -3,29 +3,26 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth, appleSignInAvailable } from '../context/AuthContext.jsx'
 import { isNative } from '../lib/native.js'
 import { useTitle } from '../lib/hooks.js'
-import { loadPrefs, withSetup } from '../lib/prefs.js'
-import { sp } from '../lib/sport.js'
+import { loadPrefs, landingAfterSignIn } from '../lib/prefs.js'
 import { Logo } from '../brand/Logo.jsx'
 import { Skeleton } from '../ui/Bits.jsx'
 
 /**
- * Just signed in: someone new (no setup on the account yet) goes through the setup, over the page
- * they were headed to (their league's home when that was only the default); everyone else goes
- * straight there. Someone on their way to buy a pass buys first and can run the setup from Account.
+ * Just signed in: off to where they were headed, else their league's home page (not Account).
+ * Someone new (no setup on the account yet) goes through the setup first, over that page; someone
+ * on their way to buy a pass buys first and gets the setup on their next visit.
  */
-function AfterSignIn({ next, chosen }) {
+function AfterSignIn({ next }) {
   const nav = useNavigate()
   useEffect(() => {
     let live = true
     loadPrefs().then((p) => {
-      if (!live) return
-      if (p && !p.onboarded && !/[?&]buy=/.test(next)) nav(withSetup(chosen ? next : p.leagues?.[0] ? sp(p.leagues[0]) : '/'), { replace: true })
-      else nav(next, { replace: true })
+      if (live) nav(landingAfterSignIn(p, next), { replace: true })
     })
     return () => {
       live = false
     }
-  }, [next, chosen, nav])
+  }, [next, nav])
   return (
     <div className="container page">
       <Skeleton rows={3} />
@@ -65,9 +62,8 @@ export function LoginPage() {
   useTitle('Sign up or sign in')
   // only paths on this site: "/x", never "//host" or "/\\host" (both leave the site)
   const rawNext = q.get('next') || ''
-  const chosen = /^\/(?![/\\])[^\s]*$/.test(rawNext)
-  const next = chosen ? rawNext : '/account'
-  if (!loading && user) return <AfterSignIn next={next} chosen={chosen} />
+  const next = /^\/(?![/\\])[^\s]*$/.test(rawNext) ? rawNext : null
+  if (!loading && user) return <AfterSignIn next={next} />
   const apple = (
     <button
       type="button"

@@ -220,3 +220,27 @@ test('operators: where they bet comes first, everything else a tap away, each on
   assert.equal(operatorName('pick6', { short: true }), 'Pick6')
   assert.equal(operatorName('nope'), '')
 })
+
+test('signing in lands on the home page, through the setup when it isn’t done; the setup opens once by itself', async () => {
+  const { landingAfterSignIn, setupDue } = await import('../src/lib/prefs.js')
+  const done = { leagues: ['nba', 'nfl'], onboarded: 1795727000000 }
+  const fresh = { leagues: [], onboarded: null }
+  // a returning member: their first league's home, or where they were headed; never Account by default
+  assert.equal(landingAfterSignIn(done), '/nba')
+  assert.equal(landingAfterSignIn({ leagues: [], onboarded: 1 }), '/')
+  assert.equal(landingAfterSignIn(done, '/picks?tab=groups'), '/picks?tab=groups')
+  // a new account: the setup first, over that page
+  assert.equal(landingAfterSignIn(fresh), '/?welcome=1')
+  assert.equal(landingAfterSignIn(fresh, '/me'), '/me?welcome=1')
+  // buying a pass comes first; the server not answering means no setup now
+  assert.equal(landingAfterSignIn(fresh, '/account?buy=pro'), '/account?buy=pro')
+  assert.equal(landingAfterSignIn(null), '/')
+  // on its own: anywhere but signing in, the admin and legal pages, a checkout, or the setup itself
+  assert.equal(setupDue(fresh, { pathname: '/nba', search: '' }), true)
+  assert.equal(setupDue(fresh, { pathname: '/u/someone', search: '?x=1' }), true)
+  for (const [pathname, search] of [['/login', ''], ['/admin', ''], ['/admin/model-test', ''], ['/adminn', ''], ['/terms', ''], ['/privacy', ''], ['/consent', ''], ['/account', '?buy=pro'], ['/nba', '?welcome=1']]) {
+    assert.equal(setupDue(fresh, { pathname, search }), false, pathname + search)
+  }
+  assert.equal(setupDue(done, { pathname: '/nba' }), false)
+  assert.equal(setupDue(null, { pathname: '/nba' }), false)
+})
