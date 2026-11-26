@@ -36,3 +36,13 @@ export function bookState(code) {
   const m = /^US-([A-Z]{2})$/.exec(String(code || ''))
   return m && BOOK_STATES.includes(m[1]) ? m[1] : null
 }
+
+// Wikimedia Commons' file names where they aren't simply "Flag of <name>"
+const FLAG_FILE = { 'US-DC': 'the District of Columbia', 'US-GA': 'Georgia (U.S. state)', 'CA-NT': 'the Northwest Territories' }
+
+/** The state's or province's flag: a small picture from Wikimedia Commons (every one checked to load). */
+export function flagOf(code) {
+  if (!code || code === 'other') return null
+  const name = FLAG_FILE[code] || regionName(code)
+  return name ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(`Flag of ${name}.svg`.replace(/ /g, '_'))}?width=80` : null
+}

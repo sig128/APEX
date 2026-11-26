@@ -179,6 +179,29 @@ html.is-welcoming body {
   margin-bottom: 8px;
   color: var(--chalk-2);
 }
+/* a league: its own logo, glowing in its color, like a team crest under lights */
+.wl-tile--league {
+  background:
+    radial-gradient(84px 64px at 30px 30px, rgba(var(--lg), 0.34), transparent 72%),
+    var(--stand-2);
+}
+.wl-tile--league[aria-pressed='true'] {
+  background:
+    radial-gradient(96px 72px at 30px 30px, rgba(var(--lg), 0.5), transparent 72%),
+    linear-gradient(180deg, rgba(184, 255, 31, 0.06), rgba(184, 255, 31, 0.02)),
+    var(--stand-2);
+}
+.wl-tile__logo {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 10px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+.wl-tile__sub.is-off {
+  color: var(--chalk-3);
+  font-style: italic;
+}
 .wl-tile[aria-pressed='true'] .wl-tile__icon {
   color: var(--lime);
 }
@@ -255,6 +278,35 @@ html.is-welcoming body {
 }
 .wl-row[aria-pressed='true'] .wl-row__eg {
   color: var(--lime);
+}
+/* a place: its flag, its name, its two letters */
+.wl-row--place {
+  justify-content: flex-start;
+  gap: 14px;
+  min-height: 60px;
+  padding: 0 14px;
+}
+.wl-row--place .wl-row__name {
+  flex: 1;
+}
+.wl-flag {
+  flex: none;
+  width: 40px;
+  height: 27px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--seat);
+  box-shadow: 0 0 0 1px rgba(238, 243, 236, 0.14);
+}
+.wl-flag--globe {
+  display: grid;
+  place-items: center;
+  color: var(--chalk-2);
+}
+.wl-row__code {
+  font: 800 15px/1 var(--font-num);
+  letter-spacing: 0.04em;
+  color: var(--chalk-3);
 }
 .wl-row__check {
   display: grid;

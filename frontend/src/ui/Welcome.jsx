@@ -6,7 +6,7 @@ import { useApi } from '../lib/useApi.js'
 import { api } from '../lib/api.js'
 import { SPORTS, isSport, sp, setLeague } from '../lib/sport.js'
 import { readPrefs, savePrefs, withSetup } from '../lib/prefs.js'
-import { US_STATES, CA_PROVINCES } from '../lib/regions.js'
+import { US_STATES, CA_PROVINCES, flagOf } from '../lib/regions.js'
 import { bookName } from '../lib/format.js'
 import { pushEnv, enablePush } from '../lib/push.js'
 import { isNative, enableNativePush } from '../lib/native.js'
@@ -60,6 +60,41 @@ function SportIcon({ league }) {
   )
 }
 
+// Each league's own logo (ESPN's versions for dark backgrounds; the college leagues have ESPN's
+// sport marks), and the color its tile glows in
+const ESPN = 'https://a.espncdn.com'
+const LOGO = {
+  nfl: `${ESPN}/i/teamlogos/leagues/500-dark/nfl.png`,
+  nba: `${ESPN}/i/teamlogos/leagues/500-dark/nba.png`,
+  mlb: `${ESPN}/i/teamlogos/leagues/500-dark/mlb.png`,
+  nhl: `${ESPN}/i/teamlogos/leagues/500-dark/nhl.png`,
+  wnba: `${ESPN}/i/teamlogos/leagues/500-dark/wnba.png`,
+  ncaaf: `${ESPN}/redesign/assets/img/icons/ESPN-icon-football-college.png`,
+  ncaab: `${ESPN}/redesign/assets/img/icons/ESPN-icon-basketball.png`,
+  epl: `${ESPN}/i/leaguelogos/soccer/500-dark/23.png`,
+  laliga: `${ESPN}/i/leaguelogos/soccer/500-dark/15.png`,
+  seriea: `${ESPN}/i/leaguelogos/soccer/500-dark/12.png`,
+  bundesliga: `${ESPN}/i/leaguelogos/soccer/500-dark/10.png`,
+  mls: `${ESPN}/i/leaguelogos/soccer/500-dark/19.png`,
+}
+const GLOW = { nfl: '33, 82, 196', nba: '201, 8, 42', mlb: '191, 13, 62', nhl: '170, 178, 182', wnba: '250, 77, 0', ncaaf: '176, 98, 52', ncaab: '242, 140, 40', epl: '150, 80, 230', laliga: '255, 75, 68', seriea: '26, 142, 211', bundesliga: '210, 5, 21', mls: '46, 107, 191' }
+
+function LeagueLogo({ league }) {
+  const [bad, setBad] = useState(false)
+  if (bad || !LOGO[league]) return <SportIcon league={league} />
+  return <img className="wl-tile__logo" src={LOGO[league]} alt="" width="40" height="40" decoding="async" onError={() => setBad(true)} />
+}
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+/** The month a league's season comes back, from its off-season months. */
+function backIn(off, month) {
+  for (let k = 1; k <= 12; k++) {
+    const m = ((month - 1 + k) % 12) + 1
+    if (!off.includes(m)) return MONTHS[m - 1]
+  }
+  return null
+}
+
 function Check() {
   return (
     <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
@@ -87,13 +122,15 @@ function Leagues({ value, onChange, offseason }) {
     <ul className="wl-grid" aria-label="Leagues">
       {SPORTS.map((s) => {
         const at = value.indexOf(s.key)
-        const off = offseason?.get(s.key)?.includes(month)
+        const months = offseason?.get(s.key) || []
+        const off = months.includes(month)
+        const back = off ? backIn(months, month) : null
         return (
           <li key={s.key}>
-            <button type="button" className="wl-tile" aria-pressed={at >= 0} onClick={() => toggle(s.key)}>
-              <SportIcon league={s.key} />
+            <button type="button" className="wl-tile wl-tile--league" style={{ '--lg': GLOW[s.key] || '120, 132, 125' }} aria-pressed={at >= 0} onClick={() => toggle(s.key)}>
+              <LeagueLogo league={s.key} />
               <span className="wl-tile__name">{s.name}</span>
-              <span className="wl-tile__sub">{off ? 'Off-season' : s.title !== s.name ? s.title : SPORT_WORD[KIND[s.key] || 'soccer']}</span>
+              <span className={`wl-tile__sub${off ? ' is-off' : ''}`}>{off ? (back ? `Off-season, back in ${back}` : 'Off-season') : s.title !== s.name ? s.title : SPORT_WORD[KIND[s.key] || 'soccer']}</span>
               {at >= 0 && (
                 <span className="wl-tile__rank num" aria-label={at === 0 ? 'opens first' : `number ${at + 1}`}>
                   {at + 1}
@@ -129,6 +166,23 @@ function Odds({ value, onChange }) {
   )
 }
 
+/** A state's or province's flag; a globe for somewhere else, or when the picture won't load. */
+function Flag({ code }) {
+  const [bad, setBad] = useState(false)
+  const src = flagOf(code)
+  if (!src || bad) {
+    return (
+      <span className="wl-flag wl-flag--globe" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z" />
+        </svg>
+      </span>
+    )
+  }
+  return <img className="wl-flag" src={src} alt="" width="40" height="27" loading="lazy" decoding="async" onError={() => setBad(true)} />
+}
+
 function Region({ value, onChange }) {
   const [q, setQ] = useState('')
   const hit = (name, code) => !q.trim() || name.toLowerCase().includes(q.trim().toLowerCase()) || code.toLowerCase() === q.trim().toLowerCase()
@@ -150,12 +204,15 @@ function Region({ value, onChange }) {
           <ul className="wl-list">
             {rows.map(([code, name]) => (
               <li key={code}>
-                <button type="button" className="wl-row" aria-pressed={value === code} onClick={() => onChange(code)}>
+                <button type="button" className="wl-row wl-row--place" aria-pressed={value === code} onClick={() => onChange(code)}>
+                  <Flag code={code} />
                   <span className="wl-row__name">{name}</span>
-                  {value === code && (
+                  {value === code ? (
                     <span className="wl-row__check">
                       <Check />
                     </span>
+                  ) : (
+                    <span className="wl-row__code num">{code === 'other' ? '' : code.slice(3)}</span>
                   )}
                 </button>
               </li>
