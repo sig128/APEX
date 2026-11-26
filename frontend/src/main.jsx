@@ -6,8 +6,9 @@ import { maybePlayIntro, playIntro, introWanted } from './intro/intro.js'
 import { hasConsented } from './lib/consent.js'
 import { api } from './lib/api.js'
 import { mutate } from './lib/useApi.js'
-import { sportFromPath, sportInfo, isSport, apiOf } from './lib/sport.js'
+import { sportFromPath, sportInfo, isSport, apiOf, sp } from './lib/sport.js'
 import { isNative, startNative } from './lib/native.js'
+import { readPrefs } from './lib/prefs.js'
 import './styles/tokens.css'
 import './styles/app.css'
 import './styles/tools.css'
@@ -17,6 +18,17 @@ import './styles/brand.css'
 {
   const to = new URLSearchParams(window.location.search).get('to')
   if (to && /^\/u\/[a-z0-9_]{3,20}$/i.test(to)) window.history.replaceState(null, '', to)
+}
+
+// The member's first league is where PropPickz opens (their setup, lib/prefs.js): a visit that
+// starts at "/" goes to that league's home, in the app and on the website.
+try {
+  const fav = readPrefs().leagues[0]
+  const opening = !sessionStorage.getItem('apex_opened')
+  sessionStorage.setItem('apex_opened', '1')
+  if (opening && fav && fav !== 'nfl' && window.location.pathname === '/' && !window.location.search) window.history.replaceState(null, '', sp(fav))
+} catch {
+  /* storage off: NFL Today, as before */
 }
 
 // The intro plays over the first paint at most every few hours, with the real numbers of the

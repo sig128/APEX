@@ -155,3 +155,37 @@ test('Smart Check counts: what was shown and what happened next, per day', async
   assert.deepEqual(d.types.weak, { shown: 1, dismissed: 0, muted: 0, removed: 1 })
   assert.equal(d.types.nope, undefined, 'unknown types are dropped')
 })
+
+test('setup: leagues, odds format, where they bet and books, kept with the account and checked', async () => {
+  // signed out there's nothing to read or save
+  assert.equal((await api.get('/api/members/prefs')).status, 401)
+  assert.equal((await api.post('/api/members/prefs', { odds: 'decimal' })).status, 401)
+  const h = { headers: bearer(uid) }
+  assert.deepEqual((await api.get('/api/members/prefs', h)).body, { leagues: [], odds: 'american', region: null, books: [], onboarded: null, at: null })
+  // a step at a time: each answer saves on its own, the rest stays
+  assert.deepEqual((await api.post('/api/members/prefs', { leagues: ['nba', 'nfl', 'nba'] }, h)).body.leagues, ['nba', 'nfl'])
+  assert.equal((await api.post('/api/members/prefs', { odds: 'decimal', region: 'CA-ON' }, h)).body.region, 'CA-ON')
+  const done = await api.post('/api/members/prefs', { books: ['fanduel', 'espnbet'], done: true }, h)
+  assert.deepEqual(done.body.leagues, ['nba', 'nfl'])
+  assert.equal(done.body.odds, 'decimal')
+  assert.deepEqual(done.body.books, ['fanduel', 'espnbet'])
+  assert.equal(done.body.onboarded, now())
+  // running the setup again later keeps the first finish
+  const first = now()
+  now.add(60_000)
+  assert.equal((await api.post('/api/members/prefs', { region: 'US-NY', done: true }, h)).body.onboarded, first)
+  // anything off the lists is turned away, and nothing of it is saved
+  for (const b of [{ leagues: ['xfl'] }, { leagues: 'nfl' }, { odds: 'fractional' }, { region: 'US-ZZ' }, { region: 'Norway' }, { books: ['pinnacle'] }]) {
+    assert.equal((await api.post('/api/members/prefs', b, h)).status, 400, JSON.stringify(b))
+  }
+  const kept = (await api.get('/api/members/prefs', h)).body
+  assert.equal(kept.odds, 'decimal')
+  assert.equal(kept.region, 'US-NY')
+  // deleting the account deletes the setup
+  const own = createStore({ driver: 'memory' })
+  const m = createMembers({ store: own })
+  await m.setPrefs('u1', { odds: 'decimal', done: true })
+  await m.eraseUser('u1')
+  assert.equal((await own.get('members', 'prefs-u-u1')) ?? null, null)
+  assert.equal((await m.prefsOf('u1')).onboarded, null)
+})

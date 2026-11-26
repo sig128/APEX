@@ -1,9 +1,37 @@
-import { useState } from 'react'
-import { Navigate, useSearchParams, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth, appleSignInAvailable } from '../context/AuthContext.jsx'
 import { isNative } from '../lib/native.js'
 import { useTitle } from '../lib/hooks.js'
+import { loadPrefs, withSetup } from '../lib/prefs.js'
+import { sp } from '../lib/sport.js'
 import { Logo } from '../brand/Logo.jsx'
+import { Skeleton } from '../ui/Bits.jsx'
+
+/**
+ * Just signed in: someone new (no setup on the account yet) goes through the setup, over the page
+ * they were headed to (their league's home when that was only the default); everyone else goes
+ * straight there. Someone on their way to buy a pass buys first and can run the setup from Account.
+ */
+function AfterSignIn({ next, chosen }) {
+  const nav = useNavigate()
+  useEffect(() => {
+    let live = true
+    loadPrefs().then((p) => {
+      if (!live) return
+      if (p && !p.onboarded && !/[?&]buy=/.test(next)) nav(withSetup(chosen ? next : p.leagues?.[0] ? sp(p.leagues[0]) : '/'), { replace: true })
+      else nav(next, { replace: true })
+    })
+    return () => {
+      live = false
+    }
+  }, [next, chosen, nav])
+  return (
+    <div className="container page">
+      <Skeleton rows={3} />
+    </div>
+  )
+}
 
 /** What went wrong with Google sign-in, in plain words (Firebase's codes otherwise). */
 export function signInError(e) {
@@ -34,11 +62,12 @@ export function LoginPage() {
   const [q] = useSearchParams()
   const [err, setErr] = useState(null)
   const [busy, setBusy] = useState(false)
-  useTitle('Sign in')
+  useTitle('Sign up or sign in')
   // only paths on this site: "/x", never "//host" or "/\\host" (both leave the site)
   const rawNext = q.get('next') || ''
-  const next = /^\/(?![/\\])[^\s]*$/.test(rawNext) ? rawNext : '/account'
-  if (!loading && user) return <Navigate to={next} replace />
+  const chosen = /^\/(?![/\\])[^\s]*$/.test(rawNext)
+  const next = chosen ? rawNext : '/account'
+  if (!loading && user) return <AfterSignIn next={next} chosen={chosen} />
   const apple = (
     <button
       type="button"
@@ -68,8 +97,8 @@ export function LoginPage() {
     <div className="container page login">
       <div className="login__card">
         <Logo height={36} className="logo--login" />
-        <h1 className="login__title">Sign in</h1>
-        <p className="muted">Your picks page, passes and model reads live on your account. Browsing props never needs one.</p>
+        <h1 className="login__title">Sign up or sign in</h1>
+        <p className="muted">One tap with Google or Apple. A new account gets a quick setup: your leagues, how odds read and your sportsbooks. Browsing props never needs one.</p>
         {!firebaseConfigured ? (
           <p className="form-err">Sign-in isn't set up on this site yet: the Firebase web config is missing (VITE_FIREBASE_* in frontend/.env).</p>
         ) : (

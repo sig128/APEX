@@ -4,7 +4,7 @@ import { api } from '../lib/api.js'
 import { useTitle, useWidth } from '../lib/hooks.js'
 import { useSlip } from '../lib/useSlip.js'
 import { parlayMath } from '../lib/slip.js'
-import { pct, odds, parseOdds, fairOf } from '../lib/format.js'
+import { pct, odds, fairOf, parseUserOdds } from '../lib/format.js'
 import { Locked } from '../ui/Locked.jsx'
 import { ImpliedHint } from '../ui/Odds.jsx'
 import { Headshot } from '../ui/Img.jsx'
@@ -30,7 +30,7 @@ export function SimPage() {
   const [state, setState] = useState({ busy: false, err: null, out: null })
   const credits = useCredits()
   const cost = useCost(runs >= 50_000 || legs.length > 6 ? 'simLarge' : 'sim')
-  const price = parseOdds(priceText) ?? (math?.priced ? math.book : null)
+  const price = parseUserOdds(priceText) ?? (math?.priced ? math.book : null)
   useEffect(() => {
     if (!priceText && math?.priced) setPriceText(odds(math.book))
     // only when the slip's own price first shows up
@@ -98,8 +98,8 @@ export function SimPage() {
                 <label className="field">
                   <span>Your parlay odds</span>
                   <span className="odds-field">
-                    <input inputMode="numeric" value={priceText} placeholder="+600" onChange={(e) => setPriceText(e.target.value)} aria-invalid={Boolean(priceText) && parseOdds(priceText) == null} />
-                    <ImpliedHint a={parseOdds(priceText)} />
+                    <input inputMode="numeric" value={priceText} placeholder="+600" onChange={(e) => setPriceText(e.target.value)} aria-invalid={Boolean(priceText) && parseUserOdds(priceText) == null} />
+                    <ImpliedHint a={parseUserOdds(priceText)} />
                   </span>
                 </label>
                 <div className="field">

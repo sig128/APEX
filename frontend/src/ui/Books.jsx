@@ -5,7 +5,8 @@ import { odds, pct, impliedOf, decimalOf, bookName } from '../lib/format.js'
 import { Dialog } from './Dialog.jsx'
 import { useSport, apiOf, legRef, legsSport } from '../lib/sport.js'
 
-const STATES = ['AZ', 'CO', 'CT', 'DC', 'IA', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME', 'MI', 'NC', 'NH', 'NJ', 'NY', 'OH', 'PA', 'TN', 'VA', 'VT', 'WV', 'WY']
+import { BOOK_STATES as STATES } from '../lib/regions.js'
+import { usePrefs } from '../lib/prefs.js'
 const read = (k, d) => {
   try {
     return localStorage.getItem(k) || d
@@ -239,7 +240,9 @@ export function BookRail({ legs, parlay = true, onMore = null, copied = false })
   const whole = parlay || n === 1
   const byKey = new Map((data?.books || []).map((b) => [b.book, b]))
   const best = whole && data?.best ? data.best : null
-  const order = best ? [best, ...FEATURED_BOOKS.filter((k) => k !== best)] : [...FEATURED_BOOKS]
+  // the best price first, then the member's own books (their setup), then the rest
+  const mine = usePrefs().books.filter((k) => FEATURED_BOOKS.includes(k))
+  const order = [...new Set([best, ...mine, ...FEATURED_BOOKS].filter(Boolean))]
   const live = Boolean(data?.books?.some((b) => b.priced))
   return (
     <section className="bookrail" aria-labelledby="bookrail-h">

@@ -1,4 +1,5 @@
-// /api/members/* — the consent screen's record, the onboarding tour's counts, and feedback.
+// /api/members/* — the consent screen's record, a member's setup, the onboarding tour's counts,
+// and feedback.
 import express from 'express'
 import { ApiError, clientIp } from '../lib/router.js'
 import { createLimiter } from '../security/rateLimit.js'
@@ -11,6 +12,8 @@ export function membersRoutes({ members, access }) {
   // a person writes a few notes a day at most; a script that tries more is turned away
   const notes = createLimiter({ burst: 5, perSec: 1 / 30 })
   const taps = createLimiter({ burst: 40, perSec: 1 / 3 })
+  // the setup saves after each of its steps; someone running it again stays well inside this
+  const setup = createLimiter({ burst: 20, perSec: 1 / 3 })
 
   const wrap = (fn) => async (req, res) => {
     res.set('Cache-Control', 'no-store')
@@ -42,6 +45,19 @@ export function membersRoutes({ members, access }) {
     if (b.agree !== true) throw new ApiError(400, 'not_agreed', 'Tick the box to agree first.')
     const user = await who(req)
     return members.consent({ device: b.device, version: b.version, app: b.app, uid: user?.uid || null })
+  }))
+
+  // the setup after signing up, kept with the account (the website and the app read the same)
+  r.get('/prefs', wrap(async (req) => {
+    const user = await who(req)
+    if (!user) throw new ApiError(401, 'sign_in', 'Sign in to see your setup.')
+    return members.prefsOf(user.uid)
+  }))
+  r.post('/prefs', wrap(async (req) => {
+    throttle(setup, clientIp(req))
+    const user = await who(req)
+    if (!user) throw new ApiError(401, 'sign_in', 'Sign in to save your setup.')
+    return members.setPrefs(user.uid, req.body || {})
   }))
 
   r.post('/tour', wrap(async (req) => {

@@ -4,6 +4,7 @@
 import crypto from 'node:crypto'
 import { ApiError } from '../lib/router.js'
 import { log, errText } from '../lib/log.js'
+import { createPrefs } from './prefs.js'
 
 /** Bump with any change to the consent text: everyone is asked again. Keep in step with the app. */
 export const CONSENT_VERSION = '2026-11-21'
@@ -37,6 +38,8 @@ export function cleanShot(shot) {
 
 export function createMembers({ store, mail = null, now = () => Date.now() }) {
   if (!store) throw new Error('members: a store is required')
+  // the setup after signing up: leagues, odds format, where they bet, sportsbooks
+  const prefs = createPrefs({ store, ns: NS, now })
 
   /** The consent screen was accepted on this device (and, signed in, by this account). */
   async function consent({ device, version, app, uid = null }) {
@@ -181,10 +184,11 @@ export function createMembers({ store, mail = null, now = () => Date.now() }) {
     return items.filter(Boolean)
   }
 
-  /** Deleting an account: the account's consent record goes (feedback notes stay with the team). */
+  /** Deleting an account: its consent record and its setup go (feedback notes stay with the team). */
   async function eraseUser(uid) {
     if (uid) await store.del(NS, `consent-u-${uid}`).catch(() => null)
+    await prefs.erase(uid)
   }
 
-  return { consent, consentOf, tour, tourStats, nudges, nudgeStats, feedback, feedbackList, feedbackShot, eraseUser }
+  return { consent, consentOf, tour, tourStats, nudges, nudgeStats, feedback, feedbackList, feedbackShot, eraseUser, prefsOf: prefs.get, setPrefs: prefs.set }
 }

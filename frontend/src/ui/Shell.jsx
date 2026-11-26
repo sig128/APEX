@@ -11,6 +11,8 @@ import { SlipPanel } from './SlipPanel.jsx'
 import { backFromBook, clearAway } from './Books.jsx'
 import { ConsentGate } from './ConsentGate.jsx'
 import { Tour, replayTour } from './Tour.jsx'
+import { Welcome } from './Welcome.jsx'
+import { loadPrefs, usePrefs } from '../lib/prefs.js'
 import { FeedbackDialog, openFeedback } from './Feedback.jsx'
 import { getSlip } from '../lib/slip.js'
 import { PickNudge } from './PickNudge.jsx'
@@ -44,7 +46,10 @@ function SportPicker() {
   const meta = useApi('/api/sports', { maxAgeMs: 10 * 60_000 }).data
   const month = new Date().getMonth() + 1
   const on = meta?.sports ? new Map(meta.sports.map((x) => [x.key, x])) : null
-  const list = SPORTS.filter((s) => !on || on.has(s.key) || s.key === sport)
+  // the member's leagues first, in their order (their setup), then the rest
+  const favs = usePrefs().leagues
+  const rank = (k) => (favs.includes(k) ? favs.indexOf(k) : favs.length + SPORTS.findIndex((s) => s.key === k))
+  const list = SPORTS.filter((s) => !on || on.has(s.key) || s.key === sport).sort((a, b) => rank(a.key) - rank(b.key))
   // on a league's pages, go to the same section of the other league; on the tools and picks
   // pages, stay put and switch the league they work on
   const choose = (key) => {
@@ -79,10 +84,12 @@ function SportPicker() {
       </button>
       {open && (
         <ul className="league__menu" id="league-menu">
-          {list.map((s) => {
+          {list.map((s, k) => {
             const off = on?.get(s.key)?.offseason?.includes(month)
+            // a line under the member's own leagues
+            const lastFav = favs.length > 0 && k === favs.filter((f) => list.some((x) => x.key === f)).length - 1 && k < list.length - 1
             return (
-              <li key={s.key}>
+              <li key={s.key} className={lastFav ? 'league__fav-end' : undefined}>
                 <button type="button" aria-current={s.key === sport ? 'true' : undefined} className={`league__item${s.key === sport ? ' is-on' : ''}`} onClick={() => choose(s.key)}>
                   <b>{s.name}</b>
                   <span>{s.title !== s.name ? s.title : ''}</span>
@@ -104,6 +111,20 @@ export function Shell({ children }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const loc = useLocation()
   const slip = useSlip()
+  const { user } = useAuth()
+
+  // signed in: the account's setup comes to this device once a visit (the app, a new browser)
+  useEffect(() => {
+    if (!user?.uid) return
+    const k = `apex_prefs_loaded_${user.uid}`
+    try {
+      if (sessionStorage.getItem(k)) return
+      sessionStorage.setItem(k, '1')
+    } catch {
+      /* storage off: load anyway */
+    }
+    loadPrefs()
+  }, [user?.uid])
 
   useEffect(() => {
     setSearchOpen(false)
@@ -134,6 +155,7 @@ export function Shell({ children }) {
       <Footer />
       <TabBar slipCount={slip.legs.length} onSlip={() => setSlipOpen(true)} />
       <ConsentGate onAccepted={() => window.dispatchEvent(new Event('apex:consented'))} />
+      <Welcome />
       <Tour />
       <FeedbackDialog />
       <SlipPanel

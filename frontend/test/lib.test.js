@@ -155,3 +155,34 @@ test('the website checkout is offered in the app only when it can work for that 
   assert.equal(webCheckoutFits({ user: apple, webSignIn: ['google', 'apple'], webSells: true }), true)
   assert.equal(webCheckoutFits({ user: null, webSignIn: ['google', 'apple'], webSells: true }), false)
 })
+
+test('odds read the member’s way: American by default, decimal after the setup picks it', async () => {
+  const { setOddsFormat, oddsFormat, parseUserOdds } = await import('../src/lib/format.js')
+  assert.equal(oddsFormat(), 'american')
+  assert.equal(odds(150), '+150')
+  setOddsFormat('decimal')
+  assert.equal(odds(150), '2.50')
+  assert.equal(odds(-110), '1.91')
+  assert.equal(odds(NaN), '–')
+  setOddsFormat('american')
+  assert.equal(odds(-110), '-110')
+  // a typed price can be either
+  assert.equal(parseUserOdds('-110'), -110)
+  assert.equal(parseUserOdds('+150'), 150)
+  assert.equal(parseUserOdds('2.50'), 150)
+  assert.equal(parseUserOdds('1.91'), -110)
+  assert.equal(parseUserOdds('1.0'), null)
+  assert.equal(parseUserOdds('abc'), null)
+})
+
+test('where you bet: names, and the state a sportsbook link uses', async () => {
+  const { regionName, bookState } = await import('../src/lib/regions.js')
+  assert.equal(regionName('US-NY'), 'New York')
+  assert.equal(regionName('CA-ON'), 'Ontario')
+  assert.equal(regionName('other'), 'Outside the US and Canada')
+  assert.equal(regionName('US-ZZ'), '')
+  assert.equal(bookState('US-NJ'), 'NJ')
+  // no state-addressed links where online sportsbooks aren't
+  assert.equal(bookState('US-CA'), null)
+  assert.equal(bookState('CA-ON'), null)
+})

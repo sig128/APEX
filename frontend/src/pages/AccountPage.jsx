@@ -13,9 +13,41 @@ import { api } from '../lib/api.js'
 import { isNative, openSite } from '../lib/native.js'
 import { appleInfo, appleProducts, productFor, buyWithApple, restoreApplePurchases } from '../lib/iap.js'
 import { webCheckoutFits } from '../lib/webSignIn.js'
+import { usePrefs, withSetup } from '../lib/prefs.js'
+import { regionName } from '../lib/regions.js'
+import { sportInfo } from '../lib/sport.js'
+import { bookName } from '../lib/format.js'
 
 const fmtDay = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '')
 const PLAN = { free: 'Free', pro: 'Pro', elite: 'Elite' }
+
+/** The setup from signing up (leagues, odds, where you bet, sportsbooks), and the way to change it. */
+function SetupCard() {
+  const p = usePrefs()
+  const nav = useNavigate()
+  const rows = [
+    ['Leagues', p.leagues.map((k) => sportInfo(k).name).join(', ') || 'Not picked yet'],
+    ['Odds', p.odds === 'decimal' ? 'Decimal, like 1.91' : 'American, like -110'],
+    ['Where you bet', regionName(p.region) || 'Not set'],
+    ['Sportsbooks', p.books.map(bookName).join(', ') || 'None picked'],
+  ]
+  return (
+    <section className="acct-list acct-setup">
+      <p className="acct-plan__k">Your setup</p>
+      <dl className="acct-setup__list">
+        {rows.map(([k, v]) => (
+          <div key={k}>
+            <dt>{k}</dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+      </dl>
+      <button type="button" className="btn btn--quiet" onClick={() => nav(withSetup('/account'))}>
+        Change your setup
+      </button>
+    </section>
+  )
+}
 
 export function AccountPage() {
   const { user, loading, signOutUser, redeemInviteCode } = useAuth()
@@ -87,6 +119,7 @@ export function AccountPage() {
 
       <CreditsCard onBuy={setBuy} />
       <PushCard />
+      <SetupCard />
 
       {!native && me?.open?.length > 0 && (
         <section className="acct-list">

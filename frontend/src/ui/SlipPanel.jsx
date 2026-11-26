@@ -4,7 +4,7 @@ import { useSlip } from '../lib/useSlip.js'
 import { removeLeg, setLegPrice, setParlayPrice, setMode, clearSlip, parlayMath, shareUrl, sharePath, slipText } from '../lib/slip.js'
 import { useSport, sp, legRef, sportInfo, apiOf } from '../lib/sport.js'
 import { trackLegs } from '../lib/track.js'
-import { pct, odds, parseOdds, decimalOf, bookName } from '../lib/format.js'
+import { pct, odds, decimalOf, bookName, oddsFormat, parseUserOdds } from '../lib/format.js'
 import { kellyFraction } from '../lib/kelly.js'
 import { RULES } from '../lib/rules.js'
 import { SendToBook, BookRail } from './Books.jsx'
@@ -34,24 +34,25 @@ function readNum(key, fallback) {
   }
 }
 
-/** Odds box that accepts "-110", "+150" or "150" and keeps what you typed until it parses. */
-function OddsInput({ value, onChange, label, placeholder = '-110' }) {
-  const [text, setText] = useState(Number.isFinite(value) ? (value > 0 ? `+${value}` : String(value)) : '')
+/** Odds box that accepts "-110", "+150", "150" or decimal "1.91", shows the member's format, and keeps what you typed until it parses. */
+function OddsInput({ value, onChange, label, placeholder }) {
+  const dec = oddsFormat() === 'decimal'
+  const [text, setText] = useState(Number.isFinite(value) ? odds(value) : '')
   useEffect(() => {
-    setText(Number.isFinite(value) ? (value > 0 ? `+${value}` : String(value)) : '')
+    setText(Number.isFinite(value) ? odds(value) : '')
   }, [value])
-  const bad = text.trim() !== '' && parseOdds(text) == null
+  const bad = text.trim() !== '' && parseUserOdds(text) == null
   return (
     <input
       className={`odds-input${bad ? ' is-bad' : ''}`}
-      inputMode="numeric"
+      inputMode={dec ? 'decimal' : 'numeric'}
       aria-label={label}
       aria-invalid={bad}
-      placeholder={placeholder}
+      placeholder={placeholder || (dec ? '1.91' : '-110')}
       value={text}
       onChange={(e) => {
         setText(e.target.value)
-        const n = parseOdds(e.target.value)
+        const n = parseUserOdds(e.target.value)
         if (n != null || e.target.value.trim() === '') onChange(n)
       }}
     />

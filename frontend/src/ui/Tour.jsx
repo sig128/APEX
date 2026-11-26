@@ -72,6 +72,8 @@ export function Tour() {
   useEffect(() => {
     // a first visit: after the consent screen and the intro
     const first = () => {
+      // not over the setup that follows signing up; it starts on its own later
+      if (new URLSearchParams(window.location.search).has('welcome')) return
       if (!read()) start(false)
     }
     const again = () => start(true)

@@ -1,8 +1,26 @@
 // How numbers, odds and times read across the app.
 export const pct = (p, digits = 0) => (Number.isFinite(p) ? `${(p * 100).toFixed(digits)}%` : '–')
 
+// How prices read: American (-110, +150) unless the member picked decimal (1.91) in their setup
+// (lib/prefs.js keeps this in step). Read here so every price on screen follows it.
+let DECIMAL = false
+try {
+  DECIMAL = JSON.parse(localStorage.getItem('apex_prefs') || '{}')?.odds === 'decimal'
+} catch {
+  /* no storage (tests, private mode) */
+}
+export function setOddsFormat(format) {
+  DECIMAL = format === 'decimal'
+}
+export const oddsFormat = () => (DECIMAL ? 'decimal' : 'american')
+
+/** A price the way the member reads odds: "+150" / "-110", or "2.50" / "1.91". */
 export function odds(a) {
   if (!Number.isFinite(a)) return '–'
+  if (DECIMAL) {
+    const d = decimalOf(a)
+    if (d) return d.toFixed(2)
+  }
   return a > 0 ? `+${a}` : String(a)
 }
 
@@ -80,6 +98,14 @@ export function decimalOf(american) {
 export function americanOf(decimal) {
   if (!(decimal > 1)) return null
   return decimal >= 2 ? Math.round((decimal - 1) * 100) : -Math.round(100 / (decimal - 1))
+}
+
+/** A price someone typed, American ("+150", "-110") or decimal ("2.50", "1.91") -> American, or null. */
+export function parseUserOdds(s) {
+  const am = parseOdds(s)
+  if (am != null) return am
+  const d = /^\s*(\d{1,3}\.\d{1,3})\s*$/.exec(String(s ?? ''))
+  return d ? americanOf(Number(d[1])) : null
 }
 
 /** "+150" / "-110" / "150" -> number, or null. */

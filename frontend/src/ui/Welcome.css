@@ -1,0 +1,540 @@
+/* The setup after signing up: one question a screen, dashes for how far along you are, the answer
+   button pinned to the bottom where a thumb is. The last screen, Pro, lets the real site show
+   through above it. */
+html.is-welcoming,
+html.is-welcoming body {
+  overflow: hidden;
+}
+.welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 185;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: radial-gradient(720px 360px at 50% -10%, rgba(124, 252, 0, 0.09), transparent 70%), var(--night);
+  color: var(--chalk);
+}
+.welcome__top {
+  display: grid;
+  grid-template-columns: 56px 1fr 56px;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  height: 52px;
+  margin: 0 auto;
+  padding: 0 8px;
+}
+.welcome__icon,
+.welcome__skip {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  border: 0;
+  border-radius: 20px;
+  background: none;
+  color: var(--chalk);
+  font: 600 15px/1 var(--font-ui);
+  cursor: pointer;
+}
+.welcome__icon {
+  width: 40px;
+}
+.welcome__skip {
+  justify-self: end;
+  padding: 0 10px;
+  color: var(--chalk-2);
+}
+.welcome__icon:focus-visible,
+.welcome__skip:focus-visible,
+.welcome__alt:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.welcome__dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.welcome__dots li {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--seat-2);
+  transition: width 0.25s ease, background-color 0.25s ease;
+}
+.welcome__dots li.is-done {
+  background: var(--chalk-3);
+}
+.welcome__dots li.is-on {
+  width: 30px;
+  background: var(--lime);
+}
+.welcome__body {
+  flex: 1;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 10px 20px 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: wl-in 0.22s ease both;
+}
+@keyframes wl-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+.welcome__title {
+  margin: 6px 0 6px;
+  font: 800 34px/1.02 var(--font-num);
+  letter-spacing: 0.005em;
+  outline: none;
+}
+.welcome__sub {
+  margin: 0 0 18px;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--chalk-2);
+}
+.welcome__foot {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 10px 20px 14px;
+}
+.welcome__cta {
+  min-height: 52px;
+  font-size: 17px;
+}
+.welcome__alt {
+  justify-self: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 20px;
+  background: none;
+  color: var(--chalk);
+  font: 600 15px/1 var(--font-ui);
+  cursor: pointer;
+}
+.welcome__note {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--chalk-3);
+}
+
+/* tiles: leagues and sportsbooks, three across */
+.wl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wl-tile {
+  position: relative;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 2px;
+  width: 100%;
+  min-height: 96px;
+  padding: 12px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  color: var(--chalk);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.wl-tile:hover {
+  border-color: var(--seat-2);
+}
+.wl-tile:focus-visible,
+.wl-row:focus-visible,
+.wl-plan:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.wl-tile[aria-pressed='true'] {
+  border-color: var(--lime);
+  background: linear-gradient(180deg, rgba(184, 255, 31, 0.08), rgba(184, 255, 31, 0.02)), var(--stand-2);
+  box-shadow: inset 0 0 0 1px var(--lime);
+}
+.wl-tile__icon {
+  margin-bottom: 8px;
+  color: var(--chalk-2);
+}
+.wl-tile[aria-pressed='true'] .wl-tile__icon {
+  color: var(--lime);
+}
+.wl-tile__name {
+  font: 800 20px/1 var(--font-num);
+  letter-spacing: 0.01em;
+}
+.wl-tile__sub {
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--chalk-3);
+}
+.wl-tile__rank,
+.wl-tile__tick {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 11px;
+  background: var(--lime);
+  color: var(--lime-ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+.wl-tile--book {
+  min-height: 92px;
+}
+.wl-tile--book .booklogo {
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
+.wl-tile__name--book {
+  font: 700 15px/1.15 var(--font-ui);
+}
+
+/* rows: odds format and where you bet */
+.wl-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 58px;
+  padding: 0 16px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-m);
+  background: var(--stand-2);
+  color: var(--chalk);
+  font: 600 16px/1.2 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.wl-row[aria-pressed='true'] {
+  border-color: var(--lime);
+  box-shadow: inset 0 0 0 1px var(--lime);
+}
+.wl-row__eg {
+  display: flex;
+  gap: 14px;
+  font: 800 20px/1 var(--font-num);
+  color: var(--chalk-2);
+}
+.wl-row[aria-pressed='true'] .wl-row__eg {
+  color: var(--lime);
+}
+.wl-row__check {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--lime);
+  color: var(--lime-ink);
+}
+.wl-search input {
+  width: 100%;
+  min-height: 48px;
+  margin-bottom: 14px;
+  padding: 0 14px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-m);
+  background: var(--stand);
+  color: var(--chalk);
+  font: 500 16px/1 var(--font-ui);
+}
+.wl-search input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.wl-group + .wl-group {
+  margin-top: 18px;
+}
+.wl-group__title {
+  margin: 0 0 8px;
+  font: 800 16px/1 var(--font-num);
+  letter-spacing: 0.02em;
+  color: var(--chalk-2);
+}
+.wl-none {
+  color: var(--chalk-2);
+}
+.wl-fine {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--chalk-3);
+}
+
+/* the record */
+.wl-record {
+  padding: 18px;
+  border: 1px solid var(--seat);
+  border-radius: var(--r-l);
+  background: var(--stand);
+}
+.wl-record--wait {
+  min-height: 260px;
+  background: linear-gradient(90deg, var(--stand) 0%, var(--stand-2) 50%, var(--stand) 100%);
+}
+.wl-record__big {
+  margin: 0;
+  font: 800 64px/0.95 var(--font-num);
+  color: var(--lime);
+}
+.wl-record__k {
+  margin: 4px 0 14px;
+  font-size: 15px;
+  color: var(--chalk-2);
+}
+.wl-record__line {
+  margin: 0 0 16px;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.wl-record__line b {
+  font-size: 20px;
+}
+.wl-bands {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wl-bands li {
+  display: grid;
+  grid-template-columns: 112px 1fr 52px;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.wl-bands__label {
+  color: var(--chalk-2);
+}
+.wl-bands__bar {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--seat);
+}
+.wl-bands__bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 5px;
+  background: var(--turf);
+}
+.wl-bands__bar em {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--chalk);
+}
+.wl-bands__hit {
+  font-weight: 800;
+  text-align: right;
+}
+
+/* alerts, as they'd arrive */
+.wl-alerts ul {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wl-alerts li {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--seat);
+  border-radius: 14px;
+  background: var(--stand-2);
+  font-size: 15px;
+}
+.wl-alerts__k {
+  font: 800 13px/1 var(--font-num);
+  letter-spacing: 0.04em;
+  color: var(--lime);
+}
+
+/* Pro: the site behind shows through, lightly dimmed; the offer sits on solid ground at the
+   bottom, fading up into the page, full width at any size */
+.welcome.is-over {
+  background: rgba(3, 6, 5, 0.32);
+}
+.welcome.is-over .welcome__body,
+.welcome.is-over .welcome__foot {
+  max-width: none;
+  padding-left: max(20px, calc((100% - 560px) / 2));
+  padding-right: max(20px, calc((100% - 560px) / 2));
+  background: var(--night);
+}
+.welcome.is-over .welcome__body {
+  flex: 0 1 auto;
+  min-height: 0;
+  margin-top: auto;
+  padding-top: 4px;
+  box-shadow: 0 -56px 56px -8px var(--night);
+}
+.welcome.is-over .welcome__title {
+  font-size: 40px;
+}
+.welcome.is-over .welcome__top {
+  max-width: none;
+}
+.welcome__close {
+  justify-self: end;
+}
+.welcome.is-over .welcome__icon {
+  background: rgba(3, 6, 5, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.wl-pro__points {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wl-pro__points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.wl-pro__tick {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: -1px;
+  border-radius: 11px;
+  background: rgba(184, 255, 31, 0.16);
+  color: var(--lime);
+}
+.wl-plans {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wl-plan {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'name price' 'what per';
+  align-items: baseline;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--seat-2);
+  border-radius: var(--r-m);
+  background: var(--stand);
+  color: var(--chalk);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wl-plan[aria-pressed='true'] {
+  border-color: var(--lime);
+  box-shadow: inset 0 0 0 1px var(--lime);
+}
+.wl-plan__name {
+  grid-area: name;
+  font: 800 20px/1 var(--font-num);
+}
+.wl-plan__what {
+  grid-area: what;
+  font-size: 13px;
+  color: var(--chalk-2);
+}
+.wl-plan__price {
+  grid-area: price;
+  font: 800 22px/1 var(--font-num);
+  text-align: right;
+}
+.wl-plan__per {
+  grid-area: per;
+  font-size: 12px;
+  text-align: right;
+  color: var(--chalk-3);
+}
+
+@media (max-width: 380px) {
+  .wl-grid {
+    gap: 8px;
+  }
+  .wl-tile {
+    min-height: 88px;
+    padding: 10px;
+  }
+  .wl-tile__name {
+    font-size: 18px;
+  }
+  .welcome__title {
+    font-size: 30px;
+  }
+}
+@media (min-width: 900px) {
+  .welcome__top {
+    height: 64px;
+  }
+  .welcome__body {
+    padding-top: 24px;
+  }
+  /* on a big screen the question and its button sit together in the middle */
+  .welcome:not(.is-over) .welcome__body {
+    flex: 0 1 auto;
+    margin-top: auto;
+  }
+  .welcome:not(.is-over) .welcome__foot {
+    margin-bottom: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome__body {
+    animation: none;
+  }
+  .welcome__dots li {
+    transition: none;
+  }
+}
