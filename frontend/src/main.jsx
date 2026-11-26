@@ -9,10 +9,14 @@ import { mutate } from './lib/useApi.js'
 import { sportFromPath, sportInfo, isSport, apiOf, sp } from './lib/sport.js'
 import { isNative, startNative } from './lib/native.js'
 import { readPrefs } from './lib/prefs.js'
+import { freshen } from './lib/freshen.js'
 import './styles/tokens.css'
 import './styles/app.css'
 import './styles/tools.css'
 import './styles/brand.css'
+
+// An older build kept in the browser's cache loads the site's current one (lib/freshen.js)
+if (!isNative()) freshen()
 
 // A picks page the server couldn't render itself arrives as /?to=/u/handle: open it in place.
 {

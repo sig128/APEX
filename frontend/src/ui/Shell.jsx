@@ -44,12 +44,25 @@ function syncSetup(uid, go) {
     go(withSetup(`${pathname}${search}${hash}`))
   }
   window.addEventListener('apex:consented', open)
-  loadPrefs().then((p) => {
-    if (!p || p.onboarded) return window.removeEventListener('apex:consented', open)
-    prefs = p
-    markSetupPending(true)
-    open()
-  })
+  const load = (tries) =>
+    loadPrefs().then((p) => {
+      if (!p) {
+        // the server didn't answer (a deploy under way, a bad connection): try again shortly, and
+        // if it still can't say, the next visit asks again
+        if (tries > 0) return setTimeout(() => load(tries - 1), 4000)
+        try {
+          sessionStorage.removeItem(k)
+        } catch {
+          /* storage off */
+        }
+        return window.removeEventListener('apex:consented', open)
+      }
+      if (p.onboarded) return window.removeEventListener('apex:consented', open)
+      prefs = p
+      markSetupPending(true)
+      open()
+    })
+  load(3)
 }
 
 /** The PropPickz lockup at a given mark height (kept under this name for older imports). */

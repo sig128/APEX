@@ -244,3 +244,32 @@ test('signing in lands on the home page, through the setup when it isn’t done;
   assert.equal(setupDue(done, { pathname: '/nba' }), false)
   assert.equal(setupDue(null, { pathname: '/nba' }), false)
 })
+
+test('an older page from the browser’s cache loads the site’s current build, once', async () => {
+  const { freshen, buildOf } = await import('../src/lib/freshen.js')
+  assert.equal(buildOf('<script type="module" crossorigin src="/assets/index-Dk8LUMt2.js"></script>'), '/assets/index-Dk8LUMt2.js')
+  assert.equal(buildOf('<html></html>'), null)
+  const page = (src) => ({ scripts: [{ src: '' }, { src }] })
+  const site = (html, ok = true) => async () => ({ ok, text: async () => html })
+  const mem = () => {
+    const m = new Map()
+    return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)) }
+  }
+  let reloads = 0
+  const reload = () => reloads++
+  const store = mem()
+  const old = page('https://proppickz.com/assets/index-OLD111.js')
+  const newer = '<script type="module" src="/assets/index-NEW222.js"></script>'
+  // an older build: load the current one
+  assert.equal(await freshen({ doc: old, fetchImpl: site(newer), store, reload }), true)
+  assert.equal(reloads, 1)
+  // the same newer build again this visit (the reload didn't take): no loop
+  assert.equal(await freshen({ doc: old, fetchImpl: site(newer), store, reload }), false)
+  assert.equal(reloads, 1)
+  // already current, the dev server (no built script), the site not answering, or a fetch that throws: nothing
+  assert.equal(await freshen({ doc: page('https://proppickz.com/assets/index-NEW222.js'), fetchImpl: site(newer), store: mem(), reload }), false)
+  assert.equal(await freshen({ doc: page('http://127.0.0.1:5173/src/main.jsx'), fetchImpl: site(newer), store: mem(), reload }), false)
+  assert.equal(await freshen({ doc: old, fetchImpl: site('', false), store: mem(), reload }), false)
+  assert.equal(await freshen({ doc: old, fetchImpl: async () => { throw new Error('offline') }, store: mem(), reload }), false)
+  assert.equal(reloads, 1)
+})

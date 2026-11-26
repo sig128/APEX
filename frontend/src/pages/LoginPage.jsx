@@ -16,9 +16,14 @@ function AfterSignIn({ next }) {
   const nav = useNavigate()
   useEffect(() => {
     let live = true
-    loadPrefs().then((p) => {
-      if (live) nav(landingAfterSignIn(p, next), { replace: true })
-    })
+    // the account's setup decides where to land; if the server doesn't answer, ask again twice
+    const land = (tries) =>
+      loadPrefs().then((p) => {
+        if (!live) return
+        if (!p && tries > 0) return setTimeout(() => land(tries - 1), 1500)
+        nav(landingAfterSignIn(p, next), { replace: true })
+      })
+    land(2)
     return () => {
       live = false
     }
